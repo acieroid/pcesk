@@ -59,6 +59,11 @@ exception EvaluationStuck of node
 
 (** String conversion *)
 
+let string_of_kont = function
+  | OperatorKont _ -> "Operator"
+  | OperandsKont _ -> "Operands"
+  | HaltKont -> "Halt"
+
 let string_of_value = function
   | String s -> "\"" ^ s ^ "\""
   | Integer n -> string_of_int n
@@ -67,16 +72,11 @@ let string_of_value = function
   | Symbol sym -> "'" ^ sym
   | Closure _ -> "#<closure>"
   | Primitive (name, _) -> "#<primitive " ^ name ^ ">"
-  | Kont _ -> "#<continuation>"
+  | Kont k -> "#<continuation " ^ (string_of_kont k) ^ ">"
 
 let string_of_state ((exp, env, store, kont, op) : state) : string = match exp with
 | Node n -> "node " ^ (Scheme_ast.string_of_node n)
 | Value v -> "value " ^ (string_of_value v)
-
-let string_of_kont = function
-  | OperatorKont _ -> "Operator"
-  | OperandsKont _ -> "Operands"
-  | HaltKont -> "Halt"
 
 let string_of_exception = function
   | NYI ->
@@ -107,13 +107,17 @@ let env_lookup = Env.lookup
 let env_extend = Env.extend
 
 (** Store *)
+let print_store (store, a) =
+  print_string ("store(" ^
+                (Store.string_of_store store
+                   (fun (v, env) -> string_of_value v))
+                ^ ", " ^ (Addr.string_of_address a) ^ ")\n")
 
 let empty_store = (Store.empty, Addr.first)
 let store_lookup (store, _) a =
-  print_string ("lookup(" ^ (Addr.string_of_address a) ^ "," ^
-                (Store.string_of_store store (fun (v, env) -> string_of_value v)) ^ ")\n");
   Store.lookup store a
-let store_extend (store, _) a s = (Store.update store a s, Addr.next a)
+let store_extend (store, addr) a s =
+  (Store.update store a s, Addr.next addr)
 let store_alloc (f, (a : Addr.t)) = (a, (f, Addr.next a))
 
 let extract_kont store a = match store_lookup store a with
