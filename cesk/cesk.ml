@@ -51,7 +51,7 @@ exception NYI
 exception PrimWrongArgType of string * value
 exception Malformed of string * node
 exception InvalidKeyword of string
-exception UnboundValue of string
+exception UnboundIdentifier of string
 exception InvalidNumberOfArguments of int * int
 exception NotAFunction of value
 exception NotAKont of value
@@ -77,6 +77,28 @@ let string_of_kont = function
   | OperatorKont _ -> "Operator"
   | OperandsKont _ -> "Operands"
   | HaltKont -> "Halt"
+
+let string_of_exception = function
+  | NYI ->
+      "Not yet implemented"
+  | PrimWrongArgType (s, v) ->
+      "Wrong argument type to primitive '" ^ s ^ "': " ^ (string_of_value v)
+  | Malformed (s, n) ->
+      "Malformed " ^ s ^ ": " ^ (Scheme_ast.string_of_node n)
+  | InvalidKeyword k ->
+      "Invalid keyword: " ^ k
+  | UnboundIdentifier s ->
+      "Unbound identifier: " ^ s
+  | InvalidNumberOfArguments (expected, got) ->
+      "Invalid number of arguments: expected " ^ (string_of_int expected) ^
+      ", got " ^ (string_of_int got)
+  | NotAFunction v ->
+      "Not a function: " ^ (string_of_value v)
+  | NotAKont v ->
+      "Not a continuation: " ^ (string_of_value v)
+  | EvaluationStuck n ->
+      "Evaluation is stuck at node " ^ (Scheme_ast.string_of_node n)
+  | e -> raise e
 
 (** Environment *)
 
@@ -186,7 +208,7 @@ let step ((node, env, store, a, _) : state) : state =
       | OperatorKont ([], env', c) ->
           apply_function v [] env' store c
       | OperatorKont (rand :: rands, env', c) ->
-          let kont' = OperandsKont (v, rands, [], env, c) in
+          let kont' = OperandsKont (v, rands, [], env', c) in
           let (a', store') = store_alloc store in
           let store'' = store_extend store' a' (Kont kont', env) in
           (Node rand, env', store'', a', Push)
