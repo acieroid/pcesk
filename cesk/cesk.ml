@@ -73,10 +73,10 @@ let string_of_state ((exp, env, store, kont, op) : state) : string = match exp w
 | Node n -> "node " ^ (Scheme_ast.string_of_node n)
 | Value v -> "value " ^ (string_of_value v)
 
-let string_of_kont_op = function
-  | Pop -> "-"
-  | Push -> "+"
-  | Epsilon -> "ε"
+let string_of_kont = function
+  | OperatorKont _ -> "Operator"
+  | OperandsKont _ -> "Operands"
+  | HaltKont -> "Halt"
 
 (** Environment *)
 
@@ -257,17 +257,21 @@ module Dot = Graph.Graphviz.Dot(DotArg)
 (** Evaluation *)
 
 let eval (e : node) : value * env * store_wrap =
+  let string_of_update (_, _, store, a, _) (_, _, store', a', change) =
+    match change with
+    | Epsilon -> "ε"
+    | Pop -> "-" ^ (string_of_kont (extract_kont store a))
+    | Push -> "+" ^ (string_of_kont (extract_kont store' a)) in
   let rec loop ((v, env, store, a, _) as state) g =
     let kont = extract_kont store a in
     match v, kont with
     | (Value result, HaltKont) -> (result, env, store), g
     | _ ->
-        let (_, _, _, _, change) as state' = step state in
+        let state' = step state in
         let vertex = G.V.create state
         and vertex' = G.V. create state' in
-        let edge = G.E.create vertex (string_of_kont_op change) vertex' in
+        let edge = G.E.create vertex (string_of_update state state') vertex' in
         let g' = G.add_edge_e (G.add_vertex g vertex') edge in
-        Printf.printf "%s - %s -> %s\n" (string_of_state state') (DotArg.vertex_name vertex) (DotArg.vertex_name vertex');
         loop state' g'
   in
   let res, graph = loop (inject e) G.empty in
