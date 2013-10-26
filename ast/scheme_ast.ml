@@ -23,4 +23,4 @@ and string_of_list = function
       (string_of_value car) ^ ")"
   | Pair (car, cdr) ->
       (string_of_value car) ^ " . " ^ (string_of_value cdr) ^ ")"
-  | x -> string_of_value x 
+  | x -> string_of_value x
