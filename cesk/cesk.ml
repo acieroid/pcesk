@@ -1,6 +1,5 @@
 (* TODO:
    - Continuations in store
-   - Primitives
    - Factor
    - Abstract *)
 
@@ -23,12 +22,14 @@ and node = Scheme_ast.scheme_node
 and state = exp * env * store_wrap * kont
 and storable = value * env
 and store_wrap = store * addr
+and prim = string * (value list -> value)
 and value =
   | String of string
   | Integer of int
   | Boolean of bool
   | Symbol of string
   | Closure of lam * env
+  | Primitive of prim
   | Kont of kont
 and lam = string list * node
 and kont =
@@ -41,7 +42,7 @@ module MyStorable : STORABLE =
     type t = value * env
   end
 
-exception PrimWrongArgType of string * Scheme_ast.scheme_node
+exception PrimWrongArgType of string * value
 
 (* val string_of_value : value -> string *)
 let string_of_value = function
@@ -51,6 +52,7 @@ let string_of_value = function
   | Boolean false -> "#f"
   | Symbol sym -> "'" ^ sym
   | Closure _ -> "#<closure>"
+  | Primitive (name, _) -> "#<primitive " ^ name ^ ">"
   | Kont _ -> "#<continuation>"
 
 let string_of_state (exp, env, store, kont) = match exp with
@@ -71,6 +73,27 @@ let keywords = ["lambda"]
 
 (* val is_keyword : string -> bool *)
 let is_keyword kw = List.mem kw keywords
+
+(* val primitives : string * (value list -> value) list *)
+let primitives =
+  [("+",
+    fun args ->
+      let ns = List.map (fun arg -> match arg with
+      | Integer n -> n
+      | _ -> raise (PrimWrongArgType ("+", arg))) args in
+      Integer (List.fold_left (+) 0 ns))]
+
+(* val apply_primitive : prim -> value list -> value *)
+let apply_primitive (name, f) args =
+  f args
+
+(* val install_primitives : env -> store -> env store *)
+let install_primitives env store =
+  let inst (env, store)  ((name, _) as prim) =
+    let (a, store') = store_alloc store in
+    (env_extend env name a,
+     store_extend store a (Primitive prim, env)) in
+  List.fold_left inst (env, store) primitives
 
 (* val step_keyword : string -> node list -> env -> store -> kont -> state *)
 let step_keyword kw args env store kont = match kw with
@@ -105,6 +128,8 @@ let apply_function rator rands env store kont = match rator with
     and extended_store = List.fold_left
         (fun store ((_, v), a) -> store_extend store a (v, env)) store addrs in
     (Node body, extended_env, extended_store, kont)
+| Primitive prim ->
+    (Value (apply_primitive prim rands), env, store, kont)
 | _ -> failwith ("Not a function: " ^ (string_of_value rator))
 
 (* val step : state -> state *)
@@ -141,11 +166,12 @@ let step (node, env, store, kont) : state = match node with
         let kont' = OperandsKont (rator, rands, v :: values, env', kont) in
         (Node rand, env', store, kont')
     | HaltKont -> (node, env, store, kont)
-    | _ -> failwith ("Cannot step value" ^ (string_of_value v))
     end
 
 (* val inject : node -> state *)
-let inject e = (Node e, empty_env, empty_store, HaltKont)
+let inject e =
+  let (env, store) = install_primitives empty_env empty_store in
+  (Node e, env, store, HaltKont)
 
 (* val eval : node -> val * env * store *)
 let eval e =
@@ -157,36 +183,3 @@ let eval e =
       loop state'
   in
   loop (inject e)
-
-(*
-(* val primitives : string * (value list -> value) list *)
-let primitives =
-  [("+",
-    fun args ->
-      List.fold_left (fun arg res -> match arg with
-      | Integer n -> arg + res
-      | _ -> raise PrimWrongArgType ("+", arg))
-        args)]
-
-(* val is_primitive : string -> bool *)
-let is_primitive prim =
-  List.mem_assoc prim primitives
-
-(* val apply_primitive : string -> value list -> value *)
-let apply_primitive prim args =
-  let impl = List.assoc prim primitives in
-  impl args
-
-(* val eval_atomic : scheme_node -> env -> store -> scheme_value *)
-let eval_atomic v env store = match v with
-  | Scheme_ast.String s -> String s
-  | Scheme_ast.Integer n -> Integer n
-  | Scheme_ast.Boolean b -> Boolean b
-  | Scheme_ast.Pair (Identifier prim, Scheme_ast.List args) ->
-      if is_primitive prim then
-        apply_primitive prim
-          (List.map (fun arg -> eval_atomic arg env store) args)
-      else
-        failwith ("Not a primitive: " ^ (Scheme_ast.string_of_node prim))
-  | node -> failwith ("Not an atomic node: " ^ (Scheme_ast.string_of_node prim))
-*)
