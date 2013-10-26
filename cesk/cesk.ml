@@ -1,6 +1,8 @@
 (* TODO:
    - Multiple arguments
    - Continuations in store
+   - Primitives
+   - Factor
    - Abstract *)
 
 type exp =
@@ -19,10 +21,10 @@ and value =
   | Symbol of string
   | Closure of lam * env
   | Kont of kont
-and lam = string * node
+and lam = string list * node
 and kont =
-  | FunKont of value * env * kont
-  | ArgKont of node * env * kont
+  | OperatorKont of node list * env * kont
+  | OperandsKont of value * node list * value list * env * kont
   | HaltKont
 
 exception PrimWrongArgType of string * Scheme_ast.scheme_node
@@ -60,13 +62,32 @@ let step_keyword kw args env store kont = match kw with
     begin match args with
     | args_node :: body :: [] ->
         begin match args_node with
-        | Scheme_ast.List [Scheme_ast.Identifier x] ->
-            (Value (Closure ((x, body), env)), env, store, kont)
+        | Scheme_ast.List args_node ->
+            let args = List.map (function
+              | Scheme_ast.Identifier x -> x
+              | node -> failwith ("Malformed lambda argument: " ^
+                                  (Scheme_ast.string_of_node node))) args_node in
+            (Value (Closure ((args, body), env)), env, store, kont)
         | _ -> failwith "Not implemented yet"
         end
     | _ -> failwith "Not implemented yet"
     end
 | _ -> failwith ("Unknown keyword: " ^ kw)
+
+(* val apply_function : value -> value list -> env -> store -> kont *)
+let apply_function rator rands env store kont = match rator with
+| Closure ((ids, body), env') ->
+    if List.length rands != List.length ids then
+      failwith (Printf.sprintf "Invalid number of arguments: got %d, expected %d"
+                  (List.length rands) (List.length ids));
+    let args = List.combine ids rands in
+    let addrs = List.map (fun x -> (x, store_alloc store)) args in
+    let extended_env = List.fold_left
+        (fun env ((x, _), a) -> env_extend env x a) env addrs
+    and extended_store = List.fold_left
+        (fun store ((_, v), a) -> store_extend store a (v, env)) store addrs in
+    (Node body, extended_env, extended_store, kont)
+| _ -> failwith ("Not a function: " ^ (string_of_value rator))
 
 (* val step : state -> state *)
 let step (node, env, store, kont) : state = match node with
@@ -83,21 +104,24 @@ let step (node, env, store, kont) : state = match node with
         (Value (Boolean b), env, store, kont)
     | Scheme_ast.List (Scheme_ast.Identifier kw :: args) when is_keyword kw ->
         step_keyword kw args env store kont
-    | Scheme_ast.List (e0 :: e1 :: []) ->
-        let kont' = ArgKont (e1, env, kont) in
-        (Node e0, env, store, kont')
+    | Scheme_ast.List (rator :: rands) ->
+        let kont' = OperatorKont (rands, env, kont) in
+        (Node rator, env, store, kont')
     | _ -> failwith ("Cannot step node:" ^ (Scheme_ast.string_of_node n))
     end
 | Value v ->
     begin match kont with
-    | ArgKont (e, env', kont) ->
-        let kont' = FunKont (v, env, kont) in
-        (Node e, env', store, kont')
-    | FunKont (Closure ((x, e), _), env', kont) ->
-        let a = store_alloc store in
-        let extended_env = env_extend env x a
-        and extended_store = store_extend store a (v, env) in
-        (Node e, extended_env, extended_store, kont)
+    | OperatorKont ([], env', kont) ->
+        apply_function v [] env' store kont
+    | OperatorKont (rand :: rands, env', kont) ->
+        let kont' = OperandsKont (v, rands, [], env, kont) in
+        (Node rand, env', store, kont')
+    | OperandsKont (rator, [], values, env', kont) ->
+        let rands = List.rev (v :: values) in
+        apply_function rator rands env' store kont
+    | OperandsKont (rator, rand :: rands, values, env', kont) ->
+        let kont' = OperandsKont (rator, rands, v :: values, env', kont) in
+        (Node rand, env', store, kont')
     | HaltKont -> (node, env, store, kont)
     | _ -> failwith ("Cannot step value" ^ (string_of_value v))
     end
