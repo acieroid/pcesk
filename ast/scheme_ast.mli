@@ -1,10 +1,9 @@
-type scheme_value =
+type scheme_node =
   | Identifier of string
-  | Symbol of string
   | String of string
   | Integer of int
   | Boolean of bool
-  | Pair of scheme_value * scheme_value
-  | Null
+  | List of scheme_node list
 
-val string_of_value : scheme_value -> string
+
+val string_of_node : scheme_node -> string

@@ -6,9 +6,9 @@ let rec parse stream = match stream with parser
 | [< 'INTEGER n >] -> Integer n
 | [< 'STRING s >] -> String s
 | [< 'BOOLEAN b >] -> Boolean b
-| [< 'QUOTE; sym = parse >] -> Pair (Identifier "quote", Pair (sym, Null))
-| [< 'LPAR; l = parseList >] -> l
+| [< 'QUOTE; exp = parse >] -> List [Identifier "quote"; exp]
+| [< 'LPAR; l = parseList >] -> List l
 
 and parseList stream = match stream with parser
-| [< 'RPAR >] -> Null
-| [< car = parse; cdr = parseList >] -> Pair (car, cdr)
+| [< 'RPAR >] -> []
+| [< car = parse; cdr = parseList >] -> car :: cdr
