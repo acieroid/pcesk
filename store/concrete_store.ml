@@ -10,6 +10,13 @@ module Concrete_store : STORE =
 
     type 'a t = 'a StoreMap.t
 
+
+    let string_of_store store f =
+      "env(" ^ (String.concat ","
+                  (List.map (fun (a, v) ->
+                    (Addr.string_of_address a) ^ ":" ^ (f v))
+                     (StoreMap.bindings store))) ^ ")"
+
     let empty =
       StoreMap.empty
 

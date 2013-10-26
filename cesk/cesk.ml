@@ -109,7 +109,10 @@ let env_extend = Env.extend
 (** Store *)
 
 let empty_store = (Store.empty, Addr.first)
-let store_lookup (store, _) a = Store.lookup store a
+let store_lookup (store, _) a =
+  print_string ("lookup(" ^ (Addr.string_of_address a) ^ "," ^
+                (Store.string_of_store store (fun (v, env) -> string_of_value v)) ^ ")\n");
+  Store.lookup store a
 let store_extend (store, _) a s = (Store.update store a s, Addr.next a)
 let store_alloc (f, (a : Addr.t)) = (a, (f, Addr.next a))
 
