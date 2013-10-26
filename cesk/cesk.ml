@@ -5,15 +5,25 @@
    - Factor
    - Abstract *)
 
-type exp =
+open Concrete_env
+open Concrete_store
+open Concrete_addr
+open Storable
+
+module Addr = Concrete_addr
+module Env = Concrete_env(Addr)
+module Store = Concrete_store(Addr)
+
+type env = Env.t
+and store = (value * env) Store.t
+and addr = Addr.t
+and exp =
   | Node of node
   | Value of value
 and node = Scheme_ast.scheme_node
-and state = exp * env * store * kont
+and state = exp * env * store_wrap * kont
 and storable = value * env
-and addr = int
-and env = string -> addr
-and store = (addr -> storable) * addr
+and store_wrap = store * addr
 and value =
   | String of string
   | Integer of int
@@ -26,6 +36,11 @@ and kont =
   | OperatorKont of node list * env * kont
   | OperandsKont of value * node list * value list * env * kont
   | HaltKont
+
+module MyStorable : STORABLE =
+  struct
+    type t = value * env
+  end
 
 exception PrimWrongArgType of string * Scheme_ast.scheme_node
 
@@ -43,16 +58,14 @@ let string_of_state (exp, env, store, kont) = match exp with
 | Node n -> "node " ^ (Scheme_ast.string_of_node n)
 | Value v -> "value " ^ (string_of_value v)
 
-let empty_env x = failwith ("unbound identifier: " ^ x)
-let env_lookup env x = env x
-let env_extend env x a =
-  fun x' -> if x = x' then a else env_lookup env x'
+let empty_env = Env.empty
+let env_lookup = Env.lookup
+let env_extend = Env.extend
 
-let empty_store = ((fun a -> failwith ("not in store: " ^ (string_of_int a))), 0)
-let store_lookup (f, _) a = f a
-let store_extend (f, _) a (v, env) =
-  ((fun a' -> if a = a' then (v, env) else f a'), a+1)
-let store_alloc (f, a) = (a, (f, a+1))
+let empty_store = (Store.empty, Addr.first)
+let store_lookup (store, _) a = Store.lookup store a
+let store_extend (store, _) a s = (Store.update store a s, Addr.next a)
+let store_alloc (f, (a : Addr.t)) = (a, (f, Addr.next a))
 
 (* val keywords : string list *)
 let keywords = ["lambda"]
