@@ -213,8 +213,13 @@ let inject (e : node) : state =
 
 module GraphNode = struct
   type t = state
-  let compare (_, _, (_, a), _,  _) (_, _, (_, a'), _, _) = Addr.compare a a'
-  let hash (_, _, (_, a), _,  _) = Hashtbl.hash a
+  let compare (exp, _, (_, a), _,  _) (exp', _, (_, a'), _, _) =
+    match (exp, exp') with
+    | Node _, Node _
+    | Value _, Value _ -> Addr.compare a a'
+    | Node _, Value _ -> 1
+    | Value _, Node _ -> -1
+  let hash (exp, _, (_, a), _, _) = Hashtbl.hash (exp, a)
   let equal = (=)
 end
 
@@ -227,16 +232,27 @@ end
 
 module G = Graph.Persistent.Digraph.ConcreteBidirectionalLabeled(GraphNode)(GraphEdge)
 
-module Dot = Graph.Graphviz.Dot(struct
-   include G
-   let edge_attributes ((a, e, b) : E.t) = [`Label e; `Color 4711]
-   let default_edge_attributes _ = []
-   let get_subgraph _ = None
-   let vertex_attributes _ = [`Shape `Box]
-   let vertex_name ((_, _, (_, a), _, _) : V.t) = Addr.string_of_address a
-   let default_vertex_attributes _ = []
-  let graph_attributes _ = []
-end)
+module DotArg =
+  struct
+    include G
+    let edge_attributes ((a, e, b) : E.t) = [`Label e]
+    let default_edge_attributes _ = []
+    let get_subgraph _ = None
+    let vertex_attributes ((exp, _, _, _, _) : V.t) =
+      match exp with
+      | Node n -> [`Shape `Box; `Style `Filled; `Fillcolor 0xFFDDDD;
+                   `Label (Scheme_ast.string_of_node n)]
+      | Value v -> [`Shape `Box; `Style `Filled; `Fillcolor 0xDDFFDD;
+                    `Label (string_of_value v)]
+    let vertex_name ((exp, _, (_, a), _, _) : V.t) =
+      match exp with
+      | Node n -> "node_" ^ (Addr.string_of_address a)
+      | Value v -> "value_" ^ (Addr.string_of_address a)
+    let default_vertex_attributes _ = []
+    let graph_attributes _ = []
+  end
+
+module Dot = Graph.Graphviz.Dot(DotArg)
 
 (** Evaluation *)
 
@@ -247,11 +263,11 @@ let eval (e : node) : value * env * store_wrap =
     | (Value result, HaltKont) -> (result, env, store), g
     | _ ->
         let (_, _, _, _, change) as state' = step state in
-        print_string ((string_of_state state') ^ "\n");
         let vertex = G.V.create state
         and vertex' = G.V. create state' in
         let edge = G.E.create vertex (string_of_kont_op change) vertex' in
         let g' = G.add_edge_e (G.add_vertex g vertex') edge in
+        Printf.printf "%s - %s -> %s\n" (string_of_state state') (DotArg.vertex_name vertex) (DotArg.vertex_name vertex');
         loop state' g'
   in
   let res, graph = loop (inject e) G.empty in

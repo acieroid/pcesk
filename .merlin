@@ -10,3 +10,4 @@ B _build/cesk
 B _build/cesk
 B _build/env
 B _build/ast
+PKG ocamlgraph
