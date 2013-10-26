@@ -27,6 +27,16 @@ and kont =
 
 exception PrimWrongArgType of string * Scheme_ast.scheme_node
 
+(* val string_of_value : value -> string *)
+let string_of_value = function
+  | String s -> "\"" ^ s ^ "\""
+  | Integer n -> string_of_int n
+  | Boolean true -> "#t"
+  | Boolean false -> "#f"
+  | Symbol sym -> "'" ^ sym
+  | Closure _ -> "#<closure>"
+  | Kont _ -> "#<continuation>"
+
 let empty_env x = failwith ("unbound identifier: " ^ x)
 let env_lookup env x = env x
 let env_extend env x a =
@@ -38,6 +48,26 @@ let store_extend (f, _) (a : addr) (s : storable) =
   ((fun a' -> if a = a' then s else f a), a+1)
 let store_alloc (_, a) = a
 
+(* val keywords : string list *)
+let keywords = ["lambda"]
+
+(* val is_keyword : string -> bool *)
+let is_keyword kw = List.mem kw keywords
+
+(* val step_keyword : string -> node list -> env -> store -> kont -> state *)
+let step_keyword kw args env store kont = match kw with
+| "lambda" ->
+    begin match args with
+    | args_node :: body :: [] ->
+        begin match args_node with
+        | Scheme_ast.List [Scheme_ast.Identifier x] ->
+            (Value (Closure ((x, body), env)), env, store, kont)
+        | _ -> failwith "Not implemented yet"
+        end
+    | _ -> failwith "Not implemented yet"
+    end
+| _ -> failwith ("Unknown keyword: " ^ kw)
+
 (* val step : state -> state *)
 let step (node, env, store, kont) : state = match node with
 | Node n ->
@@ -45,10 +75,18 @@ let step (node, env, store, kont) : state = match node with
     | Scheme_ast.Identifier x ->
         let (v, env') = store_lookup store (env_lookup env x) in
         (Value v, env', store, kont)
+    | Scheme_ast.String s ->
+        (Value (String s), env, store, kont)
+    | Scheme_ast.Integer n ->
+        (Value (Integer n), env, store, kont)
+    | Scheme_ast.Boolean b ->
+        (Value (Boolean b), env, store, kont)
+    | Scheme_ast.List (Scheme_ast.Identifier kw :: args) when is_keyword kw ->
+        step_keyword kw args env store kont
     | Scheme_ast.List (e0 :: e1 :: []) ->
         let kont' = ArgKont (e1, env, kont) in
         (Node e0, env, store, kont')
-    | _ -> failwith "Cannot step"
+    | _ -> failwith ("Cannot step node:" ^ (Scheme_ast.string_of_node n))
     end
 | Value v ->
     begin match kont with
@@ -61,7 +99,7 @@ let step (node, env, store, kont) : state = match node with
         and extended_store = store_extend store a (v, env) in
         (Node e, extended_env, extended_store, kont)
     | HaltKont -> (node, env, store, kont)
-    | _ -> failwith "Cannot step"
+    | _ -> failwith ("Cannot step value" ^ (string_of_value v))
     end
 
 (* val inject : node -> state *)
@@ -74,16 +112,6 @@ let eval e =
   | _ -> loop (step state)
   in
   loop (inject e)
-
-(* val string_of_value : value -> string *)
-let string_of_value = function
-  | String s -> "\"" ^ s ^ "\""
-  | Integer n -> string_of_int n
-  | Boolean true -> "#t"
-  | Boolean false -> "#f"
-  | Symbol sym -> "'" ^ sym
-  | Closure _ -> "#<closure>"
-  | Kont _ -> "#<continuation>"
 
 (*
 (* val primitives : string * (value list -> value) list *)
