@@ -1,5 +1,5 @@
 (* TODO:
-   - Multiple arguments
+   - Improve store and env (use maps instead of functions)
    - Continuations in store
    - Primitives
    - Factor
@@ -39,16 +39,20 @@ let string_of_value = function
   | Closure _ -> "#<closure>"
   | Kont _ -> "#<continuation>"
 
+let string_of_state (exp, env, store, kont) = match exp with
+| Node n -> "node " ^ (Scheme_ast.string_of_node n)
+| Value v -> "value " ^ (string_of_value v)
+
 let empty_env x = failwith ("unbound identifier: " ^ x)
 let env_lookup env x = env x
 let env_extend env x a =
-  fun x' -> if x = x' then a else env_lookup env x
+  fun x' -> if x = x' then a else env_lookup env x'
 
 let empty_store = ((fun a -> failwith ("not in store: " ^ (string_of_int a))), 0)
 let store_lookup (f, _) a = f a
-let store_extend (f, _) (a : addr) (s : storable) =
-  ((fun a' -> if a = a' then s else f a), a+1)
-let store_alloc (_, a) = a
+let store_extend (f, _) a (v, env) =
+  ((fun a' -> if a = a' then (v, env) else f a'), a+1)
+let store_alloc (f, a) = (a, (f, a+1))
 
 (* val keywords : string list *)
 let keywords = ["lambda"]
@@ -81,7 +85,9 @@ let apply_function rator rands env store kont = match rator with
       failwith (Printf.sprintf "Invalid number of arguments: got %d, expected %d"
                   (List.length rands) (List.length ids));
     let args = List.combine ids rands in
-    let addrs = List.map (fun x -> (x, store_alloc store)) args in
+    let addrs, store = List.fold_right (fun x (addrs, store) ->
+      let a, store' = store_alloc store in
+      ((x, a) :: addrs, store')) args ([], store) in
     let extended_env = List.fold_left
         (fun env ((x, _), a) -> env_extend env x a) env addrs
     and extended_store = List.fold_left
@@ -133,7 +139,10 @@ let inject e = (Node e, empty_env, empty_store, HaltKont)
 let eval e =
   let rec loop state = match state with
   | (Value v, env, store, HaltKont) -> (v, env, store)
-  | _ -> loop (step state)
+  | _ ->
+      let state' = step state in
+      print_string ((string_of_state state') ^ "\n");
+      loop state'
   in
   loop (inject e)
 
