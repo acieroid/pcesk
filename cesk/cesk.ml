@@ -1,29 +1,26 @@
 (* TODO:
-   - Continuations in store
-   - Factor
-   - Abstract *)
+   - Abstract
+   - add more stuff: define, set!, if, let/let*/letrec
+ *)
 
 open Concrete_env
 open Concrete_store
 open Concrete_addr
 open Storable
 
+(** Modules *)
+
 module Addr = Concrete_addr
 module Env = Concrete_env(Addr)
 module Store = Concrete_store(Addr)
 
+(** Types *)
+
 type env = Env.t
-and store = (value * env) Store.t
-and addr = Addr.t
-and exp =
-  | Node of node
-  | Value of value
-and node = Scheme_ast.scheme_node
-and state = exp * env * store_wrap * addr
-and storable = value * env
-and store_wrap = store * addr
-and prim = string * (value list -> value)
-and value =
+type addr = Addr.t
+type node = Scheme_ast.scheme_node
+type lam = string list * node
+type value =
   | String of string
   | Integer of int
   | Boolean of bool
@@ -31,13 +28,36 @@ and value =
   | Closure of lam * env
   | Primitive of prim
   | Kont of kont
-and lam = string list * node
+and storable = value * env
 and kont =
   | OperatorKont of node list * env * addr
   | OperandsKont of value * node list * value list * env * addr
   | HaltKont
+and prim = string * (value list -> value)
+type exp =
+  | Node of node
+  | Value of value
+type kont_op =
+  | Push
+  | Pop
+  | Epsilon
+type store = (value * env) Store.t
+type store_wrap = store * addr
+type state = exp * env * store_wrap * addr * kont_op
 
+(** Exceptions *)
+
+exception NYI
 exception PrimWrongArgType of string * value
+exception Malformed of string * node
+exception InvalidKeyword of string
+exception UnboundValue of string
+exception InvalidNumberOfArguments of int * int
+exception NotAFunction of value
+exception NotAKont of value
+exception EvaluationStuck of node
+
+(** String conversion *)
 
 let string_of_value = function
   | String s -> "\"" ^ s ^ "\""
@@ -49,23 +69,33 @@ let string_of_value = function
   | Primitive (name, _) -> "#<primitive " ^ name ^ ">"
   | Kont _ -> "#<continuation>"
 
-let string_of_state ((exp, env, store, kont) : state) : string = match exp with
+let string_of_state ((exp, env, store, kont, op) : state) : string = match exp with
 | Node n -> "node " ^ (Scheme_ast.string_of_node n)
 | Value v -> "value " ^ (string_of_value v)
+
+let string_of_kont_op = function
+  | Pop -> "-"
+  | Push -> "+"
+  | Epsilon -> "ε"
+
+(** Environment *)
 
 let empty_env = Env.empty
 let env_lookup = Env.lookup
 let env_extend = Env.extend
+
+(** Store *)
 
 let empty_store = (Store.empty, Addr.first)
 let store_lookup (store, _) a = Store.lookup store a
 let store_extend (store, _) a s = (Store.update store a s, Addr.next a)
 let store_alloc (f, (a : Addr.t)) = (a, (f, Addr.next a))
 
-let keywords = ["lambda"]
+let extract_kont store a = match store_lookup store a with
+| (Kont kont, _) -> kont
+| (v, _) -> raise (NotAKont v)
 
-let is_keyword kw = List.mem kw keywords
-
+(** Primitives *)
 
 let primitives : (string * (value list -> value)) list =
   [("+",
@@ -74,7 +104,6 @@ let primitives : (string * (value list -> value)) list =
       | Integer n -> n
       | _ -> raise (PrimWrongArgType ("+", arg))) args in
       Integer (List.fold_left (+) 0 ns))]
-
 
 let apply_primitive ((name, f) : prim) (args : value list) : value =
   f args
@@ -86,7 +115,12 @@ let install_primitives (env : env) (store : store_wrap) : (env * store_wrap) =
      store_extend store a (Primitive prim, env)) in
   List.fold_left inst (env, store) primitives
 
-(* val step_keyword : string -> node list -> env -> store -> addr -> state *)
+(** Keywords *)
+
+let keywords = ["lambda"]
+
+let is_keyword kw = List.mem kw keywords
+
 let step_keyword (kw : string) (args : node list)
     (env : env) (store : store_wrap) (a : addr) : state = match kw with
     | "lambda" ->
@@ -96,22 +130,21 @@ let step_keyword (kw : string) (args : node list)
             | Scheme_ast.List args_node ->
                 let args = List.map (function
                   | Scheme_ast.Identifier x -> x
-                  | node -> failwith ("Malformed lambda argument: " ^
-                                      (Scheme_ast.string_of_node node))) args_node in
-                (Value (Closure ((args, body), env)), env, store, a)
-            | _ -> failwith "Not implemented yet"
+                  | node -> raise (Malformed ("lambda argument", node))) args_node in
+                (Value (Closure ((args, body), env)), env, store, a, Epsilon)
+            | _ -> raise NYI
             end
-        | _ -> failwith "Not implemented yet"
+        | _ -> raise NYI
         end
-    | _ -> failwith ("Unknown keyword: " ^ kw)
+    | _ -> raise (InvalidKeyword kw)
 
-(* val apply_function : value -> value list -> env -> store -> addr -> state *)
+(** State manipulation *)
+
 let apply_function (rator : value) (rands : value list)
     (env : env) (store : store_wrap) (a : addr) : state = match rator with
     | Closure ((ids, body), env') ->
-        if List.length rands != List.length ids then
-          failwith (Printf.sprintf "Invalid number of arguments: got %d, expected %d"
-                      (List.length rands) (List.length ids));
+        if List.length ids != List.length rands then
+          raise (InvalidNumberOfArguments (List.length ids, List.length rands));
         let args = List.combine ids rands in
         let addrs, store = List.fold_right (fun x (addrs, store) ->
           let a, store' = store_alloc store in
@@ -120,36 +153,33 @@ let apply_function (rator : value) (rands : value list)
             (fun env ((x, _), a) -> env_extend env x a) env addrs
         and extended_store = List.fold_left
             (fun store ((_, v), a) -> store_extend store a (v, env)) store addrs in
-        (Node body, extended_env, extended_store, a)
+        (Node body, extended_env, extended_store, a, Pop)
     | Primitive prim ->
-        (Value (apply_primitive prim rands), env, store, a)
-    | _ -> failwith ("Not a function: " ^ (string_of_value rator))
+        (Value (apply_primitive prim rands), env, store, a, Pop)
+    | _ -> raise (NotAFunction rator)
 
-(* val step : state -> state *)
-let step ((node, env, store, a) : state) : state =
-  let kont = match store_lookup store a with
-  | (Kont kont, _) -> kont
-  | (v, _) -> failwith ("Not a continuation: " ^ (string_of_value v)) in
+let step ((node, env, store, a, _) : state) : state =
+  let kont = extract_kont store a in
   match node with
   | Node n ->
       begin match n with
       | Scheme_ast.Identifier x ->
           let (v, env') = store_lookup store (env_lookup env x) in
-          (Value v, env', store, a)
+          (Value v, env', store, a, Epsilon)
       | Scheme_ast.String s ->
-          (Value (String s), env, store, a)
+          (Value (String s), env, store, a, Epsilon)
       | Scheme_ast.Integer n ->
-          (Value (Integer n), env, store, a)
+          (Value (Integer n), env, store, a, Epsilon)
       | Scheme_ast.Boolean b ->
-          (Value (Boolean b), env, store, a)
+          (Value (Boolean b), env, store, a, Epsilon)
       | Scheme_ast.List (Scheme_ast.Identifier kw :: args) when is_keyword kw ->
           step_keyword kw args env store a
       | Scheme_ast.List (rator :: rands) ->
           let kont' = OperatorKont (rands, env, a) in
           let (a', store') = store_alloc store in
           let store'' = store_extend store' a' (Kont kont', env) in
-          (Node rator, env, store'', a')
-      | _ -> failwith ("Cannot step node:" ^ (Scheme_ast.string_of_node n))
+          (Node rator, env, store'', a', Push)
+      | _ -> raise (EvaluationStuck n)
       end
   | Value v ->
       begin match kont with
@@ -159,7 +189,7 @@ let step ((node, env, store, a) : state) : state =
           let kont' = OperandsKont (v, rands, [], env, c) in
           let (a', store') = store_alloc store in
           let store'' = store_extend store' a' (Kont kont', env) in
-          (Node rand, env', store'', a')
+          (Node rand, env', store'', a', Push)
       | OperandsKont (rator, [], values, env', c) ->
           let rands = List.rev (v :: values) in
           apply_function rator rands env' store c
@@ -167,26 +197,64 @@ let step ((node, env, store, a) : state) : state =
           let kont' = OperandsKont (rator, rands, v :: values, env', c) in
           let (a', store') = store_alloc store in
           let store'' = store_extend store' a' (Kont kont', env) in
-          (Node rand, env', store'', a')
-      | HaltKont -> (node, env, store, a)
+          (Node rand, env', store'', a', Push)
+      | HaltKont -> (node, env, store, a, Epsilon)
       end
+
+(** Injection *)
 
 let inject (e : node) : state =
   let (env, store) = install_primitives empty_env empty_store in
   let (a_halt, store') = store_alloc store in
   let store'' = store_extend store' a_halt (Kont HaltKont, env) in
-  (Node e, env, store'', a_halt)
+  (Node e, env, store'', a_halt, Epsilon)
+
+(** Graph representation *)
+
+module GraphNode = struct
+  type t = state
+  let compare (_, _, (_, a), _,  _) (_, _, (_, a'), _, _) = Addr.compare a a'
+  let hash (_, _, (_, a), _,  _) = Hashtbl.hash a
+  let equal = (=)
+end
+
+module GraphEdge = struct
+  type t = string
+  let compare = Pervasives.compare
+  let equal = (=)
+  let default = ""
+end
+
+module G = Graph.Persistent.Digraph.ConcreteBidirectionalLabeled(GraphNode)(GraphEdge)
+
+module Dot = Graph.Graphviz.Dot(struct
+   include G
+   let edge_attributes ((a, e, b) : E.t) = [`Label e; `Color 4711]
+   let default_edge_attributes _ = []
+   let get_subgraph _ = None
+   let vertex_attributes _ = [`Shape `Box]
+   let vertex_name ((_, _, (_, a), _, _) : V.t) = Addr.string_of_address a
+   let default_vertex_attributes _ = []
+  let graph_attributes _ = []
+end)
+
+(** Evaluation *)
 
 let eval (e : node) : value * env * store_wrap =
-  let rec loop ((v, env, store, a) as state) =
-    let kont = match store_lookup store a with
-    | (Kont k, _) -> k
-    | (v, _) -> failwith ("Not a continuation: " ^ (string_of_value v)) in
+  let rec loop ((v, env, store, a, _) as state) g =
+    let kont = extract_kont store a in
     match v, kont with
-    | (Value result, HaltKont) -> (result, env, store)
+    | (Value result, HaltKont) -> (result, env, store), g
     | _ ->
-        let state' = step state in
+        let (_, _, _, _, change) as state' = step state in
         print_string ((string_of_state state') ^ "\n");
-        loop state'
+        let vertex = G.V.create state
+        and vertex' = G.V. create state' in
+        let edge = G.E.create vertex (string_of_kont_op change) vertex' in
+        let g' = G.add_edge_e (G.add_vertex g vertex') edge in
+        loop state' g'
   in
-  loop (inject e)
+  let res, graph = loop (inject e) G.empty in
+  let out = open_out_bin "/tmp/foo.dot" in
+  Dot.output_graph out graph;
+  res
