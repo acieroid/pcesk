@@ -1,5 +1,4 @@
 (* TODO:
-   - Improve store and env (use maps instead of functions)
    - Continuations in store
    - Primitives
    - Factor
