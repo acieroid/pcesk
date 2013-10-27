@@ -5,5 +5,4 @@ type scheme_node =
   | Boolean of bool
   | List of scheme_node list
 
-
 val string_of_node : scheme_node -> string

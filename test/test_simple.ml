@@ -29,10 +29,11 @@ let test_lambda2 _ =
   assert_equal v1 (Integer 1);
   assert_equal v2 (Integer 2)
 
-let suite = "Simple tests" >:::
-  ["integer" >:: test_int;
-   "string" >:: test_string;
-   "boolean" >:: test_boolean;
-   "lambda with one argument" >:: test_lambda1;
-   "lambda with two arguments" >:: test_lambda2;
- ]
+let suite =
+  "Simple tests" >:::
+    ["integer" >:: test_int;
+     "string" >:: test_string;
+     "boolean" >:: test_boolean;
+     "lambda with one argument" >:: test_lambda1;
+     "lambda with two arguments" >:: test_lambda2;
+    ]

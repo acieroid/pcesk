@@ -1,16 +1,16 @@
 open Address
 
 module Concrete_addr : ADDRESS =
-  struct
+struct
 
-    type t = int
+  type t = int
 
-    let first = 0
+  let first = 0
 
-    let alloc time = time + 1
+  let alloc time = time + 1
 
-    let compare = Pervasives.compare
+  let compare = Pervasives.compare
 
-    let string_of_address = string_of_int
+  let string_of_address = string_of_int
 
-  end
+end

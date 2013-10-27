@@ -1,7 +1,7 @@
 open Address
 
 module type ENV =
-    functor (Addr : ADDRESS) ->
+  functor (Addr : ADDRESS) ->
   sig
     type t
     (* The empty environment *)
@@ -35,7 +35,7 @@ module Env : ENV =
     let string_of_env env =
       "env(" ^ (String.concat ","
                   (List.map (fun (n, a) ->
-                    n ^ ":" ^ (Addr.string_of_address a))
-                     (EnvMap.bindings env))) ^ ")"
+                       n ^ ":" ^ (Addr.string_of_address a))
+                      (EnvMap.bindings env))) ^ ")"
 
   end
