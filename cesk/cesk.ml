@@ -1,12 +1,5 @@
-(* TODO:
-   - Abstract
-   - add more stuff: define, set!, if, let/let*/letrec
-   - viz: initial state does not appear in the dot file, so another
-     state is linked to the second state, which is weird
- *)
-
 open Concrete_env
-open Concrete_store
+open Store
 open Concrete_addr
 open Storable
 
@@ -14,7 +7,7 @@ open Storable
 
 module Addr = Concrete_addr
 module Env = Concrete_env(Addr)
-module Store = Concrete_store(Addr)
+module Store = Store(Addr)
 
 (** Types *)
 
@@ -406,8 +399,7 @@ let eval (e : node) : value * env * store =
         loop state' g'
   in
   let initial_state = inject e in
-  let vertex = (G.V.create initial_state) in
-  let initial_graph = G.add_vertex G.empty vertex in
+  let initial_graph = G.add_vertex G.empty (G.V.create initial_state) in
   let res, graph = loop initial_state initial_graph in
   let out = open_out_bin "/tmp/foo.dot" in
   Dot.output_graph out graph;
