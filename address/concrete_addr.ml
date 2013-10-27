@@ -7,7 +7,7 @@ module Concrete_addr : ADDRESS =
 
     let first = 0
 
-    let next addr = addr + 1
+    let alloc time = time + 1
 
     let compare = Pervasives.compare
 
