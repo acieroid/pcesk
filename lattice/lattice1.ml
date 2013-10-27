@@ -43,37 +43,14 @@ let string_of_lattice_value = function
   | Top -> "Top"
   | Bot -> "Bot"
 
-let op_int_bin f x y = match x, y with
+let op_bin f x y = match x, y with
   | Bot, _ | _, Bot -> Bot
-  | Unique (Integer n1), Unique (Integer n2) -> Unique (Integer (f n1 n2))
-  | Unique (Integer _), Num | Num, Unique (Integer _) -> Num
-  | Num, Num -> Num
+  | Unique v1, Unique v2 -> Unique (f v1 v2)
   | _ -> Top
 
-let op_int_un f x = match x with
+let op_un f x = match x with
   | Bot -> Bot
-  | Unique (Integer n) -> Unique (Integer (f n))
-  | Num -> Num
-  | _ -> Top
-
-let op_int_comp f x y = match x, y with
-  | Bot, _ | _, Bot -> Bot
-  | Unique (Integer n1), Unique (Integer n2) -> Unique (Boolean (f n1 n2))
-  | Unique (Integer _), Num | Num, Unique (Integer _) | Num, Num -> Bool
-  | _ -> Top
-
-let op_eq x y = match x, y with
-  | Bot, _ | _, Bot -> Bot
-  | Unique v1, Unique v2 -> Unique (Boolean (v1 = v2))
-  | Unique (Integer _), Num | Num, Unique (Integer _) -> Bool
-  | Unique (String _), Str | Str, Unique (String _) -> Bool
-  | Num, Num | Str, Str | Bool, Bool -> Bool
-  | _ -> Top
-
-let op_neq x y = match x, y with
-  | Bot, _ | _, Bot -> Bot
-  | Unique v1, Unique v2 -> Unique (Boolean (v1 <> v2))
-  | Num, Num | Str, Str | Bool, Bool -> Bool
+  | Unique v -> Unique (f v)
   | _ -> Top
 
 let test () =
@@ -90,18 +67,17 @@ let test () =
 
   (* Operations *)
   let six = abst1 (Integer 6)
-  and seven = abst1 (Integer 7)
-  and str = abst1 (String "foo") in
-  assert_equal ~msg:"6*7" (op_int_bin ( * ) six seven) (abst1 (Integer 42));
-  assert_equal ~msg:"6+foo" (op_int_bin (+) six str) Top;
+  and seven = abst1 (Integer 7) in
+  assert_equal ~msg:"6*7" (op_bin value_mul six seven) (abst1 (Integer 42));
+  assert_equal ~msg:"6+foo" (op_bin value_mul six Top) Top;
 
-  assert_equal ~msg:"-6" (op_int_un (fun x -> -x) six) (abst1 (Integer (-6)));
+  assert_equal ~msg:"-6" (op_un value_neg six) (abst1 (Integer (-6)));
 
-  assert_equal ~msg:"6>7" (op_int_comp (>) six seven) (abst1 (Boolean false));
-  assert_equal ~msg:"6<7" (op_int_comp (<) six seven) (abst1 (Boolean true));
+  assert_equal ~msg:"6>7" (op_bin value_gt six seven) (abst1 (Boolean false));
+  assert_equal ~msg:"6<7" (op_bin value_lt six seven) (abst1 (Boolean true));
 
-  assert_equal ~msg:"6=6" (op_eq six six) (abst1 (Boolean true));
-  assert_equal ~msg:"6=7" (op_eq six seven) (abst1 (Boolean false));
-  assert_equal ~msg:"6=Num" (op_eq six Num) Bool
+  assert_equal ~msg:"6=6" (op_bin value_eq six six) (abst1 (Boolean true));
+  assert_equal ~msg:"6=7" (op_bin value_eq six seven) (abst1 (Boolean false));
+  assert_equal ~msg:"6=Num" (op_bin value_eq six Num) Top
 
 end
