@@ -121,7 +121,9 @@ let env_lookup env name =
     Env.lookup env name
   with
     Not_found -> raise (UnboundIdentifier name)
-let env_extend = Env.extend
+let env_extend env name a =
+  print_string ("extend(" ^ name ^ ", " ^ (Addr.string_of_address a) ^ ")\n");
+  Env.extend env name a
 
 (** Store *)
 
@@ -136,7 +138,9 @@ let store_lookup store a =
     Store.lookup store a
   with
     Not_found -> raise (UnboundAddress a)
-let store_extend = Store.update
+let store_extend store a v =
+  print_string ("store(" ^ (Addr.string_of_address a) ^ ", " ^ (string_of_value (fst v)) ^ ")\n");
+  Store.update store a v
 
 let extract_kont state = match store_lookup state.store state.addr with
 | (Kont kont, _) -> kont
