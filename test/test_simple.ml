@@ -1,9 +1,9 @@
 open OUnit
-open Cesk
+open Types
 
 let run string =
   let node = Scheme_parser.parse (Scheme_lexer.lex_string string) in
-  eval node
+  Cesk.eval node
 
 let test_int _ =
   let (value, _, _) = run "1" in
