@@ -1,5 +1,6 @@
 let suites = [
   Test_simple.suite;
+  Test_lattice.suite;
 ]
 
 let _ =
