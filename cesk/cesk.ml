@@ -266,7 +266,7 @@ let step (state : state) : state =
           print_string "keyword\n";
           step_keyword kw args state
       | Scheme_ast.List (rator :: rands) ->
-          print_string "call\n";
+          print_string ("call " ^ (string_of_int (List.length rands)));
           let kont' = OperatorKont (rands, state.env, state.addr)
           and a' = alloc state in
           print_add a' kont';
@@ -283,12 +283,13 @@ let step (state : state) : state =
       begin match kont with
         (* TODO: problem around here, operands seems to point to operator, while it should not (it should point to operator's kont) *)
       | OperatorKont ([], env', c) ->
-          print_string ("operator1: " ^ (Addr.string_of_address c) ^ "\n");          apply_function v [] { state with
+          print_string ("operator1: " ^ (string_of_value v) ^ "\n");
+          apply_function v [] { state with
                                 env = env';
                                 addr = c;
                                 time = tick state }
       | OperatorKont (rand :: rands, env', c) ->
-          print_string ("operator2: " ^ (Addr.string_of_address c) ^ "\n");
+          print_string ("operator2: " ^ (string_of_value v) ^ "\n");
           let kont' = OperandsKont (v, rands, [], env', c) in
           let a' = alloc state in
           print_add a' kont';
@@ -300,19 +301,19 @@ let step (state : state) : state =
             change = Push;
             time = tick state }
       | OperandsKont (rator, [], values, env', c) ->
-          print_string ("operands1: " ^ (Addr.string_of_address c) ^ "\n");
+          print_string ("operands1: " ^ (string_of_value v) ^ "\n");
           let rands = List.rev (v :: values) in
           apply_function rator rands { state with
                                        env = env';
                                        addr = c;
                                        time = tick state }
       | OperandsKont (rator, rand :: rands, values, env', c) ->
-          print_string ("operator1: " ^ (Addr.string_of_address c) ^ "\n");
+          print_string ("operands2: " ^ (string_of_value v) ^ "\n");
           let kont' = OperandsKont (rator, rands, v :: values, env', c) in
           let a' = alloc state in
           print_add a' kont';
           let store' = store_extend state.store a' (Kont kont', state.env) in
-          { state with
+          { exp = Node rand;
             env = env';
             store = store';
             addr = a';
