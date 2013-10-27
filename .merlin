@@ -11,3 +11,4 @@ B _build/store
 B _build/env
 B _build/ast
 PKG ocamlgraph
+PKG oUnit

@@ -41,4 +41,5 @@ rule lexer = parse
        to_stream lexbuf
 
  let lex channel = to_stream (Lexing.from_channel channel)
+ let lex_string string = to_stream (Lexing.from_string string)
 }
