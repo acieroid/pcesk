@@ -1,7 +1,8 @@
 (* TODO:
-   - put the timestamp in the state instead of the store
    - Abstract
    - add more stuff: define, set!, if, let/let*/letrec
+   - viz: initial state does not appear in the dot file, so another
+     state is linked to the second state, which is weird
  *)
 
 open Concrete_env
@@ -107,12 +108,6 @@ let string_of_exception = function
       "Evaluation is stuck at node " ^ (Scheme_ast.string_of_node n)
   | e -> raise e
 
-let print_add a k =
-  print_string ("Add: " ^
-                (Addr.string_of_address a) ^ " -> " ^
-                (string_of_kont k));
-  print_newline ()
-
 (** Environment *)
 
 let empty_env = Env.empty
@@ -122,7 +117,8 @@ let env_lookup env name =
   with
     Not_found -> raise (UnboundIdentifier name)
 let env_extend env name a =
-  print_string ("extend(" ^ name ^ ", " ^ (Addr.string_of_address a) ^ ")\n");
+  (* print_string ("extend(" ^ name ^ ", " ^
+                (Addr.string_of_address a) ^ ")\n"); *)
   Env.extend env name a
 
 (** Store *)
@@ -139,7 +135,8 @@ let store_lookup store a =
   with
     Not_found -> raise (UnboundAddress a)
 let store_extend store a v =
-  print_string ("store(" ^ (Addr.string_of_address a) ^ ", " ^ (string_of_value (fst v)) ^ ")\n");
+  (* print_string ("extend_store(" ^ (Addr.string_of_address a) ^ ", " ^
+                (string_of_value (fst v)) ^ ")\n"); *)
   Store.update store a v
 
 let extract_kont state = match store_lookup state.store state.addr with
@@ -240,7 +237,6 @@ let step (state : state) : state =
   | Node n ->
       begin match n with
       | Scheme_ast.Identifier x ->
-          print_string "identifier\n";
           let (v, env') = store_lookup state.store (env_lookup state.env x) in
           { state with
             exp = Value v;
@@ -263,13 +259,10 @@ let step (state : state) : state =
             change = Epsilon;
             time = tick state }
       | Scheme_ast.List (Scheme_ast.Identifier kw :: args) when is_keyword kw ->
-          print_string "keyword\n";
           step_keyword kw args state
       | Scheme_ast.List (rator :: rands) ->
-          print_string ("call " ^ (string_of_int (List.length rands)));
           let kont' = OperatorKont (rands, state.env, state.addr)
           and a' = alloc state in
-          print_add a' kont';
           let store' = store_extend state.store a' (Kont kont', state.env) in
           { state with
             exp = Node rator;
@@ -283,16 +276,13 @@ let step (state : state) : state =
       begin match kont with
         (* TODO: problem around here, operands seems to point to operator, while it should not (it should point to operator's kont) *)
       | OperatorKont ([], env', c) ->
-          print_string ("operator1: " ^ (string_of_value v) ^ "\n");
           apply_function v [] { state with
                                 env = env';
                                 addr = c;
                                 time = tick state }
       | OperatorKont (rand :: rands, env', c) ->
-          print_string ("operator2: " ^ (string_of_value v) ^ "\n");
           let kont' = OperandsKont (v, rands, [], env', c) in
           let a' = alloc state in
-          print_add a' kont';
           let store' = store_extend state.store a' (Kont kont', state.env) in
           { exp = Node rand;
             env = env';
@@ -301,17 +291,14 @@ let step (state : state) : state =
             change = Push;
             time = tick state }
       | OperandsKont (rator, [], values, env', c) ->
-          print_string ("operands1: " ^ (string_of_value v) ^ "\n");
           let rands = List.rev (v :: values) in
           apply_function rator rands { state with
                                        env = env';
                                        addr = c;
                                        time = tick state }
       | OperandsKont (rator, rand :: rands, values, env', c) ->
-          print_string ("operands2: " ^ (string_of_value v) ^ "\n");
           let kont' = OperandsKont (rator, rands, v :: values, env', c) in
           let a' = alloc state in
-          print_add a' kont';
           let store' = store_extend state.store a' (Kont kont', state.env) in
           { exp = Node rand;
             env = env';
@@ -336,7 +323,6 @@ let empty_state = {
 let inject (e : node) : state =
   let state = install_primitives empty_state in
   let a_halt = alloc state in
-  print_add a_halt HaltKont;
   let store' = store_extend state.store a_halt (Kont HaltKont, state.env) in
   { state with
     exp = Node e;
@@ -381,8 +367,8 @@ module DotArg =
                     `Label (string_of_value v)]
     let vertex_name (state : V.t) =
       match state.exp with
-      | Node n -> "node_" ^ (Addr.string_of_address state.addr)
-      | Value v -> "value_" ^ (Addr.string_of_address state.addr)
+      | Node n -> "node_" ^ (string_of_int state.time)
+      | Value v -> "value_" ^ (string_of_int state.time)
     let default_vertex_attributes _ = []
     let graph_attributes _ = []
   end
@@ -412,14 +398,17 @@ let eval (e : node) : value * env * store =
     | _ ->
         let state' = step state in
         let vertex = G.V.create state
-        and vertex' = G.V. create state' in
+        and vertex' = G.V.create state' in
         let edge = G.E.create vertex (string_of_update state state') vertex' in
         let g' = G.add_edge_e (G.add_vertex g vertex') edge in
-        print_string ((string_of_state state') ^ " -> " ^ (string_of_update state state'));
+        print_string ((string_of_state state') ^ " -> " ^ (string_of_update state state') ^ " - " ^ (DotArg.vertex_name state) ^ ", " ^ (DotArg.vertex_name state'));
         print_newline ();
         loop state' g'
   in
-  let res, graph = loop (inject e) G.empty in
+  let initial_state = inject e in
+  let vertex = (G.V.create initial_state) in
+  let initial_graph = G.add_vertex G.empty vertex in
+  let res, graph = loop initial_state initial_graph in
   let out = open_out_bin "/tmp/foo.dot" in
   Dot.output_graph out graph;
   res
