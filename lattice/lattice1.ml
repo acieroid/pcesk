@@ -34,6 +34,11 @@ let join x y = match x, y with
 let abst vs =
   List.fold_left join Bot (List.map abst1 vs)
 
+let conc = function
+  | Unique v -> [v]
+  | Bot -> []
+  | _ -> raise TooAbstracted
+
 let string_of_lattice_value = function
   | Unique v -> "Unique(" ^ (string_of_value v) ^ ")"
   | Num -> "Num"

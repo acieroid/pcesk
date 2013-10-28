@@ -1,9 +1,9 @@
 open Env
-open Concrete_addr
+open Address
 
 (** Modules *)
 
-module Addr = Concrete_addr
+module Addr = Mono_addr
 module Env = Env(Addr)
 
 (** Types *)

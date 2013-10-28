@@ -17,6 +17,11 @@ let abst vs = match vs with
   | [v] -> Unique v
   | _ -> Top
 
+let conc = function
+  | Unique v -> [v]
+  | Bot -> []
+  | Top -> raise TooAbstracted
+
 let join x y = match x, y with
   | Bot, x | x, Bot -> x
   | Unique v1, Unique v2 when v1 = v2 -> Unique v1

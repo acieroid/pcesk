@@ -34,6 +34,11 @@ module Set_lattice : functor (Size : SIZE) -> LATTICE =
         else
           Values vs
 
+    let conc = function
+      | Values vs -> vs
+      | Bot -> []
+      | Top -> raise TooAbstracted
+
     let join x y = match x, y with
       | Bot, x | x, Bot -> x
       (* TODO: union, not concatenation *)
