@@ -1,4 +1,8 @@
 open Types
+open Store
+open Lattice1
+
+module Store = Store(Addr)(Lattice1)
 
 type exp =
   | Node of node
@@ -7,7 +11,12 @@ type kont_op =
   | Push
   | Pop
   | Epsilon
-type store = (value * env) Store.t
+(* TODO: In Abstracting Abstract Machines, Storable = Val x Env, here we
+   only keep the value, since it is just simpler not to handle the
+   environment. Is it still correct? The only CESK rule that uses the
+   stored env is when looking at the value of an identifier, and it does
+   not seem necessary to use this env there *)
+type store = Store.t
 type time = int
 type state = {
   exp : exp;
@@ -71,9 +80,7 @@ let env_extend env name a =
 (** Store *)
 
 let print_store store =
-  print_string ("store(" ^
-                  (Store.string_of_store store
-                     (fun (v, env) -> string_of_value v)) ^ ")\n")
+  print_string ("store(" ^ (Store.string_of_store store) ^ ")\n")
 
 let empty_store = Store.empty
 let store_lookup store a =

@@ -1,4 +1,3 @@
-open Store
 open Env
 open Concrete_addr
 
@@ -6,7 +5,6 @@ open Concrete_addr
 
 module Addr = Concrete_addr
 module Env = Env(Addr)
-module Store = Store(Addr)
 
 (** Types *)
 
