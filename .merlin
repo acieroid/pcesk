@@ -5,6 +5,7 @@ S store
 S env
 S ast
 S lattice
+S test
 B _build
 B _build/address
 B _build/cesk
@@ -12,5 +13,6 @@ B _build/store
 B _build/env
 B _build/ast
 B _build/lattice
+B _build/test
 PKG ocamlgraph
 PKG oUnit
