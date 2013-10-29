@@ -1,8 +1,10 @@
 open Types
 open Store
-open Lattice1
+open Set_lattice
 
-module Store = Store(Addr)(Lattice1)
+module Lattice = Set_lattice(struct let size = 10 end)
+module Store = Store(Addr)(Lattice)
+module Exploration = Exploration.Bfs
 
 type exp =
   | Node of node
@@ -11,11 +13,6 @@ type kont_op =
   | Push
   | Pop
   | Epsilon
-(* TODO: In Abstracting Abstract Machines, Storable = Val x Env, here we
-   only keep the value, since it is just simpler not to handle the
-   environment. Is it still correct? The only CESK rule that uses the
-   stored env is when looking at the value of an identifier, and it does
-   not seem necessary to use this env there *)
 type store = Store.t
 type time = int
 type state = {
@@ -90,16 +87,21 @@ let store_lookup store a =
     Not_found -> raise (UnboundAddress a)
 let store_extend store a v =
   (* print_string ("extend_store(" ^ (Addr.string_of_address a) ^ ", " ^
-                (string_of_value (fst v)) ^ ")\n"); *)
-  Store.update store a v
+                (Lattice.string_of_lattice_value v) ^ ")\n"); *)
+  Store.alloc store a v
 
-let extract_kont state = match store_lookup state.store state.addr with
-  | (Kont kont, _) -> kont
-  | (v, _) -> raise (NotAKont v)
+let extract_konts state =
+  List.map (function Kont k -> k | _ -> failwith "Should not happen")
+    (List.filter (function Kont k -> true | _ -> false)
+        (Lattice.conc (store_lookup state.store state.addr)))
 
 (** Allocation *)
 
-let alloc (state : state) : addr = Addr.alloc state.time
+let alloc (state : state) (tag : int) : addr = Addr.alloc tag
+
+let alloc_prim (state : state) (name : string) : addr = Addr.alloc_prim name
+
+let alloc_kont (state : state) = Addr.alloc_kont state.time
 
 (** Time *)
 
@@ -120,10 +122,10 @@ let apply_primitive ((name, f) : prim) (args : value list) : value =
 
 let install_primitives (state : state) : state =
   let inst state ((name, _) as prim) =
-    let a = alloc state in
+    let a = alloc_prim state name in
     {state with
      env = env_extend state.env name a;
-     store = store_extend state.store a (Primitive prim, state.env);
+     store = store_extend state.store a (Lattice.abst1 (Primitive prim));
      time = tick state}
   in
   List.fold_left inst state primitives
@@ -135,20 +137,20 @@ let keywords = ["lambda"]
 let is_keyword kw = List.mem kw keywords
 
 let step_keyword (kw : string) (args : node list)
-    (state : state) : state = match kw with
+    (state : state) : state list = match kw with
   | "lambda" ->
     begin match args with
       | args_node :: body :: [] ->
         begin match args_node with
-          | Scheme_ast.List args_node ->
+          | (Scheme_ast.List args_node, tag) ->
             let args = List.map (function
-                | Scheme_ast.Identifier x -> x
+                | (Scheme_ast.Identifier x, tag) -> (x, tag)
                 | node -> raise (Malformed ("lambda argument", node))) args_node in
-            {state with
-             exp = Value (Closure ((args, body), state.env));
-             change = Epsilon;
-             time = tick state}
-          | _ -> raise NYI
+            [{ state with
+               exp = Value (Closure ((args, body), state.env));
+               change = Epsilon;
+               time = tick state }]
+            | _ -> raise NYI
         end
       | _ -> raise NYI
     end
@@ -162,16 +164,16 @@ let apply_function (rator : value) (rands : value list)
     if List.length ids != List.length rands then
       raise (InvalidNumberOfArguments (List.length ids, List.length rands));
     let args = List.combine ids rands in
-    let addrs, state = List.fold_right (fun x (addrs, state) ->
-        let a = alloc state in
-        ((x, a) :: addrs, {state with time = tick state}))
+    let addrs, state = List.fold_right (fun ((name, tag), value) (addrs, state) ->
+        let a = alloc state tag in
+        (name, value, a) :: addrs, {state with time = tick state})
         args ([], state) in
     let extended_env = List.fold_left
-        (fun env ((x, _), a) ->
-           env_extend env x a) state.env addrs
+        (fun env (name, value, a) ->
+           env_extend env name a) state.env addrs
     and extended_store = List.fold_left
-        (fun store ((_, v), a) ->
-           store_extend store a (v, state.env)) state.store addrs in
+        (fun store (name, value, a) ->
+           store_extend store a (Lattice.abst1 value)) state.store addrs in
     { state with
       exp = Node body;
       env = extended_env;
@@ -185,83 +187,89 @@ let apply_function (rator : value) (rands : value list)
       time = tick state}
   | _ -> raise (NotAFunction rator)
 
-let step (state : state) : state =
-  let kont = extract_kont state in
-  match state.exp with
-  | Node n ->
-    begin match n with
-      | Scheme_ast.Identifier x ->
-        let (v, env') = store_lookup state.store (env_lookup state.env x) in
-        { state with
-          exp = Value v;
-          env = env';
-          change = Epsilon;
-          time = tick state }
-      | Scheme_ast.String s ->
-        { state with
-          exp = Value (String s);
-          change = Epsilon;
-          time = tick state }
-      | Scheme_ast.Integer n ->
-        { state with
-          exp = Value (Integer n);
-          change = Epsilon;
-          time = tick state }
-      | Scheme_ast.Boolean b ->
-        { state with
-          exp = Value (Boolean b);
-          change = Epsilon;
-          time = tick state }
-      | Scheme_ast.List (Scheme_ast.Identifier kw :: args) when is_keyword kw ->
-        step_keyword kw args state
-      | Scheme_ast.List (rator :: rands) ->
-        let kont' = OperatorKont (rands, state.env, state.addr)
-        and a' = alloc state in
-        let store' = store_extend state.store a' (Kont kont', state.env) in
-        { state with
-          exp = Node rator;
-          store = store';
-          addr = a';
-          change = Push;
-          time = tick state }
-      | _ -> raise (EvaluationStuck n)
-    end
-  | Value v ->
-    begin match kont with
-      (* TODO: problem around here, operands seems to point to operator, while it should not (it should point to operator's kont) *)
-      | OperatorKont ([], env', c) ->
-        apply_function v [] { state with
-                              env = env';
-                              addr = c;
-                              time = tick state }
-      | OperatorKont (rand :: rands, env', c) ->
-        let kont' = OperandsKont (v, rands, [], env', c) in
-        let a' = alloc state in
-        let store' = store_extend state.store a' (Kont kont', state.env) in
-        { exp = Node rand;
-          env = env';
-          store = store';
-          addr = a';
-          change = Push;
-          time = tick state }
-      | OperandsKont (rator, [], values, env', c) ->
-        let rands = List.rev (v :: values) in
-        apply_function rator rands { state with
-                                     env = env';
-                                     addr = c;
-                                     time = tick state }
-      | OperandsKont (rator, rand :: rands, values, env', c) ->
-        let kont' = OperandsKont (rator, rands, v :: values, env', c) in
-        let a' = alloc state in
-        let store' = store_extend state.store a' (Kont kont', state.env) in
-        { exp = Node rand;
-          env = env';
-          store = store';
-          addr = a';
-          change = Push;
-          time = tick state }
-      | HaltKont -> { state with change = Epsilon; time = tick state }
-    end
+let step (state : state) : state list =
+  let step' state kont =
+    match state.exp with
+    | Node (e, tag) ->
+      begin match e with
+        | Scheme_ast.Identifier x ->
+          let values = Lattice.conc
+              (store_lookup state.store (env_lookup state.env x)) in
+          List.map (fun v ->
+              { state with
+                exp = Value v;
+                (* env = env'; *)
+                change = Epsilon;
+                time = tick state })
+            values
+        | Scheme_ast.String s ->
+          [{ state with
+             exp = Value (String s);
+             change = Epsilon;
+             time = tick state }]
+        | Scheme_ast.Integer n ->
+          [{ state with
+             exp = Value (Integer n);
+             change = Epsilon;
+             time = tick state }]
+        | Scheme_ast.Boolean b ->
+          [{ state with
+             exp = Value (Boolean b);
+             change = Epsilon;
+             time = tick state }]
+        | Scheme_ast.List ((Scheme_ast.Identifier kw, tag') :: args)
+          when is_keyword kw ->
+          step_keyword kw args state
+        | Scheme_ast.List (rator :: rands) ->
+          let kont' = OperatorKont (rands, state.env, state.addr)
+          and a' = alloc_kont state in
+          let store' = store_extend state.store a' (Lattice.abst1 (Kont kont')) in
+          [{ state with
+             exp = Node rator;
+             store = store';
+             addr = a';
+             change = Push;
+             time = tick state }]
+        | _ -> raise (EvaluationStuck (e, tag))
+      end
+    | Value v ->
+      begin match kont with
+        | OperatorKont ([], env', c) ->
+          [apply_function v [] { state with
+                                 env = env';
+                                 addr = c;
+                                 time = tick state }]
+        | OperatorKont (rand :: rands, env', c) ->
+          let kont' = OperandsKont (v, rands, [], env', c) in
+          let a' = alloc_kont state in
+          let store' = store_extend state.store a' (Lattice.abst1 (Kont kont')) in
+          [{ exp = Node rand;
+             env = env';
+             store = store';
+             addr = a';
+             change = Push;
+             time = tick state }]
+        | OperandsKont (rator, [], values, env', c) ->
+          let rands = List.rev (v :: values) in
+          [apply_function rator rands { state with
+                                        env = env';
+                                        addr = c;
+                                        time = tick state }]
+        | OperandsKont (rator, rand :: rands, values, env', c) ->
+          let kont' = OperandsKont (rator, rands, v :: values, env', c) in
+          let a' = alloc_kont state in
+          let store' = store_extend state.store a' (Lattice.abst1 (Kont kont')) in
+          [{ exp = Node rand;
+             env = env';
+             store = store';
+             addr = a';
+             change = Push;
+             time = tick state }]
+        | HaltKont -> [{ state with change = Epsilon; time = tick state }]
+      end
+  in
+  List.flatten (List.map (step' state) (extract_konts state))
+
 
 (** Injection *)
 
@@ -274,15 +282,16 @@ let empty_state = {
   time = 0;
 }
 
-let inject (e : node) : state =
+let inject (e : node) : state * addr =
   let state = install_primitives empty_state in
-  let a_halt = alloc state in
-  let store' = store_extend state.store a_halt (Kont HaltKont, state.env) in
-  { state with
-    exp = Node e;
-    store = store';
-    addr = a_halt;
-    time = tick state}
+  let a_halt = alloc_kont state in
+  let store' = store_extend state.store a_halt (Lattice.abst1 (Kont HaltKont)) in
+  ({ state with
+     exp = Node e;
+     store = store';
+     addr = a_halt;
+     time = tick state},
+   a_halt)
 
 (** Graph representation *)
 
@@ -331,37 +340,48 @@ module Dot = Graph.Graphviz.Dot(DotArg)
 
 (** Evaluation *)
 
+let string_of_konts konts =
+  String.concat "|" (List.map string_of_kont konts)
+
 let string_of_state (state : state) : string =
-  let kont = extract_kont state in
+  let konts = extract_konts state in
   (match state.exp with
    | Node n -> "node " ^ (Scheme_ast.string_of_node n)
    | Value v -> "value " ^ (string_of_value v)) ^
-    " k:" ^ (string_of_kont kont) ^ "@" ^
+    " k:" ^ (string_of_konts konts) ^ "@" ^
     (Addr.string_of_address state.addr)
 
-let eval (e : node) : value * env * store =
-  let string_of_update state state' =
-    match state'.change with
-    | Epsilon -> "ε"
-    | Pop -> "-" ^ (string_of_kont (extract_kont state))
-    | Push -> "+" ^ (string_of_kont (extract_kont state')) in
-  let rec loop state g =
-    let kont = extract_kont state in
-    match state.exp, kont with
-    | (Value result, HaltKont) -> (result, state.env, state.store), g
-    | _ ->
-      let state' = step state in
-      let vertex = G.V.create state
-      and vertex' = G.V.create state' in
-      let edge = G.E.create vertex (string_of_update state state') vertex' in
-      let g' = G.add_edge_e (G.add_vertex g vertex') edge in
-      print_string ((string_of_state state') ^ " -> " ^ (string_of_update state state'));
-      print_newline ();
-      loop state' g'
+let string_of_update state state' = match state'.change with
+  | Epsilon -> "ε"
+  | Pop -> "-" ^ (string_of_konts (extract_konts state))
+  | Push -> "+" ^ (string_of_konts (extract_konts state'))
+
+let extract_kont state =
+    (* TODO: explore all the continuations *)
+    List.hd (extract_konts state)
+
+let eval (e : node) : (value * env * store) list =
+  let (initial_state, a_halt) = inject e in
+  let extract_final state =
+    match state.exp, state.addr with
+    | Value result, addr when addr = a_halt ->
+      Some (result, state.env, state.store)
+    | _ -> None
+  and todo = Exploration.create initial_state in
+  let rec loop finished =
+    if Exploration.is_empty todo then
+      finished
+    else
+      let state = Exploration.pick todo in
+      match extract_final state with
+      | Some res ->
+        loop (res::finished)
+      | None ->
+        Exploration.add todo (step state);
+        loop finished
   in
-  let initial_state = inject e in
   let initial_graph = G.add_vertex G.empty (G.V.create initial_state) in
-  let res, graph = loop initial_state initial_graph in
+  let res = loop [] in
   let out = open_out_bin "/tmp/foo.dot" in
-  Dot.output_graph out graph;
+  (* Dot.output_graph out graph; *)
   res
