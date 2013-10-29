@@ -39,16 +39,17 @@ module Set_lattice : functor (Size : SIZE) -> LATTICE =
       | Bot -> []
       | Top -> raise TooAbstracted
 
-    let join x y = match x, y with
-      | Bot, x | x, Bot -> x
-      (* TODO: union, not concatenation *)
-      | Values vs1, Values vs2 -> abst (vs1 @ vs2)
-      | _ -> Top
-
     let string_of_lattice_value = function
       | Values vs -> "[" ^ (String.concat ", " (List.map string_of_value vs)) ^ "]"
       | Top -> "Top"
       | Bot -> "Bot"
+
+    let join x y =
+      match x, y with
+      | Bot, x | x, Bot -> x
+      (* TODO: union, not concatenation *)
+      | Values vs1, Values vs2 -> abst (vs1 @ vs2)
+      | _ -> Top
 
     let op_bin f x y = match x, y with
       | Bot, _ | _, Bot -> Bot

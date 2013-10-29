@@ -64,7 +64,7 @@ module Store : STORE =
       let (v, f) = StoreMap.find addr store in
       let to_store = match f with
         | Empty -> raise Not_found
-        | Fresh -> (v, Fresh)
+        | Fresh -> (value, Fresh)
         | NotFresh -> (Lattice.join v value, NotFresh) in
       StoreMap.add addr to_store store
 

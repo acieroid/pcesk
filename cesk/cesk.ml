@@ -74,7 +74,7 @@ let env_lookup env name =
     Not_found -> raise (UnboundIdentifier name)
 let env_extend env name a =
   (* print_string ("extend(" ^ name ^ ", " ^
-                (Addr.string_of_address a) ^ ")\n"); *)
+                  (Addr.string_of_address a) ^ ")\n"); *)
   Env.extend env name a
 
 (** Store *)
@@ -89,9 +89,13 @@ let store_lookup store a =
   with
     Not_found -> raise (UnboundAddress a)
 let store_extend store a v =
-  (* print_string ("extend_store(" ^ (Addr.string_of_address a) ^ ", " ^
+  (* print_string ("store_extend(" ^ (Addr.string_of_address a) ^ ", " ^
                 (Lattice.string_of_lattice_value v) ^ ")\n"); *)
   Store.alloc store a v
+let store_update store a v =
+  (* print_string ("store_update(" ^ (Addr.string_of_address a) ^ ", " ^
+                  (Lattice.string_of_lattice_value v) ^ ")\n"); *)
+  Store.update store a v
 
 let extract_konts state =
   List.map (function Kont k -> k | _ -> failwith "Should not happen")
@@ -135,7 +139,7 @@ let install_primitives (state : state) : state =
 
 (** Keywords *)
 
-let keywords = ["lambda"; "begin"; "define"; "if"]
+let keywords = ["lambda"; "begin"; "define"; "if"; "set!"]
 
 let is_keyword kw = List.mem kw keywords
 
@@ -207,7 +211,21 @@ let step_keyword (kw : string) (args : node list)
          change = Push;
          addr = a;
          time = tick state }]
-    | _ -> raise (MalformedReason "if with too much/not enough arguments")
+    | _ -> raise (MalformedReason "if with an invalid number of arguments")
+    end
+  | "set!" ->
+    begin match args with
+    | (Scheme_ast.Identifier id, tag) :: value :: [] ->
+      let kont = SetKont (tag, id, state.env, state.addr) in
+      let a = alloc_kont state in
+      let store' = store_extend state.store a (Lattice.abst1 (Kont kont)) in
+      [{ state with
+         exp = Node value;
+         store = store';
+         change = Push;
+         addr = a;
+         time = tick state }]
+    | _ -> raise (MalformedReason "set! with an invalid number of arguments")
     end
   | _ -> raise (InvalidKeyword kw)
 
@@ -353,8 +371,17 @@ let step (state : state) : state list =
              addr = c;
              change = Epsilon;
              time = tick state }]
-        | IfKont (_, consequent, alternative, env', c) ->
+        | IfKont (_, consequent, alternative, env, c) ->
           raise NYI (* TODO *)
+        | SetKont (_, id, env, c) ->
+          let a = env_lookup env id in
+          let store' = store_update state.store a (Lattice.abst1 v) in
+          [{ state with
+             exp = Value v; (* TODO: return unspecified *)
+             store = store';
+             addr = c;
+             change = Epsilon;
+             time = tick state }]
         | HaltKont -> [{ state with change = Epsilon; time = tick state }]
       end
   in
@@ -477,7 +504,7 @@ let eval (e : node) : (value * env * store) list * G.t =
           List.fold_left G.add_edge_e
             (List.fold_left G.add_vertex graph dests) edges in
         List.iter (fun state' ->
-            print_string ((string_of_state state) ^ " -- " ^
+            print_string ("==> " ^ (string_of_state state) ^ " -- " ^
                             (string_of_update state state') ^ " -> " ^
                             (string_of_state state') ^ "\n")) states;
         Exploration.add todo states;
