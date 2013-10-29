@@ -31,6 +31,38 @@ let test_lambda2 _ =
   assert_equal v1 (Integer 1);
   assert_equal v2 (Integer 2)
 
+let test_begin _ =
+  let (v1, _, _) = run_concrete "(begin 1 2 3)"
+  and (v2, _, _) = run_concrete "(begin (+ 1 2) (+ 2 3) (+ 3 (begin 4 5)))" in
+  assert_equal v1 (Integer 3);
+  assert_equal v2 (Integer 8)
+
+let test_define_simple _ =
+  let (v1, _, _) = run_concrete "(begin (define x 1) x)"
+  and (v2, _, _) = run_concrete "(begin (define x (+ 1 2)) (define y (+ x x)) y)"
+  and (v3, _, _) = run_concrete "(begin (define x 1))" in
+  assert_equal v1 (Integer 1);
+  assert_equal v2 (Integer 6);
+  assert_equal v3 Unspecified
+
+let test_define_fun _ =
+  todo "syntactic sugar for define not implemented";
+  let (v1, _, _) = run_concrete "(begin (define (f x) (+ x 1)) (f 41))" in
+  assert_equal v1 (Integer 42)
+
+let test_if _ =
+  todo "if not implemented";
+  let (v1, _, _) = run_concrete "(if #t 1 2)"
+  and (v2, _, _) = run_concrete "(if #f 1 2)" in
+  assert_equal v1 (Integer 1);
+  assert_equal v2 (Integer 2)
+
+let test_set _ =
+  let (v1, _, _) = run_concrete "(begin (define x 1) (set! x 2) x)"
+  and (v2, _, _) = run_concrete "(begin (define x 1) (set! x (+ x x)) x)" in
+  assert_equal v1 (Integer 2);
+  assert_equal v2 (Integer 2)
+
 let suite =
   "Simple tests" >:::
     ["integer" >:: test_int;
@@ -38,4 +70,9 @@ let suite =
      "boolean" >:: test_boolean;
      "lambda with one argument" >:: test_lambda1;
      "lambda with two arguments" >:: test_lambda2;
+     "begin" >:: test_begin;
+     "simple define" >:: test_define_simple;
+     "syntactic sugar define" >:: test_define_fun;
+     "if" >:: test_if;
+     "set" >:: test_set;
     ]
