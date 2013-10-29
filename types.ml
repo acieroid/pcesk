@@ -29,8 +29,9 @@ and storable =
   | StorableValue of value
   | StorableKont of kont
 and kont =
-  | OperatorKont of node list * env * addr
-  | OperandsKont of value * node list * value list * env * addr
+  | OperatorKont of int * node list * env * addr
+  | OperandsKont of int * value * node list * value list * env * addr
+  | BeginKont of int * node list * env * addr
   | HaltKont
 and prim = string * (value list -> value)
 
@@ -38,8 +39,9 @@ and prim = string * (value list -> value)
 (** String conversion *)
 
 let string_of_kont = function
-  | OperatorKont (_, _, a) -> "Operator(" ^ (Addr.string_of_address a) ^ ")"
-  | OperandsKont (_, _, _, _, a) -> "Operands(" ^ (Addr.string_of_address a) ^ ")"
+  | OperatorKont (t, _, _, _) -> "Operator-" ^ (string_of_int t)
+  | OperandsKont (t, _, _, _, _, _) -> "Operands-" ^ (string_of_int t)
+  | BeginKont (t, _, _, _) -> "Begin-" ^ (string_of_int t)
   | HaltKont -> "Halt"
 
 let string_of_value = function

@@ -132,7 +132,7 @@ let install_primitives (state : state) : state =
 
 (** Keywords *)
 
-let keywords = ["lambda"]
+let keywords = ["lambda"; "begin"]
 
 let is_keyword kw = List.mem kw keywords
 
@@ -153,6 +153,20 @@ let step_keyword (kw : string) (args : node list)
             | _ -> raise NYI
         end
       | _ -> raise NYI
+    end
+  | "begin" ->
+    begin match args with
+    | [] -> raise NYI (* TODO: add unspecified to the values *)
+    | (_, tag) as n :: rest ->
+      let kont = BeginKont (tag, rest, state.env, state.addr) in
+      let a = alloc_kont state in
+      let store' = store_extend state.store a (Lattice.abst1 (Kont kont)) in
+      [{ state with
+         exp = Node n;
+         store = store';
+         change = Push;
+         addr = a;
+         time = tick state }]
     end
   | _ -> raise (InvalidKeyword kw)
 
@@ -220,8 +234,8 @@ let step (state : state) : state list =
         | Scheme_ast.List ((Scheme_ast.Identifier kw, tag') :: args)
           when is_keyword kw ->
           step_keyword kw args state
-        | Scheme_ast.List (rator :: rands) ->
-          let kont' = OperatorKont (rands, state.env, state.addr)
+        | Scheme_ast.List ((_, tag) as rator :: rands) ->
+          let kont' = OperatorKont (tag, rands, state.env, state.addr)
           and a' = alloc_kont state in
           let store' = store_extend state.store a' (Lattice.abst1 (Kont kont')) in
           [{ state with
@@ -234,13 +248,13 @@ let step (state : state) : state list =
       end
     | Value v ->
       begin match kont with
-        | OperatorKont ([], env', c) ->
+        | OperatorKont (_, [], env', c) ->
           [apply_function v [] { state with
                                  env = env';
                                  addr = c;
                                  time = tick state }]
-        | OperatorKont (rand :: rands, env', c) ->
-          let kont' = OperandsKont (v, rands, [], env', c) in
+        | OperatorKont (_, ((_, tag) as rand) :: rands, env', c) ->
+          let kont' = OperandsKont (tag, v, rands, [], env', c) in
           let a' = alloc_kont state in
           let store' = store_extend state.store a' (Lattice.abst1 (Kont kont')) in
           [{ exp = Node rand;
@@ -249,17 +263,34 @@ let step (state : state) : state list =
              addr = a';
              change = Push;
              time = tick state }]
-        | OperandsKont (rator, [], values, env', c) ->
+        | OperandsKont (_, rator, [], values, env', c) ->
           let rands = List.rev (v :: values) in
           [apply_function rator rands { state with
                                         env = env';
                                         addr = c;
                                         time = tick state }]
-        | OperandsKont (rator, rand :: rands, values, env', c) ->
-          let kont' = OperandsKont (rator, rands, v :: values, env', c) in
+        | OperandsKont (_, rator, ((_, tag) as rand) :: rands, values, env', c) ->
+          let kont' = OperandsKont (tag, rator, rands, v :: values, env', c) in
           let a' = alloc_kont state in
           let store' = store_extend state.store a' (Lattice.abst1 (Kont kont')) in
           [{ exp = Node rand;
+             env = env';
+             store = store';
+             addr = a';
+             change = Push;
+             time = tick state }]
+        | BeginKont (_, [], env', c) ->
+          [{ state with
+             exp = Value v;
+             env = env';
+             addr = c;
+             change = Epsilon;
+             time = tick state }]
+        | BeginKont (_, ((_, tag) as node) :: rest, env', c) ->
+          let kont' = BeginKont (tag, rest, env', c) in
+          let a' = alloc_kont state in
+          let store' = store_extend state.store a' (Lattice.abst1 (Kont kont')) in
+          [{ exp = Node node;
              env = env';
              store = store';
              addr = a';
