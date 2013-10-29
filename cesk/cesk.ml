@@ -135,7 +135,7 @@ let install_primitives (state : state) : state =
 
 (** Keywords *)
 
-let keywords = ["lambda"; "begin"]
+let keywords = ["lambda"; "begin"; "define"]
 
 let is_keyword kw = List.mem kw keywords
 
@@ -174,6 +174,24 @@ let step_keyword (kw : string) (args : node list)
          change = Push;
          addr = a;
          time = tick state }]
+    end
+  | "define" ->
+    begin match args with
+    | [] -> raise (MalformedReason "define without arguments")
+    | [_] -> raise NYI (* defines value to unspecified *)
+    | (Scheme_ast.Identifier name, tag) :: value :: [] ->
+      let kont = DefineKont (tag, name, state.env, state.addr) in
+      let a = alloc_kont state in
+      let store' = store_extend state.store a (Lattice.abst1 (Kont kont)) in
+      [{ state with
+         exp = Node value;
+         store = store';
+         change = Push;
+         addr = a;
+         time = tick state }]
+    | (Scheme_ast.List ((Scheme_ast.Identifier name, tag) :: args), _) :: body ->
+      raise NYI
+    | _ -> raise (MalformedReason "define with too much arguments")
     end
   | _ -> raise (InvalidKeyword kw)
 
@@ -293,10 +311,9 @@ let step (state : state) : state list =
              addr = a';
              change = Push;
              time = tick state }]
-        | BeginKont (_, [], env', c) ->
+        | BeginKont (_, [], _, c) ->
           [{ state with
              exp = Value v;
-             env = env';
              addr = c;
              change = Epsilon;
              time = tick state }]
@@ -304,11 +321,21 @@ let step (state : state) : state list =
           let kont' = BeginKont (tag, rest, env', c) in
           let a' = alloc_kont state in
           let store' = store_extend state.store a' (Lattice.abst1 (Kont kont')) in
-          [{ exp = Node node;
-             env = env';
+          [{ state with
+             exp = Node node;
              store = store';
              addr = a';
              change = Push;
+             time = tick state }]
+        | DefineKont (tag, name, env, c) ->
+          let a = alloc state tag in
+          let env' = env_extend env name a in
+          let store' = store_extend state.store a (Lattice.abst1 v) in
+          [{ exp = Value v; (* TODO: return unspecified *)
+             env = env';
+             store = store';
+             addr = c;
+             change = Epsilon;
              time = tick state }]
         | HaltKont -> [{ state with change = Epsilon; time = tick state }]
       end
