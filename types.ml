@@ -11,7 +11,7 @@ module Env = Env(Addr)
 type env = Env.t
 type addr = Addr.t
 type node = Scheme_ast.scheme_node
-type lam = (string * int) list * node
+type lam = (string * int) list * (node list)
 type value =
   | String of string
   | Integer of int

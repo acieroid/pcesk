@@ -29,6 +29,7 @@ type state = {
 exception NYI
 exception PrimWrongArgType of string * value
 exception Malformed of string * node
+exception MalformedReason of string
 exception InvalidKeyword of string
 exception UnboundIdentifier of string
 exception UnboundAddress of addr
@@ -44,6 +45,8 @@ let string_of_exception = function
     "Wrong argument type to primitive '" ^ s ^ "': " ^ (string_of_value v)
   | Malformed (s, n) ->
     "Malformed " ^ s ^ ": " ^ (Scheme_ast.string_of_node n)
+  | MalformedReason s ->
+    "Malformed " ^ s
   | InvalidKeyword k ->
     "Invalid keyword: " ^ k
   | UnboundIdentifier s ->
@@ -140,19 +143,23 @@ let step_keyword (kw : string) (args : node list)
     (state : state) : state list = match kw with
   | "lambda" ->
     begin match args with
-      | args_node :: body :: [] ->
+      | args_node :: body ->
         begin match args_node with
           | (Scheme_ast.List args_node, tag) ->
             let args = List.map (function
                 | (Scheme_ast.Identifier x, tag) -> (x, tag)
-                | node -> raise (Malformed ("lambda argument", node))) args_node in
-            [{ state with
-               exp = Value (Closure ((args, body), state.env));
-               change = Epsilon;
-               time = tick state }]
-            | _ -> raise NYI
+                | node -> raise (Malformed ("lambda argument list", node))) args_node in
+            begin match body with
+            | [] -> raise (MalformedReason "lambda without body")
+            | body ->
+              [{ state with
+                 exp = Value (Closure ((args, body), state.env));
+                 change = Epsilon;
+                 time = tick state }]
+            end
+          | _ -> raise NYI
         end
-      | _ -> raise NYI
+      | _ -> raise (MalformedReason "lambda without arguments")
     end
   | "begin" ->
     begin match args with
@@ -173,7 +180,7 @@ let step_keyword (kw : string) (args : node list)
 (** State manipulation *)
 
 let apply_function (rator : value) (rands : value list)
-    (state : state) : state = match rator with
+    (state : state) : state list = match rator with
   | Closure ((ids, body), env') ->
     if List.length ids != List.length rands then
       raise (InvalidNumberOfArguments (List.length ids, List.length rands));
@@ -188,17 +195,24 @@ let apply_function (rator : value) (rands : value list)
     and extended_store = List.fold_left
         (fun store (name, value, a) ->
            store_extend store a (Lattice.abst1 value)) state.store addrs in
-    { state with
-      exp = Node body;
-      env = extended_env;
-      store = extended_store;
-      change = Pop;
-      time = tick state}
+    begin match body with
+      | [form] ->
+        (* Only one form in body *)
+        [{ state with
+           exp = Node form;
+           env = extended_env;
+           store = extended_store;
+           change = Pop;
+           time = tick state}]
+      | _ ->
+        (* Multiple forms in body, implicit begin *)
+        step_keyword "begin" body state
+    end
   | Primitive prim ->
-    { state with
-      exp = Value (apply_primitive prim rands);
-      change = Pop;
-      time = tick state}
+    [{ state with
+       exp = Value (apply_primitive prim rands);
+       change = Pop;
+       time = tick state}]
   | _ -> raise (NotAFunction rator)
 
 let step (state : state) : state list =
@@ -249,10 +263,10 @@ let step (state : state) : state list =
     | Value v ->
       begin match kont with
         | OperatorKont (_, [], env', c) ->
-          [apply_function v [] { state with
-                                 env = env';
-                                 addr = c;
-                                 time = tick state }]
+          apply_function v [] { state with
+                                env = env';
+                                addr = c;
+                                time = tick state }
         | OperatorKont (_, ((_, tag) as rand) :: rands, env', c) ->
           let kont' = OperandsKont (tag, v, rands, [], env', c) in
           let a' = alloc_kont state in
@@ -265,10 +279,10 @@ let step (state : state) : state list =
              time = tick state }]
         | OperandsKont (_, rator, [], values, env', c) ->
           let rands = List.rev (v :: values) in
-          [apply_function rator rands { state with
-                                        env = env';
-                                        addr = c;
-                                        time = tick state }]
+          apply_function rator rands { state with
+                                       env = env';
+                                       addr = c;
+                                       time = tick state }
         | OperandsKont (_, rator, ((_, tag) as rand) :: rands, values, env', c) ->
           let kont' = OperandsKont (tag, rator, rands, v :: values, env', c) in
           let a' = alloc_kont state in
