@@ -167,7 +167,11 @@ let step_keyword (kw : string) (args : node list)
     end
   | "begin" ->
     begin match args with
-    | [] -> raise NYI (* TODO: add unspecified to the values *)
+    | [] ->
+      [{ state with
+         exp = Value Unspecified;
+         change = Epsilon;
+         time = tick state }]
     | (_, tag) as n :: rest ->
       let kont = BeginKont (tag, rest, state.env, state.addr) in
       let a = alloc_kont state in
@@ -182,7 +186,16 @@ let step_keyword (kw : string) (args : node list)
   | "define" ->
     begin match args with
     | [] -> raise (MalformedReason "define without arguments")
-    | [_] -> raise NYI (* defines value to unspecified *)
+    | [Scheme_ast.Identifier name, tag] ->
+      let a = alloc state tag in
+      let env' = env_extend state.env name a in
+      let store' = store_extend state.store a (Lattice.abst1 Unspecified) in
+      [{ state with
+         exp = Value Unspecified;
+         env = env';
+         store = store';
+         change = Epsilon;
+         time = tick state }]
     | (Scheme_ast.Identifier name, tag) :: value :: [] ->
       let kont = DefineKont (tag, name, state.env, state.addr) in
       let a = alloc_kont state in
@@ -365,7 +378,7 @@ let step (state : state) : state list =
           let a = alloc state tag in
           let env' = env_extend env name a in
           let store' = store_extend state.store a (Lattice.abst1 v) in
-          [{ exp = Value v; (* TODO: return unspecified *)
+          [{ exp = Value Unspecified;
              env = env';
              store = store';
              addr = c;
@@ -377,7 +390,7 @@ let step (state : state) : state list =
           let a = env_lookup env id in
           let store' = store_update state.store a (Lattice.abst1 v) in
           [{ state with
-             exp = Value v; (* TODO: return unspecified *)
+             exp = Value Unspecified;
              store = store';
              addr = c;
              change = Epsilon;
