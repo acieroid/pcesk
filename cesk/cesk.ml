@@ -360,7 +360,7 @@ let extract_kont state =
     (* TODO: explore all the continuations *)
     List.hd (extract_konts state)
 
-let eval (e : node) : (value * env * store) list =
+let eval (e : node) : (value * env * store) list * G.t =
   let (initial_state, a_halt) = inject e in
   let extract_final state =
     match state.exp, state.addr with
@@ -368,20 +368,30 @@ let eval (e : node) : (value * env * store) list =
       Some (result, state.env, state.store)
     | _ -> None
   and todo = Exploration.create initial_state in
-  let rec loop finished =
+  let rec loop finished graph =
     if Exploration.is_empty todo then
-      finished
+      finished, graph
     else
       let state = Exploration.pick todo in
       match extract_final state with
       | Some res ->
-        loop (res::finished)
+        loop (res::finished) graph
       | None ->
-        Exploration.add todo (step state);
-        loop finished
+        let states = step state in
+        let source = G.V.create state
+        and dests = List.map G.V.create states in
+        let edges = List.map (fun dest -> G.E.create source
+                                 (string_of_update source dest)
+                                 dest) dests in
+        let graph' =
+          List.fold_left G.add_edge_e
+            (List.fold_left G.add_vertex graph dests) edges in
+        List.iter (fun state' ->
+            print_string ((string_of_state state) ^ " -- " ^
+                            (string_of_update state state') ^ " -> " ^
+                            (string_of_state state') ^ "\n")) states;
+        Exploration.add todo states;
+        loop finished graph'
   in
   let initial_graph = G.add_vertex G.empty (G.V.create initial_state) in
-  let res = loop [] in
-  let out = open_out_bin "/tmp/foo.dot" in
-  (* Dot.output_graph out graph; *)
-  res
+  loop [] initial_graph

@@ -3,7 +3,7 @@ open Types
 
 let run_concrete string =
   let node = Scheme_parser.parse (Scheme_lexer.lex_string string) in
-  let res = Cesk.eval node in
+  let res, _ = Cesk.eval node in
   assert_equal (List.length res) 1;
   List.hd res
 
