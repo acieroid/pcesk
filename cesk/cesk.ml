@@ -1,6 +1,7 @@
 open Types
 open Store
 open Set_lattice
+open Primitives
 
 module Lattice = Set_lattice(struct let size = 10 end)
 module Store = Store(Addr)(Lattice)
@@ -27,7 +28,6 @@ type state = {
 (** Exceptions *)
 
 exception NYI
-exception PrimWrongArgType of string * value
 exception Malformed of string * node
 exception MalformedReason of string
 exception InvalidKeyword of string
@@ -115,14 +115,6 @@ let alloc_kont (state : state) = Addr.alloc_kont state.time
 let tick (state : state) : time = (state.time)+1
 
 (** Primitives *)
-
-let primitives : (string * (value list -> value)) list =
-  [("+",
-    fun args ->
-      let ns = List.map (fun arg -> match arg with
-          | Integer n -> n
-          | _ -> raise (PrimWrongArgType ("+", arg))) args in
-      Integer (List.fold_left (+) 0 ns))]
 
 let apply_primitive ((name, f) : prim) (args : value list) : value =
   f args
