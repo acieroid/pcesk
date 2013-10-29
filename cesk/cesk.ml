@@ -135,7 +135,7 @@ let install_primitives (state : state) : state =
 
 (** Keywords *)
 
-let keywords = ["lambda"; "begin"; "define"]
+let keywords = ["lambda"; "begin"; "define"; "if"]
 
 let is_keyword kw = List.mem kw keywords
 
@@ -192,6 +192,22 @@ let step_keyword (kw : string) (args : node list)
     | (Scheme_ast.List ((Scheme_ast.Identifier name, tag) :: args), _) :: body ->
       raise NYI
     | _ -> raise (MalformedReason "define with too much arguments")
+    end
+  | "if" ->
+    begin match args with
+    | cond :: consequent :: [] ->
+      raise NYI
+    | (_, tag) as cond :: consequent :: alternative :: [] ->
+      let kont = IfKont (tag, consequent, alternative, state.env, state.addr) in
+      let a = alloc_kont state in
+      let store' = store_extend state.store a (Lattice.abst1 (Kont kont)) in
+      [{ state with
+         exp = Node cond;
+         store = store';
+         change = Push;
+         addr = a;
+         time = tick state }]
+    | _ -> raise (MalformedReason "if with too much/not enough arguments")
     end
   | _ -> raise (InvalidKeyword kw)
 
@@ -337,6 +353,8 @@ let step (state : state) : state list =
              addr = c;
              change = Epsilon;
              time = tick state }]
+        | IfKont (_, consequent, alternative, env', c) ->
+          raise NYI (* TODO *)
         | HaltKont -> [{ state with change = Epsilon; time = tick state }]
       end
   in

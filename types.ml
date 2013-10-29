@@ -33,6 +33,7 @@ and kont =
   | OperandsKont of int * value * node list * value list * env * addr
   | BeginKont of int * node list * env * addr
   | DefineKont of int * string * env * addr
+  | IfKont of int * node * node * env * addr
   | HaltKont
 and prim = string * (value list -> value)
 
@@ -44,6 +45,7 @@ let string_of_kont = function
   | OperandsKont (t, _, _, _, _, _) -> "Operands-" ^ (string_of_int t)
   | BeginKont (t, _, _, _) -> "Begin-" ^ (string_of_int t)
   | DefineKont (t, _, _, _) -> "Define-" ^ (string_of_int t)
+  | IfKont (t, _, _, _, _) -> "If-" ^ (string_of_int t)
   | HaltKont -> "Halt"
 
 let string_of_value = function
