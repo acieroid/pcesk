@@ -199,7 +199,7 @@ let step (state : state) : state list =
               { state with
                 exp = Value v;
                 (* env = env'; *)
-                change = Epsilon;
+                change = Epsilon; (* TODO: might depend on the context? *)
                 time = tick state })
             values
         | Scheme_ast.String s ->
@@ -300,7 +300,7 @@ module GraphNode = struct
   let compare state state' =
     match (state.exp, state'.exp) with
     | Node _, Node _
-    | Value _, Value _ -> Addr.compare state.addr state'.addr
+    | Value _, Value _ -> Pervasives.compare state.time state'.time
     | Node _, Value _ -> 1
     | Value _, Node _ -> -1
   let hash state = Hashtbl.hash (state.exp, state.addr)
