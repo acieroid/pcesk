@@ -154,7 +154,7 @@ let step_keyword (kw : string) (args : node list)
             | body ->
               [{ state with
                  exp = Value (Closure ((args, body), state.env));
-                 change = Epsilon;
+                 change = Pop;
                  time = tick state }]
             end
           | _ -> raise NYI
@@ -211,7 +211,7 @@ let apply_function (rator : value) (rands : value list)
   | Primitive prim ->
     [{ state with
        exp = Value (apply_primitive prim rands);
-       change = Pop;
+       change = Epsilon;
        time = tick state}]
   | _ -> raise (NotAFunction rator)
 
@@ -227,23 +227,23 @@ let step (state : state) : state list =
               { state with
                 exp = Value v;
                 (* env = env'; *)
-                change = Epsilon; (* TODO: might depend on the context? *)
+                change = Pop;
                 time = tick state })
             values
         | Scheme_ast.String s ->
           [{ state with
              exp = Value (String s);
-             change = Epsilon;
+             change = Pop;
              time = tick state }]
         | Scheme_ast.Integer n ->
           [{ state with
              exp = Value (Integer n);
-             change = Epsilon;
+             change = Pop;
              time = tick state }]
         | Scheme_ast.Boolean b ->
           [{ state with
              exp = Value (Boolean b);
-             change = Epsilon;
+             change = Pop;
              time = tick state }]
         | Scheme_ast.List ((Scheme_ast.Identifier kw, tag') :: args)
           when is_keyword kw ->
