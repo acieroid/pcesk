@@ -45,7 +45,7 @@ module Set_lattice : functor (Size : SIZE) -> LATTICE =
     let meet x y = match x, y with
       | Top, v | v, Top -> v
       | Bot, _ | _, Bot -> Bot
-      | Values v1, Values v2 -> Values (List.filter (fun x -> List.mem x v2) v1)
+      | Values v1, Values v2 -> abst (List.filter (fun x -> List.mem x v2) v1)
 
     let string_of_lattice_value = function
       | Values vs -> "[" ^ (String.concat ", " (List.map string_of_value vs)) ^ "]"
