@@ -51,7 +51,6 @@ let test_define_fun _ =
   assert_equal v1 (Integer 42)
 
 let test_if _ =
-  todo "if not implemented";
   let (v1, _, _) = run_concrete "(if #t 1 2)"
   and (v2, _, _) = run_concrete "(if #f 1 2)" in
   assert_equal v1 (Integer 1);
