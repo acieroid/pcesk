@@ -6,7 +6,7 @@ let (=>) string expected =
   let res, _ = Cesk.eval node in
   assert_equal (List.length res) 1;
   let r, _, _ = List.hd res in
-  assert_equal r expected
+  assert_equal ~msg:string r expected
 
 let test_atoms _ =
   "1" => Integer 1;
@@ -38,6 +38,22 @@ let test_set _ =
   "(begin (define x 1) (set! x 2) x)" => Integer 2;
   "(begin (define x 1) (set! x (+ x x)) x)" => Integer 2
 
+let test_primitives _ =
+  "(+ 1)" => Integer 1;
+  "(+ 1 2)" => Integer 3;
+  "(+ 1 2 3)" => Integer 6;
+  "(* 1 2)" => Integer 2;
+  "(* 2 3 7)" => Integer 42;
+  "(- 1)" => Integer (-1);
+  "(- 1 2)" => Integer (-1);
+  "(- 1 2 3)" => Integer (-4);
+  "(= 5 (+ 2 3))" => Boolean true;
+  "(= 2 3)" => Boolean false;
+  "(> 1 2)" => Boolean false;
+  "(> 2 1)" => Boolean true;
+  "(> 1 1)" => Boolean false;
+  "(>= 1 1)" => Boolean true
+
 let suite =
   "Simple tests" >:::
     ["atom" >:: test_atoms;
@@ -47,4 +63,5 @@ let suite =
      "simple define" >:: test_define_simple;
      "if" >:: test_if;
      "set" >:: test_set;
+     "primitives" >:: test_primitives;
     ]
