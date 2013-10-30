@@ -525,10 +525,12 @@ let eval (e : node) : (value * env * store) list * G.t =
         let graph' =
           List.fold_left G.add_edge_e
             (List.fold_left G.add_vertex graph dests) edges in
+        print_string ("==> " ^ (string_of_state state) ^ "\n");
         List.iter (fun state' ->
-            print_string ("==> " ^ (string_of_state state) ^ " -- " ^
+              print_string ("    " ^
                             (string_of_update state state') ^ " -> " ^
                             (string_of_state state') ^ "\n")) states;
+        print_newline ();
         Exploration.add todo states;
         loop finished graph'
   in
