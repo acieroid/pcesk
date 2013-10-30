@@ -377,7 +377,24 @@ let step (state : state) : state list =
              change = Epsilon;
              time = tick state }]
         | IfKont (_, consequent, alternative, env, c) ->
-          raise NYI (* TODO *)
+          let new_state = { state with
+                            addr = c;
+                            change = Epsilon;
+                            time = tick state } in
+          let state_true = { new_state with exp = Node consequent }
+          and state_false = { new_state with exp = Node alternative }
+          and l_false = Lattice.abst1 (Boolean false)
+          and l_v = Lattice.abst1 v in
+          let proj = Lattice.meet l_v l_false in
+          if Lattice.is_bottom proj then
+            (* v can't be false *)
+            [state_true]
+          else if l_v = l_false then
+            (* v is false *)
+            [state_false]
+          else
+            (* either true or false *)
+            [state_true; state_false]
         | SetKont (_, id, env, c) ->
           let a = env_lookup env id in
           let store' = store_update state.store a (Lattice.abst1 v) in
