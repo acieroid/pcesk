@@ -10,6 +10,10 @@ type t =
   | Top
   | Bot
 
+let is_bottom = function
+  | Bot -> true
+  | _ -> false
+
 let abst1 v = Unique v
 
 let abst vs = match vs with
@@ -21,6 +25,12 @@ let conc = function
   | Unique v -> [v]
   | Bot -> []
   | Top -> raise TooAbstracted
+
+let meet x y = match x, y with
+  | Top, v | v, Top -> v
+  | Bot, _ | _, Bot -> Bot
+  | Unique v1, Unique v2 when v1 = v2 -> Unique v1
+  | _ -> Bot
 
 let join x y = match x, y with
   | Bot, x | x, Bot -> x
@@ -37,7 +47,7 @@ let op_bin f x y = match x, y with
   | Unique v1, Unique v2 -> Unique (f v1 v2)
   | _ -> Top
 
-let op_un f x = match x with
+let op_un f = function
   | Bot -> Bot
   | Unique v -> Unique (f v)
   | _ -> Top

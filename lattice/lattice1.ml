@@ -14,6 +14,10 @@ type t =
   | Top
   | Bot
 
+let is_bottom = function
+  | Bot -> true
+  | _ -> false
+
 let abst1 v = Unique v
 
 let join x y = match x, y with
@@ -38,6 +42,17 @@ let conc = function
   | Unique v -> [v]
   | Bot -> []
   | _ -> raise TooAbstracted
+
+(* TODO: can be more complete here *)
+let meet x y = match x, y with
+  | Top, v | v, Top -> v
+  | Bot, _ | _, Bot -> Bot
+  | Unique v1, Unique v2 when v1 = v2 -> Unique v1
+  | Num, NumStr | NumStr, Num -> NumStr
+  | Str, Str -> Str
+  | Num, Num -> Num
+  | Bool, Bool -> Bool
+  | _ -> Bot
 
 let string_of_lattice_value = function
   | Unique v -> "Unique(" ^ (string_of_value v) ^ ")"

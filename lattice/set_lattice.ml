@@ -23,12 +23,15 @@ module Set_lattice : functor (Size : SIZE) -> LATTICE =
       | Top
       | Bot
 
+    let is_bottom = function
+      | Bot -> true
+      | _ -> false
+
     let abst1 v = Values [v]
 
-    let abst vs =
-      match vs with
+    let abst = function
       | [] -> Bot
-      | _ ->
+      | vs ->
         if List.length vs > Size.size then
           Top
         else
@@ -38,6 +41,11 @@ module Set_lattice : functor (Size : SIZE) -> LATTICE =
       | Values vs -> vs
       | Bot -> []
       | Top -> raise TooAbstracted
+
+    let meet x y = match x, y with
+      | Top, v | v, Top -> v
+      | Bot, _ | _, Bot -> Bot
+      | Values v1, Values v2 -> Values (List.filter (fun x -> List.mem x v2) v1)
 
     let string_of_lattice_value = function
       | Values vs -> "[" ^ (String.concat ", " (List.map string_of_value vs)) ^ "]"

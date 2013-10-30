@@ -7,6 +7,9 @@ sig
   (* An element of the lattice *)
   type t
 
+  (* Check if this lattice value is the bottom one *)
+  val is_bottom : t -> bool
+
   (* Abstract one value *)
   val abst1 : value -> t
 
@@ -20,6 +23,10 @@ sig
      If elements are too abstracted to be extracted, raise a
      TooAbstracted exception *)
   val conc : t -> value list
+
+  (* Compute the intersection of the first lattice value with the
+     second one *)
+  val meet : t -> t -> t
 
   (* Return a string representation of a lattice element *)
   val string_of_lattice_value : t -> string
