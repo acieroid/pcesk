@@ -1,6 +1,7 @@
 open Types
 
 exception PrimWrongArgType of string * value
+exception PrimWrongNumberOfArgs of string * int
 
 let int_val_op (name : string) (f : int list -> value) =
   name,
@@ -26,7 +27,10 @@ let rec cmp op = function
 
 let primitives : prim list =
   [int_op "+" (fun ns -> (List.fold_left (+) 0 ns));
-   int_op "-" (fun ns -> (List.fold_left (-) 0 ns));
+   int_op "-" (function
+     | [] -> raise (PrimWrongNumberOfArgs ("-", 0))
+     | [x] -> -x
+     | hd :: tl -> List.fold_left (-) hd tl);
    int_op "*" (fun ns -> (List.fold_left ( * ) 1 ns));
    int_comp "=" (cmp (=));
    int_comp ">" (cmp (>));
@@ -34,4 +38,3 @@ let primitives : prim list =
    int_comp ">=" (cmp (>=));
    int_comp "<=" (cmp (<=));
 ]
-

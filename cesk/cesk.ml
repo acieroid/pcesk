@@ -43,6 +43,8 @@ let string_of_exception = function
     "Not yet implemented"
   | PrimWrongArgType (s, v) ->
     "Wrong argument type to primitive '" ^ s ^ "': " ^ (string_of_value v)
+  | PrimWrongNumberOfArgs (s, n) ->
+    "Wrong number of args to primitive '" ^ s ^ "' (got " ^ (string_of_int n) ^ ")"
   | Malformed (s, n) ->
     "Malformed " ^ s ^ ": " ^ (Scheme_ast.string_of_node n)
   | MalformedReason s ->
