@@ -7,10 +7,20 @@ open Viz
 
 (** Helper functions *)
 
-let state_push state node store addr =
+let state_push_old state node store addr =
   { state with
     exp = Node node;
     addr = addr;
+    store = store;
+    change = Push;
+    time = tick state }
+
+let state_push state node kont =
+  let a = alloc_kont state in
+  let store = store_extend state.store a (Lattice.abst1 (Kont kont)) in
+  { state with
+    exp = Node node;
+    addr = a;
     store = store;
     change = Push;
     time = tick state }
@@ -47,9 +57,7 @@ let step_begin node state = function
        time = tick state }]
   | (_, tag) as n :: rest ->
     let kont = BeginKont (tag, rest, state.env, state.addr) in
-    let a = alloc_kont state in
-    let store = store_extend state.store a (Lattice.abst1 (Kont kont)) in
-    [state_push state n store a]
+    [state_push state n kont]
 
 let step_define node state = function
   | [] -> raise (Malformed ("define without arguments", node))
@@ -65,9 +73,7 @@ let step_define node state = function
        time = tick state }]
   | (Scheme_ast.Identifier name, tag) :: value :: [] ->
     let kont = DefineKont (tag, name, state.env, state.addr) in
-    let a = alloc_kont state in
-    let store = store_extend state.store a (Lattice.abst1 (Kont kont)) in
-    [state_push state value store a]
+    [state_push state value kont]
   | (Scheme_ast.List ((Scheme_ast.Identifier name, tag) :: args), _) :: body ->
     raise NotYetImplemented
   | _ -> raise (Malformed ("define with too much arguments", node))
@@ -77,17 +83,13 @@ let step_if node state = function
     raise NotYetImplemented
   | (_, tag) as cond :: consequent :: alternative :: [] ->
     let kont = IfKont (tag, consequent, alternative, state.env, state.addr) in
-    let a = alloc_kont state in
-    let store = store_extend state.store a (Lattice.abst1 (Kont kont)) in
-    [state_push state cond store a]
+    [state_push state cond kont]
   | _ -> raise (Malformed ("if with an invalid number of arguments", node))
 
 let step_set node state = function
   | (Scheme_ast.Identifier id, tag) :: value :: [] ->
     let kont = SetKont (tag, id, state.env, state.addr) in
-    let a = alloc_kont state in
-    let store = store_extend state.store a (Lattice.abst1 (Kont kont)) in
-    [state_push state value store a]
+    [state_push state value kont]
   | _ -> raise (Malformed ("set! with invalid arguments", node))
 
 let keywords = [("lambda", step_lambda);
@@ -110,7 +112,7 @@ let step_keyword (kw : string) (node : node) (args : node list)
 
 let apply_function (rator : value) (rands : value list)
     (state : state) : state list = match rator with
-  | Closure ((ids, body), env') ->
+  | Closure ((ids, body), env) ->
     if List.length ids != List.length rands then
       raise (InvalidNumberOfArguments (List.length ids, List.length rands));
     let args = List.combine ids rands in
@@ -168,10 +170,8 @@ let step (state : state) : state list =
           when is_keyword kw ->
           step_keyword kw (e, tag) args state
         | Scheme_ast.List ((_, tag) as rator :: rands) ->
-          let kont = OperatorKont (tag, rands, state.env, state.addr)
-          and a = alloc_kont state in
-          let store = store_extend state.store a (Lattice.abst1 (Kont kont)) in
-          [state_push state rator store a]
+          let kont = OperatorKont (tag, rands, state.env, state.addr) in
+          [state_push state rator kont]
         | _ -> raise (EvaluationStuck (e, tag))
       end
     | Value v ->
@@ -183,9 +183,7 @@ let step (state : state) : state list =
                                 time = tick state }
         | OperatorKont (_, ((_, tag) as rand) :: rands, env, c) ->
           let kont = OperandsKont (tag, v, rands, [], env, c) in
-          let a = alloc_kont state in
-          let store = store_extend state.store a (Lattice.abst1 (Kont kont)) in
-          [{(state_push state rand store a) with env = env}]
+          [{(state_push state rand kont) with env = env}]
         | OperandsKont (_, rator, [], values, env, c) ->
           let rands = List.rev (v :: values) in
           apply_function rator rands { state with
@@ -194,9 +192,7 @@ let step (state : state) : state list =
                                        time = tick state }
         | OperandsKont (_, rator, ((_, tag) as rand) :: rands, values, env, c) ->
           let kont = OperandsKont (tag, rator, rands, v :: values, env, c) in
-          let a = alloc_kont state in
-          let store = store_extend state.store a (Lattice.abst1 (Kont kont)) in
-          [{ (state_push state rand store a) with env = env }]
+          [{(state_push state rand kont) with env = env }]
         | BeginKont (_, [], _, c) ->
           [{ state with
              exp = Value v;
@@ -204,10 +200,8 @@ let step (state : state) : state list =
              change = Epsilon;
              time = tick state }]
         | BeginKont (_, ((_, tag) as node) :: rest, env, c) ->
-          let kont' = BeginKont (tag, rest, env, c) in
-          let a = alloc_kont state in
-          let store = store_extend state.store a (Lattice.abst1 (Kont kont')) in
-          [state_push state node store a]
+          let kont = BeginKont (tag, rest, env, c) in
+          [state_push state node kont]
         | DefineKont (tag, name, env, c) ->
           let a = alloc state tag in
           let env' = env_extend env name a in
