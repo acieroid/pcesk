@@ -7,108 +7,111 @@ open Viz
 
 (** Keywords *)
 
-let keywords = ["lambda"; "begin"; "define"; "if"; "set!"]
-
-let is_keyword kw = List.mem kw keywords
-
-let step_keyword (kw : string) (args : node list)
-    (state : state) : state list = match kw with
-  | "lambda" ->
-    begin match args with
-      | args_node :: body ->
-        begin match args_node with
-          | (Scheme_ast.List args_node, tag) ->
-            let args = List.map (function
-                | (Scheme_ast.Identifier x, tag) -> (x, tag)
-                | node -> raise (Malformed ("lambda argument list", node))) args_node in
-            begin match body with
-            | [] -> raise (MalformedReason "lambda without body")
-            | body ->
-              [{ state with
-                 exp = Value (Closure ((args, body), state.env));
-                 change = Pop;
-                 time = tick state }]
-            end
-          | _ -> raise NYI
+let step_lambda node state = function
+  | args_node :: body ->
+    begin match args_node with
+      | (Scheme_ast.List args_node, tag) ->
+        let args = List.map (function
+            | (Scheme_ast.Identifier x, tag) -> (x, tag)
+            | _ -> raise (Malformed ("lambda argument list", node))) args_node in
+        begin match body with
+          | [] -> raise (Malformed ("lambda without body", node))
+          | body ->
+            [{ state with
+               exp = Value (Closure ((args, body), state.env));
+               change = Pop;
+               time = tick state }]
         end
-      | _ -> raise (MalformedReason "lambda without arguments")
+      | _ -> raise NotYetImplemented
     end
-  | "begin" ->
-    begin match args with
-    | [] ->
-      [{ state with
-         exp = Value Unspecified;
-         change = Epsilon;
-         time = tick state }]
-    | (_, tag) as n :: rest ->
-      let kont = BeginKont (tag, rest, state.env, state.addr) in
-      let a = alloc_kont state in
-      let store' = store_extend state.store a (Lattice.abst1 (Kont kont)) in
-      [{ state with
-         exp = Node n;
-         store = store';
-         change = Push;
-         addr = a;
-         time = tick state }]
-    end
-  | "define" ->
-    begin match args with
-    | [] -> raise (MalformedReason "define without arguments")
-    | [Scheme_ast.Identifier name, tag] ->
-      let a = alloc state tag in
-      let env' = env_extend state.env name a in
-      let store' = store_extend state.store a (Lattice.abst1 Unspecified) in
-      [{ state with
-         exp = Value Unspecified;
-         env = env';
-         store = store';
-         change = Epsilon;
-         time = tick state }]
-    | (Scheme_ast.Identifier name, tag) :: value :: [] ->
-      let kont = DefineKont (tag, name, state.env, state.addr) in
-      let a = alloc_kont state in
-      let store' = store_extend state.store a (Lattice.abst1 (Kont kont)) in
-      [{ state with
-         exp = Node value;
-         store = store';
-         change = Push;
-         addr = a;
-         time = tick state }]
-    | (Scheme_ast.List ((Scheme_ast.Identifier name, tag) :: args), _) :: body ->
-      raise NYI
-    | _ -> raise (MalformedReason "define with too much arguments")
-    end
-  | "if" ->
-    begin match args with
-    | cond :: consequent :: [] ->
-      raise NYI
-    | (_, tag) as cond :: consequent :: alternative :: [] ->
-      let kont = IfKont (tag, consequent, alternative, state.env, state.addr) in
-      let a = alloc_kont state in
-      let store' = store_extend state.store a (Lattice.abst1 (Kont kont)) in
-      [{ state with
-         exp = Node cond;
-         store = store';
-         change = Push;
-         addr = a;
-         time = tick state }]
-    | _ -> raise (MalformedReason "if with an invalid number of arguments")
-    end
-  | "set!" ->
-    begin match args with
-    | (Scheme_ast.Identifier id, tag) :: value :: [] ->
-      let kont = SetKont (tag, id, state.env, state.addr) in
-      let a = alloc_kont state in
-      let store' = store_extend state.store a (Lattice.abst1 (Kont kont)) in
-      [{ state with
-         exp = Node value;
-         store = store';
-         change = Push;
-         addr = a;
-         time = tick state }]
-    | _ -> raise (MalformedReason "set! with an invalid number of arguments")
-    end
-  | _ -> raise (InvalidKeyword kw)
+  | _ -> raise (Malformed ("lambda without arguments", node))
+
+let step_begin node state = function
+  | [] ->
+    [{ state with
+       exp = Value Unspecified;
+       change = Epsilon;
+       time = tick state }]
+  | (_, tag) as n :: rest ->
+    let kont = BeginKont (tag, rest, state.env, state.addr) in
+    let a = alloc_kont state in
+    let store' = store_extend state.store a (Lattice.abst1 (Kont kont)) in
+    [{ state with
+       exp = Node n;
+       store = store';
+       change = Push;
+       addr = a;
+       time = tick state }]
+
+let step_define node state = function
+  | [] -> raise (Malformed ("define without arguments", node))
+  | [Scheme_ast.Identifier name, tag] ->
+    let a = alloc state tag in
+    let env' = env_extend state.env name a in
+    let store' = store_extend state.store a (Lattice.abst1 Unspecified) in
+    [{ state with
+       exp = Value Unspecified;
+       env = env';
+       store = store';
+       change = Epsilon;
+       time = tick state }]
+  | (Scheme_ast.Identifier name, tag) :: value :: [] ->
+    let kont = DefineKont (tag, name, state.env, state.addr) in
+    let a = alloc_kont state in
+    let store' = store_extend state.store a (Lattice.abst1 (Kont kont)) in
+    [{ state with
+       exp = Node value;
+       store = store';
+       change = Push;
+       addr = a;
+       time = tick state }]
+  | (Scheme_ast.List ((Scheme_ast.Identifier name, tag) :: args), _) :: body ->
+    raise NotYetImplemented
+  | _ -> raise (Malformed ("define with too much arguments", node))
+
+let step_if node state = function
+  | cond :: consequent :: [] ->
+    raise NotYetImplemented
+  | (_, tag) as cond :: consequent :: alternative :: [] ->
+    let kont = IfKont (tag, consequent, alternative, state.env, state.addr) in
+    let a = alloc_kont state in
+    let store' = store_extend state.store a (Lattice.abst1 (Kont kont)) in
+    [{ state with
+       exp = Node cond;
+       store = store';
+       change = Push;
+       addr = a;
+       time = tick state }]
+  | _ -> raise (Malformed ("if with an invalid number of arguments", node))
+
+let step_set node state = function
+  | (Scheme_ast.Identifier id, tag) :: value :: [] ->
+    let kont = SetKont (tag, id, state.env, state.addr) in
+    let a = alloc_kont state in
+    let store' = store_extend state.store a (Lattice.abst1 (Kont kont)) in
+    [{ state with
+       exp = Node value;
+       store = store';
+       change = Push;
+       addr = a;
+       time = tick state }]
+  | _ -> raise (Malformed ("set! with invalid arguments", node))
+
+let keywords = [("lambda", step_lambda);
+                ("begin", step_begin);
+                ("define", step_define);
+                ("if", step_if);
+                ("set!", step_set)]
+
+let is_keyword kw = List.mem_assoc kw keywords
+
+let step_keyword (kw : string) (node : node) (args : node list)
+    (state : state) : state list =
+  try
+    let f = List.assoc kw keywords in
+    f node state args
+  with
+    Not_found -> raise (InvalidKeyword kw)
 
 (** State manipulation *)
 
@@ -129,6 +132,7 @@ let apply_function (rator : value) (rands : value list)
         (fun store (name, value, a) ->
            store_extend store a (Lattice.abst1 value)) state.store addrs in
     begin match body with
+      | [] -> failwith "Should not happen"
       | [form] ->
         (* Only one form in body *)
         [{ state with
@@ -139,7 +143,8 @@ let apply_function (rator : value) (rands : value list)
            time = tick state}]
       | _ ->
         (* Multiple forms in body, implicit begin *)
-        step_keyword "begin" body state
+        (* TODO: should pass the node corresponding to the lambda *)
+        step_keyword "begin" (List.hd body) body state
     end
   | Primitive prim ->
     [{ state with
@@ -180,7 +185,7 @@ let step (state : state) : state list =
              time = tick state }]
         | Scheme_ast.List ((Scheme_ast.Identifier kw, tag') :: args)
           when is_keyword kw ->
-          step_keyword kw args state
+          step_keyword kw (e, tag) args state
         | Scheme_ast.List ((_, tag) as rator :: rands) ->
           let kont' = OperatorKont (tag, rands, state.env, state.addr)
           and a' = alloc_kont state in
