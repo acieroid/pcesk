@@ -5,6 +5,22 @@ open Exceptions
 open Primitives
 open Viz
 
+(** Helper functions *)
+
+let state_push state node store addr =
+  { state with
+    exp = Node node;
+    addr = addr;
+    store = store;
+    change = Push;
+    time = tick state }
+
+let state_produce_value state value =
+  { state with
+    exp = Value value;
+    change = Pop;
+    time = tick state }
+
 (** Keywords *)
 
 let step_lambda node state = function
@@ -17,10 +33,7 @@ let step_lambda node state = function
         begin match body with
           | [] -> raise (Malformed ("lambda without body", node))
           | body ->
-            [{ state with
-               exp = Value (Closure ((args, body), state.env));
-               change = Pop;
-               time = tick state }]
+            [state_produce_value state (Closure ((args, body), state.env))]
         end
       | _ -> raise NotYetImplemented
     end
@@ -35,36 +48,26 @@ let step_begin node state = function
   | (_, tag) as n :: rest ->
     let kont = BeginKont (tag, rest, state.env, state.addr) in
     let a = alloc_kont state in
-    let store' = store_extend state.store a (Lattice.abst1 (Kont kont)) in
-    [{ state with
-       exp = Node n;
-       store = store';
-       change = Push;
-       addr = a;
-       time = tick state }]
+    let store = store_extend state.store a (Lattice.abst1 (Kont kont)) in
+    [state_push state n store a]
 
 let step_define node state = function
   | [] -> raise (Malformed ("define without arguments", node))
   | [Scheme_ast.Identifier name, tag] ->
     let a = alloc state tag in
     let env' = env_extend state.env name a in
-    let store' = store_extend state.store a (Lattice.abst1 Unspecified) in
+    let store = store_extend state.store a (Lattice.abst1 Unspecified) in
     [{ state with
        exp = Value Unspecified;
        env = env';
-       store = store';
+       store = store;
        change = Epsilon;
        time = tick state }]
   | (Scheme_ast.Identifier name, tag) :: value :: [] ->
     let kont = DefineKont (tag, name, state.env, state.addr) in
     let a = alloc_kont state in
-    let store' = store_extend state.store a (Lattice.abst1 (Kont kont)) in
-    [{ state with
-       exp = Node value;
-       store = store';
-       change = Push;
-       addr = a;
-       time = tick state }]
+    let store = store_extend state.store a (Lattice.abst1 (Kont kont)) in
+    [state_push state value store a]
   | (Scheme_ast.List ((Scheme_ast.Identifier name, tag) :: args), _) :: body ->
     raise NotYetImplemented
   | _ -> raise (Malformed ("define with too much arguments", node))
@@ -75,26 +78,16 @@ let step_if node state = function
   | (_, tag) as cond :: consequent :: alternative :: [] ->
     let kont = IfKont (tag, consequent, alternative, state.env, state.addr) in
     let a = alloc_kont state in
-    let store' = store_extend state.store a (Lattice.abst1 (Kont kont)) in
-    [{ state with
-       exp = Node cond;
-       store = store';
-       change = Push;
-       addr = a;
-       time = tick state }]
+    let store = store_extend state.store a (Lattice.abst1 (Kont kont)) in
+    [state_push state cond store a]
   | _ -> raise (Malformed ("if with an invalid number of arguments", node))
 
 let step_set node state = function
   | (Scheme_ast.Identifier id, tag) :: value :: [] ->
     let kont = SetKont (tag, id, state.env, state.addr) in
     let a = alloc_kont state in
-    let store' = store_extend state.store a (Lattice.abst1 (Kont kont)) in
-    [{ state with
-       exp = Node value;
-       store = store';
-       change = Push;
-       addr = a;
-       time = tick state }]
+    let store = store_extend state.store a (Lattice.abst1 (Kont kont)) in
+    [state_push state value store a]
   | _ -> raise (Malformed ("set! with invalid arguments", node))
 
 let keywords = [("lambda", step_lambda);
@@ -161,106 +154,74 @@ let step (state : state) : state list =
         | Scheme_ast.Identifier x ->
           let values = Lattice.conc
               (store_lookup state.store (env_lookup state.env x)) in
-          List.map (fun v ->
-              { state with
-                exp = Value v;
-                (* env = env'; *)
-                change = Pop;
-                time = tick state })
-            values
+          print_string ("values: " ^ (Lattice.string_of_lattice_value
+                                        (store_lookup state.store (env_lookup state.env x))) ^
+                          "\n");
+          List.map (state_produce_value state) values
         | Scheme_ast.String s ->
-          [{ state with
-             exp = Value (String s);
-             change = Pop;
-             time = tick state }]
+          [state_produce_value state (String s)]
         | Scheme_ast.Integer n ->
-          [{ state with
-             exp = Value (Integer n);
-             change = Pop;
-             time = tick state }]
+          [state_produce_value state (Integer n)]
         | Scheme_ast.Boolean b ->
-          [{ state with
-             exp = Value (Boolean b);
-             change = Pop;
-             time = tick state }]
+          [state_produce_value state (Boolean b)]
         | Scheme_ast.List ((Scheme_ast.Identifier kw, tag') :: args)
           when is_keyword kw ->
           step_keyword kw (e, tag) args state
         | Scheme_ast.List ((_, tag) as rator :: rands) ->
-          let kont' = OperatorKont (tag, rands, state.env, state.addr)
-          and a' = alloc_kont state in
-          let store' = store_extend state.store a' (Lattice.abst1 (Kont kont')) in
-          [{ state with
-             exp = Node rator;
-             store = store';
-             addr = a';
-             change = Push;
-             time = tick state }]
+          let kont = OperatorKont (tag, rands, state.env, state.addr)
+          and a = alloc_kont state in
+          let store = store_extend state.store a (Lattice.abst1 (Kont kont)) in
+          [state_push state rator store a]
         | _ -> raise (EvaluationStuck (e, tag))
       end
     | Value v ->
       begin match kont with
-        | OperatorKont (_, [], env', c) ->
+        | OperatorKont (_, [], env, c) ->
           apply_function v [] { state with
-                                env = env';
+                                env = env;
                                 addr = c;
                                 time = tick state }
-        | OperatorKont (_, ((_, tag) as rand) :: rands, env', c) ->
-          let kont' = OperandsKont (tag, v, rands, [], env', c) in
-          let a' = alloc_kont state in
-          let store' = store_extend state.store a' (Lattice.abst1 (Kont kont')) in
-          [{ exp = Node rand;
-             env = env';
-             store = store';
-             addr = a';
-             change = Push;
-             time = tick state }]
-        | OperandsKont (_, rator, [], values, env', c) ->
+        | OperatorKont (_, ((_, tag) as rand) :: rands, env, c) ->
+          let kont = OperandsKont (tag, v, rands, [], env, c) in
+          let a = alloc_kont state in
+          let store = store_extend state.store a (Lattice.abst1 (Kont kont)) in
+          [{(state_push state rand store a) with env = env}]
+        | OperandsKont (_, rator, [], values, env, c) ->
           let rands = List.rev (v :: values) in
           apply_function rator rands { state with
-                                       env = env';
+                                       env = env;
                                        addr = c;
                                        time = tick state }
-        | OperandsKont (_, rator, ((_, tag) as rand) :: rands, values, env', c) ->
-          let kont' = OperandsKont (tag, rator, rands, v :: values, env', c) in
-          let a' = alloc_kont state in
-          let store' = store_extend state.store a' (Lattice.abst1 (Kont kont')) in
-          [{ exp = Node rand;
-             env = env';
-             store = store';
-             addr = a';
-             change = Push;
-             time = tick state }]
+        | OperandsKont (_, rator, ((_, tag) as rand) :: rands, values, env, c) ->
+          let kont = OperandsKont (tag, rator, rands, v :: values, env, c) in
+          let a = alloc_kont state in
+          let store = store_extend state.store a (Lattice.abst1 (Kont kont)) in
+          [{ (state_push state rand store a) with env = env }]
         | BeginKont (_, [], _, c) ->
           [{ state with
              exp = Value v;
              addr = c;
              change = Epsilon;
              time = tick state }]
-        | BeginKont (_, ((_, tag) as node) :: rest, env', c) ->
-          let kont' = BeginKont (tag, rest, env', c) in
-          let a' = alloc_kont state in
-          let store' = store_extend state.store a' (Lattice.abst1 (Kont kont')) in
-          [{ state with
-             exp = Node node;
-             store = store';
-             addr = a';
-             change = Push;
-             time = tick state }]
+        | BeginKont (_, ((_, tag) as node) :: rest, env, c) ->
+          let kont' = BeginKont (tag, rest, env, c) in
+          let a = alloc_kont state in
+          let store = store_extend state.store a (Lattice.abst1 (Kont kont')) in
+          [state_push state node store a]
         | DefineKont (tag, name, env, c) ->
           let a = alloc state tag in
           let env' = env_extend env name a in
-          let store' = store_extend state.store a (Lattice.abst1 v) in
+          let store = store_extend state.store a (Lattice.abst1 v) in
           [{ exp = Value Unspecified;
              env = env';
-             store = store';
+             store = store;
              addr = c;
              change = Epsilon;
              time = tick state }]
         | IfKont (_, consequent, alternative, env, c) ->
           let new_state = { state with
                             addr = c;
-                            change = Epsilon;
+                            change = Pop;
                             time = tick state } in
           let state_true = { new_state with exp = Node consequent }
           and state_false = { new_state with exp = Node alternative }
@@ -278,10 +239,10 @@ let step (state : state) : state list =
             [state_true; state_false]
         | SetKont (_, id, env, c) ->
           let a = env_lookup env id in
-          let store' = store_update state.store a (Lattice.abst1 v) in
+          let store = store_update state.store a (Lattice.abst1 v) in
           [{ state with
              exp = Value Unspecified;
-             store = store';
+             store = store;
              addr = c;
              change = Epsilon;
              time = tick state }]
@@ -305,10 +266,10 @@ let empty_state = {
 let inject (e : node) : state * addr =
   let state = install_primitives empty_state in
   let a_halt = alloc_kont state in
-  let store' = store_extend state.store a_halt (Lattice.abst1 (Kont HaltKont)) in
+  let store = store_extend state.store a_halt (Lattice.abst1 (Kont HaltKont)) in
   ({ state with
      exp = Node e;
-     store = store';
+     store = store;
      addr = a_halt;
      time = tick state},
    a_halt)
