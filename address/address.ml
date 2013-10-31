@@ -1,10 +1,15 @@
 module type ADDRESS =
 sig
   type t
+  (* Allocates an address for a value *)
   val alloc : int -> t
+  (* Allocates an address for a primitive, given its name *)
   val alloc_prim : string -> t
+  (* Allocates an address for a continuation *)
   val alloc_kont : int  -> t
+  (* Compares two addresses *)
   val compare : t -> t -> int
+  (* Convert an address to its string representation *)
   val string_of_address : t -> string
 end
 

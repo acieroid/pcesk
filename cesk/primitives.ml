@@ -1,7 +1,7 @@
 open Types
-
-exception PrimWrongArgType of string * value
-exception PrimWrongNumberOfArgs of string * int
+open Cesk_types
+open Exceptions
+open Cesk_base
 
 let int_val_op (name : string) (f : int list -> value) =
   name,
@@ -38,3 +38,16 @@ let primitives : prim list =
    int_comp ">=" (cmp (>=));
    int_comp "<=" (cmp (<=));
 ]
+
+let apply_primitive ((name, f) : prim) (args : value list) : value =
+  f args
+
+let install_primitives (state : state) : state =
+  let inst state ((name, _) as prim) =
+    let a = alloc_prim state name in
+    {state with
+     env = env_extend state.env name a;
+     store = store_extend state.store a (Lattice.abst1 (Primitive prim));
+     time = tick state}
+  in
+  List.fold_left inst state primitives

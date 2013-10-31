@@ -7,8 +7,6 @@ let _ =
     List.iter (fun (value, env, store) ->
         print_string (string_of_value value); print_newline ())
       res;
-    let out = open_out_bin "/tmp/foo.dot" in
-    Cesk.Dot.output_graph out graph;
-    close_out out
+    Viz.output_graph "/tmp/foo.dot" graph
   with
-  | e -> print_string (Cesk.string_of_exception e)
+  | e -> print_string (Exceptions.string_of_exception e)
