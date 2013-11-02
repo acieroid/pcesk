@@ -8,37 +8,37 @@ let (=>) string expected =
   let r, _, _ = List.hd res in
   assert_equal ~msg:string ~printer:string_of_value (AbsUnique expected) r
 
-let test_atoms _ =
+let test_atoms () =
   "1" => Integer 1;
   "\"foo\"" => String "foo";
   "#t" => Boolean true;
   "#f" => Boolean false
 
-let test_lambda1 _ =
+let test_lambda1 () =
   "((lambda (x) x) 42)" => Integer 42
 
-let test_lambda2 _ =
+let test_lambda2 () =
   "((lambda (x y) x) 1 2)" => Integer 1;
   "((lambda (x y) y) 1 2)" => Integer 2
 
-let test_begin _ =
+let test_begin () =
   "(begin 1 2 3)" => Integer 3;
   "(begin (+ 1 2) (+ 2 3) (+ 3 (begin 4 5)))" => Integer 8
 
-let test_define_simple _ =
+let test_define_simple () =
   "(begin (define x 1) x)" => Integer 1;
   "(begin (define x (+ 1 2)) (define y (+ x x)) y)" => Integer 6;
   "(begin (define x 1))" => Unspecified
 
-let test_if _ =
+let test_if () =
   "(if #t 1 2)" => Integer 1;
   "(if #f 1 2)" => Integer 2
 
-let test_set _ =
+let test_set () =
   "(begin (define x 1) (set! x 2) x)" => Integer 2;
   "(begin (define x 1) (set! x (+ x x)) x)" => Integer 2
 
-let test_primitives _ =
+let test_primitives () =
   "(+ 1)" => Integer 1;
   "(+ 1 2)" => Integer 3;
   "(+ 1 2 3)" => Integer 6;
