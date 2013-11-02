@@ -53,50 +53,66 @@ module Set_lattice : functor (Size : SIZE) -> LATTICE =
       | Bot -> "Bot"
 
     let join x y =
+      let rec merge_value v = function
+        | [] -> [v]
+        | hd :: tl ->
+          begin match merge v hd with
+          | Some v' -> v' :: tl
+          | None -> hd :: (merge_value v tl)
+          end in
+      let merge_values vs1 vs2 =
+        List.fold_left (fun l v -> merge_value v l) vs1 vs2 in
       match x, y with
       | Bot, x | x, Bot -> x
-      (* TODO: union, not concatenation *)
-      | Values vs1, Values vs2 -> abst (vs1 @ vs2)
+      | Values vs1, Values vs2 -> abst (merge_values vs1 vs2)
       | _ -> Top
+
+    let filter_option l =
+      BatList.filter_map (fun x -> x) l
 
     let op_bin f x y = match x, y with
       | Bot, _ | _, Bot -> Bot
       | Values vs1, Values vs2 ->
-        abst (List.map (fun (x, y) -> f x y) (product vs1 vs2))
+        abst (filter_option (List.map (fun (x, y) -> f x y) (product vs1 vs2)))
       | _ -> Top
 
     let op_un f x = match x with
       | Bot -> Bot
-      | Values vs -> Values (List.map f vs)
+      | Values vs -> Values (filter_option (List.map f vs))
       | _ -> Top
 
     let test () =
-      assert_equal ~msg:"5" (abst1 (Integer 5)) (Values [Integer 5]);
-      assert_equal ~msg:"5,6" (abst [Integer 5; Integer 6])
-        (Values [Integer 5; Integer 6]);
-      assert_equal ~msg:"5,foo" (abst [Integer 5; String "foo"])
-        (Values [Integer 5; String "foo"]);
-      assert_equal ~msg:"5,'foo" (abst [Integer 5; Symbol "foo"])
-        (Values [Integer 5; Symbol "foo"]);
+      let five = AbsUnique (Integer 5)
+      and six = AbsUnique (Integer 6)
+      and str = AbsUnique (String "foo") in
+      assert_equal ~msg:"5" (abst1 five) (Values [five]);
+      assert_equal ~msg:"5,6" (abst [five; six])
+        (Values [AbsInteger]);
+      assert_equal ~msg:"5,foo" (abst [five; str])
+        (Values [five; str]);
       assert_equal ~msg:"[]" (abst []) Bot;
 
       (* Join *)
-      assert_equal ~msg:"5,6" (join (abst1 (Integer 5)) (abst1 (Integer 6)))
-        (Values [Integer 5; Integer 6])
+      assert_equal ~msg:"5,6" (join (abst1 five) (abst1 six))
+        (Values [AbsInteger]);
 
       (* Operations *)
-      let six = abst1 (Integer 6)
-      and seven = abst1 (Integer 7) in
-      assert_equal ~msg:"6*7" (op_bin value_mul six seven) (abst1 (Integer 42));
-      assert_equal ~msg:"6+foo" (op_bin value_mul six Top) Top;
+      let abs_six = abst1 six
+      and abs_seven = abst1 (AbsUnique (Integer 7))
+      and abs_fortytwo = abst1 (AbsUnique (Integer 42))
+      and abs_minus_six = abst1 (AbsUnique (Integer (-6)))
+      and abs_true = abst1 (AbsUnique (Boolean true))
+      and abs_false = abst1 (AbsUnique (Boolean false)) in
+      assert_equal ~msg:"6*7" (op_bin value_mul abs_six abs_seven) abs_fortytwo;
+      assert_equal ~msg:"6+foo" (op_bin value_mul abs_six Top) Top;
 
-      assert_equal ~msg:"-6" (op_un value_neg six) (abst1 (Integer (-6)));
+      assert_equal ~msg:"-6" (op_un value_neg abs_six) abs_minus_six;
 
-      assert_equal ~msg:"6>7" (op_bin value_gt six seven) (abst1 (Boolean false));
-      assert_equal ~msg:"6<7" (op_bin value_lt six seven) (abst1 (Boolean true));
+      assert_equal ~msg:"6>7" (op_bin value_gt abs_six abs_seven) abs_false;
+      assert_equal ~msg:"6<7" (op_bin value_lt abs_six abs_seven) abs_true;
 
-      assert_equal ~msg:"6=6" (op_bin value_eq six six) (abst1 (Boolean true));
-      assert_equal ~msg:"6=7" (op_bin value_eq six seven) (abst1 (Boolean false));
+      assert_equal ~msg:"6=6" (op_bin value_int_eq abs_six abs_six) abs_true;
+      assert_equal ~msg:"6=7" (op_bin value_int_eq abs_six abs_seven) abs_false;
 
       (* TODO: more tests, and dependent on Size.size *)
 

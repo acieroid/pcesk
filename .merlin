@@ -16,3 +16,4 @@ B _build/lattice
 B _build/test
 PKG ocamlgraph
 PKG oUnit
+PKG batteries

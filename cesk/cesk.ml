@@ -17,7 +17,7 @@ let state_push_old state node store addr =
 
 let state_push state node kont =
   let a = alloc_kont state in
-  let store = store_extend state.store a (Lattice.abst1 (Kont kont)) in
+  let store = store_extend state.store a (Lattice.abst1 (AbsUnique (Kont kont))) in
   { state with
     exp = Node node;
     addr = a;
@@ -43,7 +43,7 @@ let step_lambda node state = function
         begin match body with
           | [] -> raise (Malformed ("lambda without body", node))
           | body ->
-            [state_produce_value state (Closure ((args, body), state.env))]
+            [state_produce_value state (AbsUnique (Closure ((args, body), state.env)))]
         end
       | _ -> raise NotYetImplemented
     end
@@ -52,7 +52,7 @@ let step_lambda node state = function
 let step_begin node state = function
   | [] ->
     [{ state with
-       exp = Value Unspecified;
+       exp = Value (AbsUnique Unspecified);
        change = Epsilon;
        time = tick state }]
   | (_, tag) as n :: rest ->
@@ -64,9 +64,10 @@ let step_define node state = function
   | [Scheme_ast.Identifier name, tag] ->
     let a = alloc state tag in
     let env' = env_extend state.env name a in
-    let store = store_extend state.store a (Lattice.abst1 Unspecified) in
+    let unsp = AbsUnique Unspecified in
+    let store = store_extend state.store a (Lattice.abst1 unsp) in
     [{ state with
-       exp = Value Unspecified;
+       exp = Value unsp;
        env = env';
        store = store;
        change = Epsilon;
@@ -112,7 +113,7 @@ let step_keyword (kw : string) (node : node) (args : node list)
 
 let apply_function (rator : value) (rands : value list)
     (state : state) : state list = match rator with
-  | Closure ((ids, body), env) ->
+  | AbsUnique (Closure ((ids, body), env)) ->
     if List.length ids != List.length rands then
       raise (InvalidNumberOfArguments (List.length ids, List.length rands));
     let args = List.combine ids rands in
@@ -141,12 +142,16 @@ let apply_function (rator : value) (rands : value list)
         (* TODO: should pass the node corresponding to the lambda *)
         step_keyword "begin" (List.hd body) body state
     end
-  | Primitive prim ->
-    [{ state with
-       exp = Value (apply_primitive prim rands);
-       change = Epsilon;
-       time = tick state}]
-  | _ -> raise (NotAFunction rator)
+  | AbsUnique (Primitive prim) ->
+    begin match apply_primitive prim rands with
+    | Some v ->
+      [{ state with
+         exp = Value v;
+         change = Epsilon;
+         time = tick state}]
+    | None -> []
+    end
+  | _ -> []
 
 let step (state : state) : state list =
   let step' state kont =
@@ -161,11 +166,11 @@ let step (state : state) : state list =
                           "\n");
           List.map (state_produce_value state) values
         | Scheme_ast.String s ->
-          [state_produce_value state (String s)]
+          [state_produce_value state (AbsUnique (String s))]
         | Scheme_ast.Integer n ->
-          [state_produce_value state (Integer n)]
+          [state_produce_value state (AbsUnique (Integer n))]
         | Scheme_ast.Boolean b ->
-          [state_produce_value state (Boolean b)]
+          [state_produce_value state (AbsUnique (Boolean b))]
         | Scheme_ast.List ((Scheme_ast.Identifier kw, tag') :: args)
           when is_keyword kw ->
           step_keyword kw (e, tag) args state
@@ -206,7 +211,7 @@ let step (state : state) : state list =
           let a = alloc state tag in
           let env' = env_extend env name a in
           let store = store_extend state.store a (Lattice.abst1 v) in
-          [{ exp = Value Unspecified;
+          [{ exp = Value (AbsUnique Unspecified);
              env = env';
              store = store;
              addr = c;
@@ -219,7 +224,7 @@ let step (state : state) : state list =
                             time = tick state } in
           let state_true = { new_state with exp = Node consequent }
           and state_false = { new_state with exp = Node alternative }
-          and l_false = Lattice.abst1 (Boolean false)
+          and l_false = Lattice.abst1 (AbsUnique (Boolean false))
           and l_v = Lattice.abst1 v in
           let proj = Lattice.meet l_v l_false in
           if Lattice.is_bottom proj then
@@ -235,7 +240,7 @@ let step (state : state) : state list =
           let a = env_lookup env id in
           let store = store_update state.store a (Lattice.abst1 v) in
           [{ state with
-             exp = Value Unspecified;
+             exp = Value (AbsUnique Unspecified);
              store = store;
              addr = c;
              change = Epsilon;
@@ -245,11 +250,10 @@ let step (state : state) : state list =
   in
   List.flatten (List.map (step' state) (extract_konts state))
 
-
 (** Injection *)
 
 let empty_state = {
-  exp = Value (Integer 0);
+  exp = Value (AbsUnique (Integer 0));
   env = empty_env;
   store = empty_store;
   addr = Addr.alloc (-1);
@@ -260,7 +264,7 @@ let empty_state = {
 let inject (e : node) : state * addr =
   let state = install_primitives empty_state in
   let a_halt = alloc_kont state in
-  let store = store_extend state.store a_halt (Lattice.abst1 (Kont HaltKont)) in
+  let store = store_extend state.store a_halt (Lattice.abst1 (AbsUnique (Kont HaltKont))) in
   ({ state with
      exp = Node e;
      store = store;

@@ -32,10 +32,10 @@ sig
   val string_of_lattice_value : t -> string
 
   (* Performs a binary operation on a lattice element *)
-  val op_bin : (value -> value -> value) -> t -> t -> t
+  val op_bin : (value -> value -> value option) -> t -> t -> t
 
   (* Performs an unary operation on a lattice element *)
-  val op_un : (value -> value) -> t -> t
+  val op_un : (value -> value option) -> t -> t
 
   (* Run unit tests on the lattice (see OUnit) *)
   val test : unit -> unit

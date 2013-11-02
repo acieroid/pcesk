@@ -3,20 +3,6 @@ open Cesk_types
 open Exceptions
 open Cesk_base
 
-let int_val_op (name : string) (f : int list -> value) =
-  name,
-  fun args ->
-    let ns = List.map (fun arg -> match arg with
-        | Integer n -> n
-        | _ -> raise (PrimWrongArgType (name, arg))) args in
-    (f ns)
-
-let int_op name (f : int list -> int) : prim =
-  int_val_op name (fun ns -> Integer (f ns))
-
-let int_comp name (f : int list -> bool) : prim =
-  int_val_op name (fun ns -> Boolean (f ns))
-
 let rec cmp op = function
   | [] | [_] -> true
   | x :: y :: rest ->
@@ -25,21 +11,31 @@ let rec cmp op = function
     else
       false
 
-let primitives : prim list =
-  [int_op "+" (fun ns -> (List.fold_left (+) 0 ns));
-   int_op "-" (function
-     | [] -> raise (PrimWrongNumberOfArgs ("-", 0))
-     | [x] -> -x
-     | hd :: tl -> List.fold_left (-) hd tl);
-   int_op "*" (fun ns -> (List.fold_left ( * ) 1 ns));
-   int_comp "=" (cmp (=));
-   int_comp ">" (cmp (>));
-   int_comp "<" (cmp (<));
-   int_comp ">=" (cmp (>=));
-   int_comp "<=" (cmp (<=));
-]
+let int_op f init ns =
+  List.fold_left (fun acc x ->
+      match acc with
+      | Some y -> f x y
+      | None -> None) (Some init) ns
 
-let apply_primitive ((name, f) : prim) (args : value list) : value =
+let int_comp f = function
+  | [] | [_] -> Some (AbsUnique (Boolean true))
+  | hd :: tl -> int_op f hd tl
+
+let primitives : prim list =
+  [("+", int_op value_add (AbsUnique (Integer 0)));
+   ("-", function
+       | [] -> None
+       | [x] -> value_neg x
+       | hd :: tl -> int_op value_sub hd tl);
+   ("*", int_op value_mul (AbsUnique (Integer 1)));
+   ("=", int_comp value_int_eq);
+   (">", int_comp value_gt);
+   (">=", int_comp value_gte);
+   ("<", int_comp value_lt);
+   ("<=", int_comp value_lte);
+  ]
+
+let apply_primitive ((name, f) : prim) (args : value list) : value option =
   f args
 
 let install_primitives (state : state) : state =
@@ -47,7 +43,7 @@ let install_primitives (state : state) : state =
     let a = alloc_prim state name in
     {state with
      env = env_extend state.env name a;
-     store = store_extend state.store a (Lattice.abst1 (Primitive prim));
+     store = store_extend state.store a (Lattice.abst1 (AbsUnique (Primitive prim)));
      time = tick state}
   in
   List.fold_left inst state primitives

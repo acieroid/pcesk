@@ -12,17 +12,24 @@ type env = Env.t
 type addr = Addr.t
 type node = Scheme_ast.scheme_node
 type lam = (string * int) list * (node list)
-type value =
+type prim_value =
   | String of string
   | Integer of int
   | Boolean of bool
   | Symbol of string
-  | Cons of value * value
+  | Cons of prim_value * prim_value
   | Nil
   | Unspecified
   | Closure of lam * env
   | Primitive of prim
   | Kont of kont
+and value =
+  | AbsUnique of prim_value
+  | AbsString
+  | AbsInteger
+  | AbsBoolean
+  | AbsSymbol
+  | AbsList
 and kont =
   | OperatorKont of int * node list * env * addr
   | OperandsKont of int * value * node list * value list * env * addr
@@ -31,7 +38,7 @@ and kont =
   | IfKont of int * node * node * env * addr
   | SetKont of int * string * env * addr
   | HaltKont
-and prim = string * (value list -> value)
+and prim = string * (value list -> value option)
 
 (** String conversion *)
 
@@ -44,31 +51,61 @@ let string_of_kont = function
   | SetKont (t, _, _, _) -> "Set-" ^ (string_of_int t)
   | HaltKont -> "Halt"
 
-let rec string_of_value = function
+let rec string_of_prim_value = function
   | String s -> "\"" ^ s ^ "\""
   | Integer n -> string_of_int n
   | Boolean true -> "#t"
   | Boolean false -> "#f"
   | Symbol sym -> "'" ^ sym
   | Cons (car, cdr) ->
-    "(" ^ (string_of_value car) ^ " . " ^
-      (string_of_value cdr) ^")"
+    "(" ^ (string_of_prim_value car) ^ " . " ^
+      (string_of_prim_value cdr) ^")"
   | Nil -> "()"
   | Unspecified -> "#<unspecified>"
   | Closure _ -> "#<closure>"
   | Primitive (name, _) -> "#<primitive " ^ name ^ ">"
   | Kont k -> "#<continuation " ^ (string_of_kont k) ^ ">"
 
-(** Some operations on values *)
-exception TypeError
+let string_of_value = function
+  | AbsUnique v -> string_of_prim_value v
+  | AbsString -> "Str"
+  | AbsInteger -> "Int"
+  | AbsBoolean -> "Bool"
+  | AbsSymbol -> "Sym"
+  | AbsList -> "List"
+
+(** Some operations on abstract values *)
+let merge x y = match x, y with
+  | AbsUnique (Integer n1), AbsUnique (Integer n2) ->
+    Some (if n1 = n2 then AbsUnique (Integer n1) else AbsInteger)
+  | AbsUnique (String s1), AbsUnique (String s2) ->
+    Some (if s1 = s2 then AbsUnique (String s1) else AbsString)
+  | AbsUnique (Symbol s1), AbsUnique (Symbol s2) ->
+    Some (if s1 = s2 then AbsUnique (Symbol s1) else AbsSymbol)
+  | AbsUnique (Boolean b1), AbsUnique (Boolean b2) ->
+    Some (if b1 = b2 then AbsUnique (Boolean b1) else AbsBoolean)
+  | AbsString, AbsString
+  | AbsString, AbsUnique (String _)
+  | AbsUnique (String _), AbsString -> Some AbsString
+  | AbsInteger, AbsInteger
+  | AbsInteger, AbsUnique (Integer _)
+  | AbsUnique (Integer _), AbsInteger -> Some AbsInteger
+  | AbsBoolean, AbsBoolean
+  | AbsBoolean, AbsUnique (Boolean _)
+  | AbsUnique (Boolean _), AbsBoolean -> Some AbsBoolean
+  | _ -> None
 
 let value_op_int f x y = match x, y with
-  | Integer a, Integer b -> Integer (f a b)
-  | _ -> raise TypeError
+  | AbsInteger, _ | _, AbsInteger -> Some AbsInteger
+  | AbsUnique (Integer v1), AbsUnique (Integer v2) ->
+    Some (AbsUnique (Integer (f v1 v2)))
+  | _ -> None
 
 let value_comp_int f x y = match x, y with
-  | Integer a, Integer b -> Boolean (f a b)
-  | _ -> raise TypeError
+  | AbsInteger, _ | _, AbsInteger -> Some AbsBoolean
+  | AbsUnique (Integer v1), AbsUnique (Integer v2) ->
+    Some (AbsUnique (Boolean (f v1 v2)))
+  | _ -> None
 
 let value_add = value_op_int (+)
 let value_sub = value_op_int (-)
@@ -76,10 +113,13 @@ let value_mul = value_op_int ( * )
 let value_div = value_op_int (/)
 
 let value_neg x = match x with
-  | Integer a -> Integer (-a)
-  | _ -> raise TypeError
+  | AbsUnique (Integer a) -> Some (AbsUnique (Integer (-a)))
+  | AbsInteger -> Some AbsInteger
+  | _ -> None
 
 let value_gt = value_comp_int (>)
+let value_gte = value_comp_int (>=)
 let value_lt = value_comp_int (<)
-let value_eq x y = Boolean (x = y)
-let value_neq x y = Boolean (x <> y)
+let value_lte = value_comp_int (<=)
+let value_int_eq = value_comp_int (=)
+let value_int_neq = value_comp_int (<>)
