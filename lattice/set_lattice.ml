@@ -2,6 +2,10 @@ open Types
 open Lattice
 open OUnit
 
+(** TODO: since the number of possible abstract values in the same lattice
+    elements will always be bounded (assuming that the number of closures,
+    primitives and continuations is bounded), we probably don't need to
+    bound the size of the set lattice *)
 module type SIZE =
 sig
   val size : int
@@ -29,13 +33,30 @@ module Set_lattice : functor (Size : SIZE) -> LATTICE =
 
     let abst1 v = Values [v]
 
-    let abst = function
-      | [] -> Bot
-      | vs ->
-        if List.length vs > Size.size then
-          Top
-        else
-          Values vs
+    let join x y =
+      let abst_nocheck = function
+        | [] -> Bot
+        | vs ->
+          if List.length vs > Size.size then
+            Top
+          else
+            Values vs in
+      let rec merge_value v = function
+        | [] -> [v]
+        | hd :: tl ->
+          begin match merge v hd with
+          | Some v' -> v' :: tl
+          | None -> hd :: (merge_value v tl)
+          end in
+      let merge_values vs1 vs2 =
+        List.fold_left (fun l v -> merge_value v l) vs1 vs2 in
+      match x, y with
+      | Bot, x | x, Bot -> x
+      | Values vs1, Values vs2 -> abst_nocheck (merge_values vs1 vs2)
+      | _ -> Top
+
+    let abst vs =
+      List.fold_left join Bot (List.map abst1 vs)
 
     let conc = function
       | Values vs -> vs
@@ -52,21 +73,6 @@ module Set_lattice : functor (Size : SIZE) -> LATTICE =
       | Top -> "Top"
       | Bot -> "Bot"
 
-    let join x y =
-      let rec merge_value v = function
-        | [] -> [v]
-        | hd :: tl ->
-          begin match merge v hd with
-          | Some v' -> v' :: tl
-          | None -> hd :: (merge_value v tl)
-          end in
-      let merge_values vs1 vs2 =
-        List.fold_left (fun l v -> merge_value v l) vs1 vs2 in
-      match x, y with
-      | Bot, x | x, Bot -> x
-      | Values vs1, Values vs2 -> abst (merge_values vs1 vs2)
-      | _ -> Top
-
     let filter_option l =
       BatList.filter_map (fun x -> x) l
 
@@ -82,19 +88,17 @@ module Set_lattice : functor (Size : SIZE) -> LATTICE =
       | _ -> Top
 
     let test () =
+      let test name = assert_equal ~printer:string_of_lattice_value ~msg:name in
       let five = AbsUnique (Integer 5)
       and six = AbsUnique (Integer 6)
       and str = AbsUnique (String "foo") in
-      assert_equal ~msg:"5" (abst1 five) (Values [five]);
-      assert_equal ~msg:"5,6" (abst [five; six])
-        (Values [AbsInteger]);
-      assert_equal ~msg:"5,foo" (abst [five; str])
-        (Values [five; str]);
-      assert_equal ~msg:"[]" (abst []) Bot;
+      test "5" (Values [five]) (abst1 five);
+      test "5,6" (Values [AbsInteger]) (abst [five; six]);
+      test "5,foo" (Values [five; str]) (abst [five; str]);
+      test "[]" Bot (abst []);
 
       (* Join *)
-      assert_equal ~msg:"5,6" (join (abst1 five) (abst1 six))
-        (Values [AbsInteger]);
+      test "join(5,6)" (Values [AbsInteger]) (join (abst1 five) (abst1 six));
 
       (* Operations *)
       let abs_six = abst1 six
@@ -103,17 +107,15 @@ module Set_lattice : functor (Size : SIZE) -> LATTICE =
       and abs_minus_six = abst1 (AbsUnique (Integer (-6)))
       and abs_true = abst1 (AbsUnique (Boolean true))
       and abs_false = abst1 (AbsUnique (Boolean false)) in
-      assert_equal ~msg:"6*7" (op_bin value_mul abs_six abs_seven) abs_fortytwo;
-      assert_equal ~msg:"6+foo" (op_bin value_mul abs_six Top) Top;
+      test "6*7" abs_fortytwo (op_bin value_mul abs_six abs_seven);
+      test "6+foo" Top (op_bin value_mul abs_six Top);
 
-      assert_equal ~msg:"-6" (op_un value_neg abs_six) abs_minus_six;
+      test "-6" abs_minus_six (op_un value_neg abs_six);
 
-      assert_equal ~msg:"6>7" (op_bin value_gt abs_six abs_seven) abs_false;
-      assert_equal ~msg:"6<7" (op_bin value_lt abs_six abs_seven) abs_true;
+      test "6>7" abs_false (op_bin value_gt abs_six abs_seven);
+      test "6<7" abs_true (op_bin value_lt abs_six abs_seven);
 
-      assert_equal ~msg:"6=6" (op_bin value_int_eq abs_six abs_six) abs_true;
-      assert_equal ~msg:"6=7" (op_bin value_int_eq abs_six abs_seven) abs_false;
-
-      (* TODO: more tests, and dependent on Size.size *)
+      test "6=6" abs_true (op_bin value_int_eq abs_six abs_six);
+      test "6=7" abs_false (op_bin value_int_eq abs_six abs_seven);
 
   end

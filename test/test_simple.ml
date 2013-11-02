@@ -6,7 +6,7 @@ let (=>) string expected =
   let res, _ = Cesk.eval node in
   assert_equal (List.length res) 1;
   let r, _, _ = List.hd res in
-  assert_equal ~msg:string r (AbsUnique expected)
+  assert_equal ~msg:string ~printer:string_of_value (AbsUnique expected) r
 
 let test_atoms _ =
   "1" => Integer 1;
