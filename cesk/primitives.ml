@@ -14,7 +14,7 @@ let rec cmp op = function
 let int_op f init ns =
   List.fold_left (fun acc x ->
       match acc with
-      | Some y -> f x y
+      | Some y -> f y x
       | None -> None) (Some init) ns
 
 let int_comp f = function
