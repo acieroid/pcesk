@@ -161,9 +161,6 @@ let step (state : state) : state list =
         | Scheme_ast.Identifier x ->
           let values = Lattice.conc
               (store_lookup state.store (env_lookup state.env x)) in
-          print_string ("values: " ^ (Lattice.string_of_lattice_value
-                                        (store_lookup state.store (env_lookup state.env x))) ^
-                          "\n");
           List.map (state_produce_value state) values
         | Scheme_ast.String s ->
           [state_produce_value state (AbsUnique (String s))]

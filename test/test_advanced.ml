@@ -13,9 +13,19 @@ let test_multiple_calls () =
   "(begin (define inc (lambda (x) (+ x 1))) (inc (inc 2)))" => AbsInteger
 
 let test_recursive_calls () =
+  todo "should have abstract timestamps";
   "(begin
-       (define count (lambda (n) (if (= n 0) \"done\" (count (- n 1)))))
-       (count 200))" => AbsUnique (String "done")
+     (define count (lambda (n)
+       (if (= n 0)
+         \"done\"
+         (count (- n 1)))))
+     (count 200))" => AbsUnique (String "done");
+  "(begin
+     (define fact (lambda (n)
+       (if (= n 0)
+         1
+         (* n (fact (- n 1))))))
+     (fact 5))" => AbsInteger
 
 let suite =
   "Advanced tests" >:::

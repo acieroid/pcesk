@@ -84,6 +84,11 @@ let merge x y = match x, y with
     Some (if s1 = s2 then AbsUnique (Symbol s1) else AbsSymbol)
   | AbsUnique (Boolean b1), AbsUnique (Boolean b2) ->
     Some (if b1 = b2 then AbsUnique (Boolean b1) else AbsBoolean)
+  | AbsUnique (Cons (_, _) as l1), AbsUnique (Cons (_, _) as l2) ->
+    Some (if l1 = l2 then AbsUnique l1 else AbsList)
+  | AbsUnique Nil, AbsUnique Nil -> Some (AbsUnique Nil)
+  | AbsUnique (Cons (_, _)), AbsUnique Nil
+  | AbsUnique Nil, AbsUnique (Cons (_, _)) -> Some AbsList
   | AbsString, AbsString
   | AbsString, AbsUnique (String _)
   | AbsUnique (String _), AbsString -> Some AbsString
@@ -93,7 +98,28 @@ let merge x y = match x, y with
   | AbsBoolean, AbsBoolean
   | AbsBoolean, AbsUnique (Boolean _)
   | AbsUnique (Boolean _), AbsBoolean -> Some AbsBoolean
+  | AbsSymbol, AbsSymbol
+  | AbsSymbol, AbsUnique (Symbol _)
+  | AbsUnique (Symbol _), AbsSymbol -> Some AbsSymbol
+  | AbsList, AbsList
+  | AbsList, AbsUnique (Cons _)
+  | AbsList, AbsUnique Nil
+  | AbsUnique (Cons _), AbsList
+  | AbsUnique Nil, AbsList -> Some AbsList
   | _ -> None
+
+let value_subsumes x y = match x, y with
+  | AbsUnique a, AbsUnique b -> a = b
+  | AbsString, AbsString
+  | AbsInteger, AbsInteger
+  | AbsBoolean, AbsBoolean
+  | AbsSymbol, AbsSymbol
+  | AbsList, AbsList
+  | AbsString, AbsUnique (String _)
+  | AbsInteger, AbsUnique (Integer _)
+  | AbsBoolean, AbsUnique (Boolean _)
+  | AbsSymbol, AbsUnique (Symbol _) -> true
+  | _ -> false
 
 let value_op_int f x y = match x, y with
   | AbsInteger, _ | _, AbsInteger -> Some AbsInteger

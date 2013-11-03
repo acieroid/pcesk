@@ -45,8 +45,8 @@ module Set_lattice : functor (Size : SIZE) -> LATTICE =
         | [] -> [v]
         | hd :: tl ->
           begin match merge v hd with
-          | Some v' -> v' :: tl
-          | None -> hd :: (merge_value v tl)
+            | Some v' -> v' :: tl
+            | None -> hd :: (merge_value v tl)
           end in
       let merge_values vs1 vs2 =
         List.fold_left (fun l v -> merge_value v l) vs1 vs2 in
@@ -66,7 +66,14 @@ module Set_lattice : functor (Size : SIZE) -> LATTICE =
     let meet x y = match x, y with
       | Top, v | v, Top -> v
       | Bot, _ | _, Bot -> Bot
-      | Values v1, Values v2 -> abst (List.filter (fun x -> List.mem x v2) v1)
+      | Values v1, Values v2 ->
+        abst (List.filter
+                (fun x ->
+                   try
+                     let _ = List.find (fun y -> value_subsumes x y) v2 in
+                     true
+                   with
+                     Not_found -> false) v1)
 
     let string_of_lattice_value = function
       | Values vs -> "[" ^ (String.concat ", " (List.map string_of_value vs)) ^ "]"
@@ -94,7 +101,7 @@ module Set_lattice : functor (Size : SIZE) -> LATTICE =
       and str = AbsUnique (String "foo") in
       test "5" (Values [five]) (abst1 five);
       test "5,6" (Values [AbsInteger]) (abst [five; six]);
-      test "5,foo" (Values [five; str]) (abst [five; str]);
+      test "5,\"foo\"" (Values [five; str]) (abst [five; str]);
       test "[]" Bot (abst []);
 
       (* Join *)
@@ -117,5 +124,12 @@ module Set_lattice : functor (Size : SIZE) -> LATTICE =
 
       test "6=6" abs_true (op_bin value_int_eq abs_six abs_six);
       test "6=7" abs_false (op_bin value_int_eq abs_six abs_seven);
+
+      (* Meet *)
+      test "meet(6,7)" Bot (meet abs_six abs_seven);
+      test "meet(6, \"foo\")" Bot (meet abs_six (abst1 str));
+      test "meet(#t, #f)" Bot (meet abs_true abs_false);
+      test "meet(Bool, #f)" (abst1 AbsBoolean) (meet (abst1 AbsBoolean) abs_false);
+      test "meet(#t, Bool)" Bot (meet abs_true (abst1 AbsBoolean));
 
   end
