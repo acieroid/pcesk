@@ -50,14 +50,14 @@ let alloc_kont state node = KontAddr (node, state.time)
 
 (** Time *)
 
-let tick (state : state) : time =
-  let node = match state.exp with
-    | Node n -> n
-    | Value _ -> failwith "Cannot tick on a value state" in
-  match state.time with
-  | Some n -> Some node
-  | None ->
-    (* 0-CFA *)
-    (* None *)
-    (* 1-CFA *)
-    Some node
+let tick (state : state) : time = match state.exp with
+  | Node node ->
+    begin match state.time with
+      | Some n -> Some node
+      | None ->
+        (* 0-CFA *)
+        (* None *)
+        (* 1-CFA *)
+        Some node
+    end
+  | Value _ -> state.time

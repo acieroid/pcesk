@@ -29,7 +29,7 @@ let state_produce_value state value =
   { state with
     exp = Value value;
     change = Pop;
-    time = tick state }
+    time = tick state}
 
 (** Keywords *)
 
