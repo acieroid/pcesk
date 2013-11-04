@@ -16,7 +16,7 @@ let state_push_old state node store addr =
     time = tick state }
 
 let state_push state node kont =
-  let a = alloc_kont state in
+  let a = alloc_kont state node in
   let store = store_extend state.store a (Lattice.abst1 (AbsUnique (Kont kont))) in
   { state with
     exp = Node node;
@@ -253,18 +253,22 @@ let step (state : state) : state list =
 
 (** Injection *)
 
+let empty_time = None
+
+let empty_address = TagAddr (0, empty_time)
+
 let empty_state = {
   exp = Value (AbsUnique (Integer 0));
   env = empty_env;
   store = empty_store;
-  addr = Addr.alloc (-1);
+  addr = empty_address;
   change = Epsilon;
-  time = 0;
+  time = empty_time;
 }
 
 let inject (e : node) : state * addr =
   let state = install_primitives empty_state in
-  let a_halt = alloc_kont state in
+  let a_halt = alloc_kont state e in
   let store = store_extend state.store a_halt (Lattice.abst1 (AbsUnique (Kont HaltKont))) in
   ({ state with
      exp = Node e;
