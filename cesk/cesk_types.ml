@@ -14,7 +14,6 @@ type kont_op =
   | Pop
   | Epsilon
 type store = Store.t
-type time = int
 type state = {
   exp : exp;
   env : env;

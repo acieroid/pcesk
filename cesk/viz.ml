@@ -36,8 +36,8 @@ struct
                   `Label (string_of_value v)]
   let vertex_name (state : V.t) =
     match state.exp with
-    | Node n -> "node_" ^ (string_of_int state.time)
-    | Value v -> "value_" ^ (string_of_int state.time)
+    | Node n -> "node_" ^ (string_of_time state.time)
+    | Value v -> "value_" ^ (string_of_time state.time)
   let default_vertex_attributes _ = []
   let graph_attributes _ = []
 end

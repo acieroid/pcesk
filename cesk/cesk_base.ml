@@ -1,4 +1,5 @@
 open Types
+open Env
 open Cesk_types
 open Exceptions
 
@@ -41,13 +42,22 @@ let extract_konts state =
 
 (** Allocation *)
 
-let alloc (state : state) (tag : int) : addr = Addr.alloc tag
+let alloc state tag = TagAddr (tag, state.time)
 
-let alloc_prim (state : state) (name : string) : addr = Addr.alloc_prim name
+let alloc_var state name = VarAddr (name, state.time)
 
-let alloc_kont (state : state) = Addr.alloc_kont state.time
+let alloc_kont state node = KontAddr (node, state.time)
 
 (** Time *)
 
-let tick (state : state) : time = (state.time)+1
-
+let tick (state : state) : time =
+  let node = match state.exp with
+    | Node n -> n
+    | Value _ -> failwith "Cannot tick on a value state" in
+  match state.time with
+  | Some n -> Some node
+  | None ->
+    (* 0-CFA *)
+    (* None *)
+    (* 1-CFA *)
+    Some node

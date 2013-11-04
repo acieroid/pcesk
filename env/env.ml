@@ -1,27 +1,23 @@
-open Address
-
 module type ENV =
-  functor (Addr : ADDRESS) ->
   sig
-    type t
+    type +'a t
     (* The empty environment *)
-    val empty : t
+    val empty : 'a t
     (* Lookup a name in the environment and return the bound address.
        Raise a Not_found exception if the name is unbound *)
-    val lookup : t -> string -> Addr.t
+    val lookup : 'a t -> string -> 'a
     (* Add a new binding to the environment (might shadow a previous one) *)
-    val extend : t -> string -> Addr.t -> t
+    val extend : 'a t -> string -> 'a -> 'a t
     (* Return a string representation of the environment *)
-    val string_of_env : t -> string
+    val string_of_env : ?print:('a -> string) -> 'a t -> string
   end
 
 module Env : ENV =
-  functor (Addr : ADDRESS) ->
   struct
 
     module EnvMap = Map.Make(String)
 
-    type t = Addr.t EnvMap.t
+    type 'a t = 'a EnvMap.t
 
     let empty =
       EnvMap.empty
@@ -32,10 +28,12 @@ module Env : ENV =
     let extend env name address =
       EnvMap.add name address env
 
-    let string_of_env env =
-      "env(" ^ (String.concat ","
-                  (List.map (fun (n, a) ->
-                       n ^ ":" ^ (Addr.string_of_address a))
+    let string_of_env ?print env = match print with
+      | Some f ->
+        "env(" ^ (String.concat ","
+                    (List.map (fun (n, a) ->
+                       n ^ ":" ^ (f a))
                       (EnvMap.bindings env))) ^ ")"
-
+      | None ->
+        "env(" ^ (String.concat "," (List.map fst (EnvMap.bindings env))) ^ ")"
   end

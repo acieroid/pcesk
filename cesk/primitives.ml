@@ -40,7 +40,7 @@ let apply_primitive ((name, f) : prim) (args : value list) : value option =
 
 let install_primitives (state : state) : state =
   let inst state ((name, _) as prim) =
-    let a = alloc_prim state name in
+    let a = alloc_var state name in
     {state with
      env = env_extend state.env name a;
      store = store_extend state.store a (Lattice.abst1 (AbsUnique (Primitive prim)));

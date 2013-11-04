@@ -224,6 +224,10 @@ let step (state : state) : state list =
           and l_false = Lattice.abst1 (AbsUnique (Boolean false))
           and l_v = Lattice.abst1 v in
           let proj = Lattice.meet l_v l_false in
+          print_string ("!! IF " ^ (string_of_value v) ^ " " ^
+                          (Lattice.string_of_lattice_value l_v) ^ " " ^
+                          (Lattice.string_of_lattice_value l_false) ^ " " ^
+                          (Lattice.string_of_lattice_value proj) ^ "\n");
           if Lattice.is_bottom proj then
             (* v can't be false *)
             [state_true]

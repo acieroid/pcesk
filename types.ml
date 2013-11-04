@@ -1,15 +1,7 @@
 open Env
-open Address
-
-(** Modules *)
-
-module Addr = Mono_addr
-module Env = Env(Addr)
 
 (** Types *)
 
-type env = Env.t
-type addr = Addr.t
 type node = Scheme_ast.scheme_node
 type lam = (string * int) list * (node list)
 type prim_value =
@@ -39,6 +31,49 @@ and kont =
   | SetKont of int * string * env * addr
   | HaltKont
 and prim = string * (value list -> value option)
+and time = node option (* only 0-CFA or 1-CFA *)
+and addr =
+  | TagAddr of int * time
+  | VarAddr of string * time
+  | KontAddr of node * time
+and env = addr Env.t
+type tag = int
+
+let compare_time x y = match x, y with
+  | None, None -> 0
+  | Some n1, Some n2 -> Scheme_ast.compare_node n1 n2
+  | _ -> failwith "Cannot compare 0-CFA addresses with 1-CFA addresses"
+
+let string_of_time = function
+  | Some n -> Scheme_ast.string_of_node n
+  | None -> "ε"
+
+module Addr = struct
+  type t = addr
+  let compare x y =
+    let comp comp1 comp2 (x1, y1) (x2, y2) =
+      match comp1 x1 x2 with
+      | 0 -> comp2 y1 y2
+      | n -> n in
+    match x, y with
+    | TagAddr (n1, t1), TagAddr (n2, t2) ->
+      comp compare compare_time (n1, t1) (n2, t2)
+    | TagAddr _, _ -> 1
+    | VarAddr _, TagAddr _ -> -1
+    | VarAddr _, KontAddr _ -> 1
+    | VarAddr (s1, t1), VarAddr (s2, t2) ->
+      comp compare compare_time (s1, t1) (s2, t2)
+    | KontAddr (n1, t1), KontAddr (n2, t2) ->
+      comp Scheme_ast.compare_node compare_time (n1, t1) (n2, t2)
+    | KontAddr _, _ -> -1
+  let string_of_address = function
+    | TagAddr (n, t) ->
+      "TagAddr(" ^ (string_of_int n) ^ "," ^ (string_of_time t) ^ ")"
+    | VarAddr (s, t) ->
+      "VarAddr(" ^ s ^ "," ^ (string_of_time t) ^ ")"
+    | KontAddr (n, t) ->
+      "KontAddr(" ^ (Scheme_ast.string_of_node n) ^ "," ^ (string_of_time t) ^ ")"
+end
 
 (** String conversion *)
 
