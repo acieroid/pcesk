@@ -280,8 +280,8 @@ let string_of_konts konts =
 
 let string_of_state (state : state) : string =
   (match state.exp with
-   | Node n -> (string_of_int (Hashtbl.hash state)) ^ "@node " ^ (Scheme_ast.string_of_node n)
-   | Value v -> (string_of_int (Hashtbl.hash state)) ^ "@value " ^ (string_of_value v))
+   | Node n -> (string_of_int (Hashtbl.hash state)) ^ "@node \027[31m" ^ (Scheme_ast.string_of_node n) ^ "\027[0m"
+   | Value v -> (string_of_int (Hashtbl.hash state)) ^ "@value \027[32m" ^ (string_of_value v) ^ "\027[0m")
 
 let string_of_update state state' = match state'.change with
   | Epsilon -> "ε"
