@@ -10,7 +10,10 @@ let (=>) string expected =
 
 
 let test_multiple_calls () =
-  "(begin (define inc (lambda (x) (+ x 1))) (inc (inc 2)))" => AbsInteger
+  "(begin
+     (define inc (lambda (x)
+       (+ x 1)))
+      (inc (inc 2)))" => AbsInteger
 
 let test_recursive_calls () =
   todo "should have abstract timestamps";

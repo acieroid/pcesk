@@ -42,7 +42,8 @@ type tag = int
 let compare_time x y = match x, y with
   | None, None -> 0
   | Some n1, Some n2 -> Scheme_ast.compare_node n1 n2
-  | _ -> failwith "Cannot compare 0-CFA addresses with 1-CFA addresses"
+  | None, Some _ -> -1
+  | Some _, None -> 1
 
 let string_of_time = function
   | Some n -> Scheme_ast.string_of_node n
@@ -110,16 +111,18 @@ let string_of_value = function
   | AbsList -> "List"
 
 (** Some operations on abstract values *)
-let merge x y = match x, y with
-  | AbsUnique (Integer n1), AbsUnique (Integer n2) ->
-    Some (if n1 = n2 then AbsUnique (Integer n1) else AbsInteger)
-  | AbsUnique (String s1), AbsUnique (String s2) ->
-    Some (if s1 = s2 then AbsUnique (String s1) else AbsString)
-  | AbsUnique (Symbol s1), AbsUnique (Symbol s2) ->
-    Some (if s1 = s2 then AbsUnique (Symbol s1) else AbsSymbol)
-  | AbsUnique (Boolean b1), AbsUnique (Boolean b2) ->
-    Some (if b1 = b2 then AbsUnique (Boolean b1) else AbsBoolean)
+let merge x y =
+  print_string ("merge(" ^ (string_of_value x) ^ "," ^ (string_of_value y) ^ ")");
+  match x, y with
+  | AbsUnique (Primitive _), AbsUnique (Primitive _) -> None
+    (* TODO: compare_kont *)
+  | _ when Hashtbl.hash x = Hashtbl.hash y -> Some x
+  | AbsUnique (Integer _), AbsUnique (Integer _) -> Some AbsInteger
+  | AbsUnique (String _), AbsUnique (String _) -> Some AbsString
+  | AbsUnique (Symbol _), AbsUnique (Symbol _) -> Some AbsSymbol
+  | AbsUnique (Boolean _), AbsUnique (Boolean _) -> Some AbsBoolean
   | AbsUnique (Cons (_, _) as l1), AbsUnique (Cons (_, _) as l2) ->
+    (* TODO: might fail if l1 and l2 contains a functional value (eg. a primitive) *)
     Some (if l1 = l2 then AbsUnique l1 else AbsList)
   | AbsUnique Nil, AbsUnique Nil -> Some (AbsUnique Nil)
   | AbsUnique (Cons (_, _)), AbsUnique Nil
