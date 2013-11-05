@@ -279,12 +279,9 @@ let string_of_konts konts =
   String.concat "|" (List.map string_of_kont konts)
 
 let string_of_state (state : state) : string =
-  let konts = extract_konts state in
   (match state.exp with
-   | Node n -> "node " ^ (Scheme_ast.string_of_node n)
-   | Value v -> "value " ^ (string_of_value v)) ^
-    " k:" ^ (string_of_konts konts) ^ "@" ^
-    (Addr.string_of_address state.addr)
+   | Node n -> (string_of_int (Hashtbl.hash state)) ^ "@node " ^ (Scheme_ast.string_of_node n)
+   | Value v -> (string_of_int (Hashtbl.hash state)) ^ "@value " ^ (string_of_value v))
 
 let string_of_update state state' = match state'.change with
   | Epsilon -> "ε"
@@ -293,9 +290,7 @@ let string_of_update state state' = match state'.change with
 
 module StateSet = Set.Make(struct
     type t = state
-    let compare x y =
-      (* TODO: correctly implement it *)
-      Pervasives.compare (Hashtbl.hash x) (Hashtbl.hash y)
+    let compare = Pervasives.compare
   end)
 
 let eval (e : node) : (value * env * store) list * G.t =
