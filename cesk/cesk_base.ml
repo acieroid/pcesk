@@ -56,8 +56,8 @@ let tick (state : state) : time = match state.exp with
       | Some n -> Some node
       | None ->
         (* 0-CFA *)
-        (* None *)
+        None
         (* 1-CFA *)
-        Some node
+        (* Some node *)
     end
   | Value _ -> state.time

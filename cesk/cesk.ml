@@ -224,10 +224,6 @@ let step (state : state) : state list =
           and l_false = Lattice.abst1 (AbsUnique (Boolean false))
           and l_v = Lattice.abst1 v in
           let proj = Lattice.meet l_v l_false in
-          print_string ("!! IF " ^ (string_of_value v) ^ " " ^
-                          (Lattice.string_of_lattice_value l_v) ^ " " ^
-                          (Lattice.string_of_lattice_value l_false) ^ " " ^
-                          (Lattice.string_of_lattice_value proj) ^ "\n");
           if Lattice.is_bottom proj then
             (* v can't be false *)
             [state_true]
@@ -295,9 +291,12 @@ let string_of_update state state' = match state'.change with
   | Pop -> "-" ^ (string_of_konts (extract_konts state))
   | Push -> "+" ^ (string_of_konts (extract_konts state'))
 
-let extract_kont state =
-    (* TODO: explore all the continuations *)
-    List.hd (extract_konts state)
+module StateSet = Set.Make(struct
+    type t = state
+    let compare x y =
+      (* TODO: correctly implement it *)
+      Pervasives.compare (Hashtbl.hash x) (Hashtbl.hash y)
+  end)
 
 let eval (e : node) : (value * env * store) list * G.t =
   let (initial_state, a_halt) = inject e in
@@ -307,32 +306,38 @@ let eval (e : node) : (value * env * store) list * G.t =
       Some (result, state.env, state.store)
     | _ -> None
   and todo = Exploration.create initial_state in
-  let rec loop finished graph =
+  let rec loop visited finished graph =
     if Exploration.is_empty todo then
       finished, graph
     else
       let state = Exploration.pick todo in
-      match extract_final state with
-      | Some res ->
-        loop (res::finished) graph
-      | None ->
-        let states = step state in
-        let source = G.V.create state
-        and dests = List.map G.V.create states in
-        let edges = List.map (fun dest -> G.E.create source
-                                 (string_of_update source dest)
-                                 dest) dests in
-        let graph' =
-          List.fold_left G.add_edge_e
-            (List.fold_left G.add_vertex graph dests) edges in
-        print_string ("==> " ^ (string_of_state state) ^ "\n");
-        List.iter (fun state' ->
-              print_string ("    " ^
-                            (string_of_update state state') ^ " -> " ^
-                            (string_of_state state') ^ "\n")) states;
-        print_newline ();
-        Exploration.add todo states;
-        loop finished graph'
+      try
+        let _ = StateSet.find state visited in
+        loop visited finished graph
+      with
+        Not_found ->
+        begin match extract_final state with
+          | Some res ->
+            loop (StateSet.add state visited) (res::finished) graph
+          | None ->
+            let states = step state in
+            let source = G.V.create state
+            and dests = List.map G.V.create states in
+            let edges = List.map (fun dest -> G.E.create source
+                                     (string_of_update source dest)
+                                     dest) dests in
+            let graph' =
+              List.fold_left G.add_edge_e
+                (List.fold_left G.add_vertex graph dests) edges in
+            print_string ("==> " ^ (string_of_state state) ^ "\n");
+            List.iter (fun state' ->
+                print_string ("    " ^
+                                (string_of_update state state') ^ " -> " ^
+                                (string_of_state state') ^ "\n")) states;
+            print_newline ();
+            Exploration.add todo states;
+            loop (StateSet.add state visited) finished graph'
+        end
   in
   let initial_graph = G.add_vertex G.empty (G.V.create initial_state) in
-  loop [] initial_graph
+  loop StateSet.empty [] initial_graph

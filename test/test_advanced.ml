@@ -16,7 +16,6 @@ let test_multiple_calls () =
       (inc (inc 2)))" => AbsInteger
 
 let test_recursive_calls () =
-  todo "should have abstract timestamps";
   "(begin
      (define count (lambda (n)
        (if (= n 0)
