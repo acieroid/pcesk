@@ -108,9 +108,7 @@ let kont_equals x y = (Hashtbl.hash x) = (Hashtbl.hash y) && match x, y with
 
 let value_equals x y = compare x y = 0
 
-let merge x y =
-  print_string ("merge(" ^ (string_of_value x) ^ "," ^ (string_of_value y) ^ ")");
-  match x, y with
+let merge x y = match x, y with
   | AbsUnique (Primitive _), AbsUnique (Primitive _) -> None
   | AbsUnique x, AbsUnique y when value_equals x y -> Some (AbsUnique x)
   | AbsUnique (Integer _), AbsUnique (Integer _) -> Some AbsInteger

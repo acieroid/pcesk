@@ -3,7 +3,7 @@ open Types
 let _ =
   try
     let node = Scheme_parser.parse (Scheme_lexer.lex stdin) in
-    let res, graph = Cesk.eval node in
+    let res, graph = Cesk.eval ~verbose:true node in
     List.iter (fun (value, env, store) ->
         print_string (string_of_value value); print_newline ())
       res;

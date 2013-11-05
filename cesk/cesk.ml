@@ -293,7 +293,7 @@ module StateSet = Set.Make(struct
     let compare = Pervasives.compare
   end)
 
-let eval (e : node) : (value * env * store) list * G.t =
+let eval ?(verbose = false) (e : node) : (value * env * store) list * G.t =
   let (initial_state, a_halt) = inject e in
   let extract_final state =
     match state.exp, state.addr with
@@ -324,12 +324,14 @@ let eval (e : node) : (value * env * store) list * G.t =
             let graph' =
               List.fold_left G.add_edge_e
                 (List.fold_left G.add_vertex graph dests) edges in
-            print_string ("==> " ^ (string_of_state state) ^ "\n");
-            List.iter (fun state' ->
-                print_string ("    " ^
-                                (string_of_update state state') ^ " -> " ^
-                                (string_of_state state') ^ "\n")) states;
-            print_newline ();
+            if verbose then begin
+              print_string ("==> " ^ (string_of_state state) ^ "\n");
+              List.iter (fun state' ->
+                  print_string ("    " ^
+                                  (string_of_update state state') ^ " -> " ^
+                                  (string_of_state state') ^ "\n")) states;
+              print_newline ();
+            end;
             Exploration.add todo states;
             loop (StateSet.add state visited) finished graph'
         end
