@@ -3,13 +3,8 @@ open Cesk_types
 
 module GraphNode = struct
   type t = state
-  let compare state state' =
-    match (state.exp, state'.exp) with
-    | Node _, Node _
-    | Value _, Value _ -> Pervasives.compare state.time state'.time
-    | Node _, Value _ -> 1
-    | Value _, Node _ -> -1
-  let hash state = Hashtbl.hash (state.exp, state.addr)
+  let compare = Pervasives.compare
+  let hash = Hashtbl.hash
   let equal = (=)
 end
 
@@ -31,13 +26,13 @@ struct
   let vertex_attributes (state : V.t) =
     match state.exp with
     | Node n -> [`Shape `Box; `Style `Filled; `Fillcolor 0xFFDDDD;
-                 `Label (Scheme_ast.string_of_node n)]
+                 `Label (BatString.escaped (Scheme_ast.string_of_node n))]
     | Value v -> [`Shape `Box; `Style `Filled; `Fillcolor 0xDDFFDD;
-                  `Label (string_of_value v)]
+                  `Label (BatString.escaped (string_of_value v))]
   let vertex_name (state : V.t) =
     match state.exp with
-    | Node n -> "node_" ^ (string_of_int (Hashtbl.hash state.time))
-    | Value v -> "value_" ^ (string_of_int (Hashtbl.hash state.time))
+    | Node n -> "node_" ^ (string_of_int (Hashtbl.hash state))
+    | Value v -> "value_" ^ (string_of_int (Hashtbl.hash state))
   let default_vertex_attributes _ = []
   let graph_attributes _ = []
 end

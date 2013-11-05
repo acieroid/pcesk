@@ -13,7 +13,6 @@ let (=>) string expected =
     ~msg:string ~printer:Lattice.string_of_lattice_value
     (Lattice.abst1 expected) merged
 
-
 let test_multiple_calls () =
   "(begin
      (define inc (lambda (x)
