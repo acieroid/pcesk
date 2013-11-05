@@ -1,12 +1,17 @@
 open OUnit
 open Types
+open Set_lattice
+
+module Lattice = Set_lattice(struct let size = 5 end)
 
 let (=>) string expected =
   let node = Scheme_parser.parse (Scheme_lexer.lex_string string) in
   let res, _ = Cesk.eval node in
-  assert_equal (List.length res) 1;
-  let r, _, _ = List.hd res in
-  assert_equal ~msg:string ~printer:string_of_value expected r
+  let results = List.map (fun (r, _, _) -> r) res in
+  let merged = Lattice.abst results in
+  assert_equal
+    ~msg:string ~printer:Lattice.string_of_lattice_value
+    (Lattice.abst1 expected) merged
 
 
 let test_multiple_calls () =
