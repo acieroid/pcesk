@@ -35,15 +35,18 @@ let primitives : prim list =
    ("<=", int_comp value_lte);
   ]
 
-let apply_primitive ((name, f) : prim) (args : value list) : value option =
-  f args
+let apply_primitive (name : string) (args : value list) : value option =
+  try
+    (List.assoc name primitives) args
+  with
+    Not_found -> raise (UnboundIdentifier name)
 
 let install_primitives (state : state) : state =
-  let inst state ((name, _) as prim) =
+  let inst state (name, _) =
     let a = alloc_var state name in
     {state with
      env = env_extend state.env name a;
-     store = store_extend state.store a (Lattice.abst1 (AbsUnique (Primitive prim)));
+     store = store_extend state.store a (Lattice.abst1 (AbsUnique (Primitive name)));
      time = tick state}
   in
   List.fold_left inst state primitives

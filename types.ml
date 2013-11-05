@@ -13,7 +13,7 @@ type prim_value =
   | Nil
   | Unspecified
   | Closure of lam * env
-  | Primitive of prim
+  | Primitive of string
   | Kont of kont
 and value =
   | AbsUnique of prim_value
@@ -78,7 +78,7 @@ let rec string_of_prim_value = function
   | Nil -> "()"
   | Unspecified -> "#<unspecified>"
   | Closure _ -> "#<closure>"
-  | Primitive (name, _) -> "#<primitive " ^ name ^ ">"
+  | Primitive name -> "#<primitive " ^ name ^ ">"
   | Kont k -> "#<continuation " ^ (string_of_kont k) ^ ">"
 
 let string_of_value = function
@@ -106,18 +106,7 @@ let kont_equals x y = (Hashtbl.hash x) = (Hashtbl.hash y) && match x, y with
   | HaltKont, HaltKont -> true
   | _ -> false
 
-let value_equals x y = match x, y with
-  | String s1, String s2 -> s1 = s2
-  | Integer n1, Integer n2 -> n1 = n2
-  | Boolean b1, Boolean b2 -> b1 = b2
-  | Symbol s1, Symbol s2 -> s1 = s2
-  | Cons _, Cons _ -> false (* TODO *)
-  | Nil, Nil -> true
-  | Unspecified, Unspecified -> true
-  | Closure _, Closure _ -> false (* TODO *)
-  | Primitive (n1, _), Primitive (n2, _) -> n1 = n2
-  | Kont k1, Kont k2 -> kont_equals k1 k2
-  | _ -> false
+let value_equals x y = compare x y = 0
 
 let merge x y =
   print_string ("merge(" ^ (string_of_value x) ^ "," ^ (string_of_value y) ^ ")");
