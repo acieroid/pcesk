@@ -111,19 +111,45 @@ let string_of_value = function
   | AbsList -> "List"
 
 (** Some operations on abstract values *)
+(* TODO: is probably wrong on certain cases *)
+let kont_equals x y = (Hashtbl.hash x) = (Hashtbl.hash y) && match x, y with
+  | OperatorKont (n1, ns1, e1, a1), OperatorKont (n2, ns2, e2, a2) ->
+    n1 = n2
+  | OperandsKont (n1, v1, ns1, vs1, e1, a1),
+    OperandsKont (n2, v2, ns2, vs2, e2, a2) ->
+    n1 = n2
+  | BeginKont (n1, ns1, e1, a1), BeginKont (n2, ns2, e2, a2) ->
+    n1 = n2
+  | DefineKont (n1, s1, e1, a1), DefineKont (n2, s2, e2, a2) ->
+    n1 = n2
+  | SetKont (n1, s1, e1, a1), SetKont (n2, s2, e2, a2) ->
+    n1 = n2
+  | HaltKont, HaltKont -> true
+  | _ -> false
+
+let value_equals x y = match x, y with
+  | String s1, String s2 -> s1 = s2
+  | Integer n1, Integer n2 -> n1 = n2
+  | Boolean b1, Boolean b2 -> b1 = b2
+  | Symbol s1, Symbol s2 -> s1 = s2
+  | Cons _, Cons _ -> false (* TODO *)
+  | Nil, Nil -> true
+  | Unspecified, Unspecified -> true
+  | Closure _, Closure _ -> false (* TODO *)
+  | Primitive (n1, _), Primitive (n2, _) -> n1 = n2
+  | Kont k1, Kont k2 -> kont_equals k1 k2
+  | _ -> false
+
 let merge x y =
   print_string ("merge(" ^ (string_of_value x) ^ "," ^ (string_of_value y) ^ ")");
   match x, y with
   | AbsUnique (Primitive _), AbsUnique (Primitive _) -> None
-    (* TODO: compare_kont *)
-  | _ when Hashtbl.hash x = Hashtbl.hash y -> Some x
+  | AbsUnique x, AbsUnique y when value_equals x y -> Some (AbsUnique x)
   | AbsUnique (Integer _), AbsUnique (Integer _) -> Some AbsInteger
   | AbsUnique (String _), AbsUnique (String _) -> Some AbsString
   | AbsUnique (Symbol _), AbsUnique (Symbol _) -> Some AbsSymbol
   | AbsUnique (Boolean _), AbsUnique (Boolean _) -> Some AbsBoolean
-  | AbsUnique (Cons (_, _) as l1), AbsUnique (Cons (_, _) as l2) ->
-    (* TODO: might fail if l1 and l2 contains a functional value (eg. a primitive) *)
-    Some (if l1 = l2 then AbsUnique l1 else AbsList)
+  | AbsUnique (Cons _), AbsUnique (Cons _) -> Some AbsList
   | AbsUnique Nil, AbsUnique Nil -> Some (AbsUnique Nil)
   | AbsUnique (Cons (_, _)), AbsUnique Nil
   | AbsUnique Nil, AbsUnique (Cons (_, _)) -> Some AbsList
