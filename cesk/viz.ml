@@ -1,5 +1,6 @@
 open Types
 open Cesk_types
+open Cesk_base
 
 module GraphNode = struct
   type t = state
@@ -30,9 +31,10 @@ struct
     | Value v -> [`Shape `Box; `Style `Filled; `Fillcolor 0xDDFFDD;
                   `Label (BatString.escaped (string_of_value v))]
   let vertex_name (state : V.t) =
+    let konts = extract_konts state in
     match state.exp with
-    | Node n -> "node_" ^ (string_of_int (Hashtbl.hash state))
-    | Value v -> "value_" ^ (string_of_int (Hashtbl.hash state))
+    | Node n -> "node_" ^ (string_of_int (Hashtbl.hash state)) ^ (string_of_int (Hashtbl.hash konts))
+    | Value v -> "value_" ^ (string_of_int (Hashtbl.hash state)) ^ (string_of_int (Hashtbl.hash konts))
   let default_vertex_attributes _ = []
   let graph_attributes _ = []
 end
