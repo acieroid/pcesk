@@ -16,5 +16,3 @@ let rec string_of_exp = function
 
 and string_of_node (exp, tag) =
   (string_of_exp exp) (* ^ "@" ^ (string_of_int tag) *)
-
-let compare_node (_, x) (_, y) = compare x y
