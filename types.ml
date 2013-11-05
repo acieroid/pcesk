@@ -90,22 +90,6 @@ let string_of_value = function
   | AbsList -> "List"
 
 (** Some operations on abstract values *)
-(* TODO: is probably wrong on certain cases *)
-let kont_equals x y = (Hashtbl.hash x) = (Hashtbl.hash y) && match x, y with
-  | OperatorKont (n1, ns1, e1, a1), OperatorKont (n2, ns2, e2, a2) ->
-    n1 = n2
-  | OperandsKont (n1, v1, ns1, vs1, e1, a1),
-    OperandsKont (n2, v2, ns2, vs2, e2, a2) ->
-    n1 = n2
-  | BeginKont (n1, ns1, e1, a1), BeginKont (n2, ns2, e2, a2) ->
-    n1 = n2
-  | DefineKont (n1, s1, e1, a1), DefineKont (n2, s2, e2, a2) ->
-    n1 = n2
-  | SetKont (n1, s1, e1, a1), SetKont (n2, s2, e2, a2) ->
-    n1 = n2
-  | HaltKont, HaltKont -> true
-  | _ -> false
-
 let value_equals x y = compare x y = 0
 
 let merge x y = match x, y with

@@ -154,98 +154,96 @@ let apply_function (rator : value) (rands : value list)
   | _ -> []
 
 let step (state : state) : state list =
-  let step' state kont =
-    match state.exp with
-    | Node (e, tag) ->
-      begin match e with
-        | Scheme_ast.Identifier x ->
-          let values = Lattice.conc
-              (store_lookup state.store (env_lookup state.env x)) in
-          List.map (state_produce_value state) values
-        | Scheme_ast.String s ->
-          [state_produce_value state (AbsUnique (String s))]
-        | Scheme_ast.Integer n ->
-          [state_produce_value state (AbsUnique (Integer n))]
-        | Scheme_ast.Boolean b ->
-          [state_produce_value state (AbsUnique (Boolean b))]
-        | Scheme_ast.List ((Scheme_ast.Identifier kw, tag') :: args)
-          when is_keyword kw ->
-          step_keyword kw (e, tag) args state
-        | Scheme_ast.List ((_, tag) as rator :: rands) ->
-          let kont = OperatorKont (tag, rands, state.env, state.addr) in
-          [state_push state rator kont]
-        | _ -> raise (EvaluationStuck (e, tag))
-      end
-    | Value v ->
-      begin match kont with
-        | OperatorKont (_, [], env, c) ->
-          apply_function v [] { state with
-                                env = env;
-                                addr = c;
-                                time = tick state }
-        | OperatorKont (_, ((_, tag) as rand) :: rands, env, c) ->
-          let kont = OperandsKont (tag, v, rands, [], env, c) in
-          [{(state_push state rand kont) with env = env}]
-        | OperandsKont (_, rator, [], values, env, c) ->
-          let rands = List.rev (v :: values) in
-          apply_function rator rands { state with
-                                       env = env;
-                                       addr = c;
-                                       time = tick state }
-        | OperandsKont (_, rator, ((_, tag) as rand) :: rands, values, env, c) ->
-          let kont = OperandsKont (tag, rator, rands, v :: values, env, c) in
-          [{(state_push state rand kont) with env = env }]
-        | BeginKont (_, [], _, c) ->
-          [{ state with
-             exp = Value v;
-             addr = c;
-             change = Epsilon;
-             time = tick state }]
-        | BeginKont (_, ((_, tag) as node) :: rest, env, c) ->
-          let kont = BeginKont (tag, rest, env, c) in
-          [state_push state node kont]
-        | DefineKont (tag, name, env, c) ->
-          let a = alloc state tag in
-          let env' = env_extend env name a in
-          let store = store_extend state.store a (Lattice.abst1 v) in
-          [{ exp = Value (AbsUnique Unspecified);
-             env = env';
-             store = store;
-             addr = c;
-             change = Epsilon;
-             time = tick state }]
-        | IfKont (_, consequent, alternative, env, c) ->
-          let new_state = { state with
+  let step_node (e, tag) =
+    match e with
+    | Scheme_ast.Identifier x ->
+      let values = Lattice.conc
+          (store_lookup state.store (env_lookup state.env x)) in
+      List.map (state_produce_value state) values
+    | Scheme_ast.String s ->
+      [state_produce_value state (AbsUnique (String s))]
+    | Scheme_ast.Integer n ->
+      [state_produce_value state (AbsUnique (Integer n))]
+    | Scheme_ast.Boolean b ->
+      [state_produce_value state (AbsUnique (Boolean b))]
+    | Scheme_ast.List ((Scheme_ast.Identifier kw, tag') :: args)
+      when is_keyword kw ->
+      step_keyword kw (e, tag) args state
+    | Scheme_ast.List ((_, tag) as rator :: rands) ->
+      let kont = OperatorKont (tag, rands, state.env, state.addr) in
+      [state_push state rator kont]
+    | _ -> raise (EvaluationStuck (e, tag))
+  and step_value v kont =
+    match kont with
+    | OperatorKont (_, [], env, c) ->
+      apply_function v [] { state with
+                            env = env;
                             addr = c;
-                            change = Pop;
-                            time = tick state } in
-          let state_true = { new_state with exp = Node consequent }
-          and state_false = { new_state with exp = Node alternative }
-          and l_false = Lattice.abst1 (AbsUnique (Boolean false))
-          and l_v = Lattice.abst1 v in
-          let proj = Lattice.meet l_v l_false in
-          if Lattice.is_bottom proj then
-            (* v can't be false *)
-            [state_true]
-          else if l_v = l_false then
-            (* v is false *)
-            [state_false]
-          else
-            (* either true or false *)
-            [state_true; state_false]
-        | SetKont (_, id, env, c) ->
-          let a = env_lookup env id in
-          let store = store_update state.store a (Lattice.abst1 v) in
-          [{ state with
-             exp = Value (AbsUnique Unspecified);
-             store = store;
-             addr = c;
-             change = Epsilon;
-             time = tick state }]
-        | HaltKont -> [{ state with change = Epsilon; time = tick state }]
-      end
+                            time = tick state }
+    | OperatorKont (_, ((_, tag) as rand) :: rands, env, c) ->
+      let kont = OperandsKont (tag, v, rands, [], env, c) in
+      [{(state_push state rand kont) with env = env}]
+    | OperandsKont (_, rator, [], values, env, c) ->
+      let rands = List.rev (v :: values) in
+      apply_function rator rands { state with
+                                   env = env;
+                                   addr = c;
+                                   time = tick state }
+    | OperandsKont (_, rator, ((_, tag) as rand) :: rands, values, env, c) ->
+      let kont = OperandsKont (tag, rator, rands, v :: values, env, c) in
+      [{(state_push state rand kont) with env = env }]
+    | BeginKont (_, [], _, c) ->
+      [{ state with
+         exp = Value v;
+         addr = c;
+         change = Epsilon;
+         time = tick state }]
+    | BeginKont (_, ((_, tag) as node) :: rest, env, c) ->
+      let kont = BeginKont (tag, rest, env, c) in
+      [state_push state node kont]
+    | DefineKont (tag, name, env, c) ->
+      let a = alloc state tag in
+      let env' = env_extend env name a in
+      let store = store_extend state.store a (Lattice.abst1 v) in
+      [{ exp = Value (AbsUnique Unspecified);
+         env = env';
+         store = store;
+         addr = c;
+         change = Epsilon;
+         time = tick state }]
+    | IfKont (_, consequent, alternative, env, c) ->
+      let new_state = { state with
+                        addr = c;
+                        change = Pop;
+                        time = tick state } in
+      let state_true = { new_state with exp = Node consequent }
+      and state_false = { new_state with exp = Node alternative }
+      and l_false = Lattice.abst1 (AbsUnique (Boolean false))
+      and l_v = Lattice.abst1 v in
+      let proj = Lattice.meet l_v l_false in
+      if Lattice.is_bottom proj then
+        (* v can't be false *)
+        [state_true]
+      else if l_v = l_false then
+        (* v is false *)
+        [state_false]
+      else
+        (* either true or false *)
+        [state_true; state_false]
+    | SetKont (_, id, env, c) ->
+      let a = env_lookup env id in
+      let store = store_update state.store a (Lattice.abst1 v) in
+      [{ state with
+         exp = Value (AbsUnique Unspecified);
+         store = store;
+         addr = c;
+         change = Epsilon;
+         time = tick state }]
+    | HaltKont -> [{ state with change = Epsilon; time = tick state }]
   in
-  List.flatten (List.map (step' state) (extract_konts state))
+  match state.exp with
+  | Node n -> step_node n
+  | Value v -> List.flatten (List.map (step_value v) (extract_konts state))
 
 (** Injection *)
 
