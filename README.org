@@ -1,0 +1,44 @@
+* PCESK
+This is an implementation of an abstract CESK machine which will
+support of parallel constructs (spawn/join), based on Matt Might's
+description of CESK machines (mainly from the papers [[http://matt.might.net/papers/vanhorn2010abstract.pdf][Abstracting
+Abstract Machines]] and [[http://matt.might.net/papers/might2011pceks.pdf][A Family of Abstract Interpretations for Static
+Analysis of Concurrent Higher-Order Programming]])
+** Dependencies and compilation
+The following OCaml packages are required:
+  - ocamlgraph
+  - oUnit
+  - batteries
+
+Those packages are installable using [[http://opam.ocamlpro.com/][OPAM]]:
+#+BEGIN_SRC shell
+opam install ocamlgraph oUnit batteries
+#+END_SRC
+
+To compile this project, you'll also need ocamlbuild (generally
+provided with ocaml). It has been tested with OCaml 4.01, but should
+probably work with older versions too. To compile, simply launch
+=make=. To launch the test suite, execute =make test=.
+** Running
+Currently, the program to analyze is read from stdin, so launch
+=main.byte= and type your program (or pipe it), and the following
+informations will be printed:
+  1. a trace of the states computed, with eval states being printed
+     in red, and continuation states being printed in green
+  2. the different results computed (it might be that the same
+     results is duplicated, thus corresponding to different paths in
+     the state graph). Generally, those different results will be
+     merged together to obtain a unique result.
+
+For example:
+#+BEGIN_SRC shell
+$ echo '(begin (define f (lambda (x) x)) (f 0))' > foo.scm
+$ ./main.byte < foo.scm
+<execution trace...>
+0
+#+END_SRC
+** Stuff to do
+  - Use the k last call sites as the timestamp (currently, it is the
+    k (0 or 1) last evaluated nodes)
+  - Use a lattice of finite width
+  - Add more complex examples (fibonacci, church numerals, …)
