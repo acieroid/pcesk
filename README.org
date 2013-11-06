@@ -38,4 +38,4 @@ $ ./main.byte < foo.scm
 0
 #+END_SRC
 ** Stuff to do
-  - Add more complex examples (fibonacci, church numerals, …)
+  - Add more complex examples (church numerals, …)

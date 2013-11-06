@@ -51,7 +51,6 @@ let test_widen () =
      this example will keep running, with values staying at the same
      "level" of the lattice, but with different values (in case the
      lattice as an infinite width) *)
-  todo "1+2 -> Int";
   "(begin
      (define g (lambda ()
        1))
@@ -68,5 +67,3 @@ let suite =
      "fibonacci" >:: test_fibo;
      "widen" >:: test_widen;
     ]
-
-
