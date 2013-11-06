@@ -33,10 +33,35 @@ let test_recursive_calls () =
          (* n (fact (- n 1))))))
      (fact 5))" => AbsInteger
 
+let test_fibo () =
+  "(begin
+     (define fib (lambda (n)
+       (if (< n 2)
+         n
+         (+ (fib (- n 1)) (fib (- n 2))))))
+     (fib 4))" => AbsInteger
+
+let test_widen () =
+  (* If the CESK machine does not widen the values at a certain points,
+     this example will keep running, with values staying at the same
+     "level" of the lattice, but with different values (in case the
+     lattice as an infinite width) *)
+  todo "1+2 -> Int";
+  "(begin
+     (define g (lambda ()
+       1))
+     (define f (lambda (n)
+       (if (= n 0)
+         0
+         (+ (f (- n 1)) (g)))))
+     (f 10))" => AbsInteger
+
 let suite =
   "Advanced tests" >:::
     ["multiple calls" >:: test_multiple_calls;
      "recursive calls" >:: test_recursive_calls;
+     "fibonacci" >:: test_fibo;
+     "widen" >:: test_widen;
     ]
 
 
