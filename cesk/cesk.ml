@@ -247,7 +247,7 @@ let step (state : state) : state list =
 
 (** Injection *)
 
-let empty_time = None
+let empty_time = []
 
 let empty_address = TagAddr (0, empty_time)
 

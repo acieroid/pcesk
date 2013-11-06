@@ -31,7 +31,7 @@ and kont =
   | SetKont of int * string * env * addr
   | HaltKont
 and prim = string * (value list -> value option)
-and time = node option (* only 0-CFA or 1-CFA *)
+and time = node list
 and addr =
   | TagAddr of int * time
   | VarAddr of string * time
@@ -39,9 +39,9 @@ and addr =
 and env = addr Env.t
 type tag = int
 
-let string_of_time = function
-  | Some n -> Scheme_ast.string_of_node n
-  | None -> "ε"
+let string_of_time t =
+  "[" ^ (String.concat ","
+           (List.map Scheme_ast.string_of_node t)) ^ "]"
 
 module Addr = struct
   type t = addr

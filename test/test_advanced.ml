@@ -15,6 +15,11 @@ let (=>) string expected =
 
 let test_multiple_calls () =
   "(begin
+     (define sq (lambda (x)
+       (* x x)))
+     (sq 2)
+     (sq 3))" => AbsInteger;
+  "(begin
      (define inc (lambda (x)
        (+ x 1)))
       (inc (inc 2)))" => AbsInteger
