@@ -85,3 +85,51 @@ module Store : STORE =
                       (StoreMap.bindings store))) ^ ")"
 
   end
+
+(* Simple implementation of a store using association lists.
+   It appears to be faster than with OCaml's map *)
+module Assoc_store : STORE =
+  functor (Addr : ADDRESS) ->
+  functor (Lattice : LATTICE) ->
+  struct
+
+    type content = Lattice.t
+
+    type t = (Addr.t * content) list
+
+    let empty = []
+
+    let lookup store addr =
+      List.assoc addr store
+
+    let alloc store addr value =
+      (addr, value) :: (BatList.remove_assoc addr store)
+
+    let update store addr value =
+      let _ = List.assoc addr store in
+      (addr, value) :: (BatList.remove_assoc addr store)
+
+    let join store store' =
+      let sort = List.sort (fun (a, _) (a', _) -> Addr.compare a a') in
+      let rec loop acc = function
+        | [], l | l, [] -> l @ acc
+        | hd::tl, hd'::tl' ->
+          match compare (fst hd) (fst hd') with
+          | 0 -> loop (((fst hd), (Lattice.join (snd hd) (snd hd'))) :: acc) (tl, tl')
+          | n when n < 0 -> loop (hd :: acc) (tl, hd'::tl')
+          | _ -> loop (hd' :: acc) (hd::tl, tl')
+      in
+      loop [] (sort store, sort store')
+
+    let narrow store addrs =
+      List.filter (fun (a, _) ->
+          (List.exists (fun a' -> Addr.compare a a' = 0) addrs))
+        store
+
+    let string_of_store store =
+      "env(" ^ (String.concat ","
+                  (List.map (fun (a, v) ->
+                       (Addr.string_of_address a) ^ ":" ^
+                         (Lattice.string_of_lattice_value v))
+                      store))
+  end
