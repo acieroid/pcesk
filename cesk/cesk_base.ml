@@ -55,5 +55,6 @@ let alloc_kont state node = KontAddr (node, state.time)
 let k = 0
 
 let tick (state : state) : time = match state.exp with
-  | Node node -> BatList.take k (node :: state.time)
-  | Value _ -> state.time
+  | Node (((Scheme_ast.List _), _) as node) ->
+    BatList.take k (node :: state.time)
+  | _ -> state.time

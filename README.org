@@ -38,7 +38,5 @@ $ ./main.byte < foo.scm
 0
 #+END_SRC
 ** Stuff to do
-  - Use the k last call sites as the timestamp (currently, it is the
-    k (0 or 1) last evaluated nodes)
   - Use a lattice of finite width
   - Add more complex examples (fibonacci, church numerals, …)
