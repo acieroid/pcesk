@@ -49,6 +49,6 @@ $ ./main.byte -i foo.scm
 0
 #+END_SRC
 ** Stuff to do
-  - Add more complex examples (church numerals, …)
+  - Add more complex examples
   - Support multiple threads of execution
   - Add parallel operators (spawn, join)

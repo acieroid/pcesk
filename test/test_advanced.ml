@@ -13,6 +13,16 @@ let (=>) string expected =
     ~msg:string ~printer:Lattice.string_of_lattice_value
     (Lattice.abst1 expected) merged
 
+let test_match string expected cmp =
+  let node = Scheme_parser.parse (Scheme_lexer.lex_string string) in
+  let res, _ = Cesk.eval node in
+  let results = List.map (fun (r, _, _) -> r) res in
+  let merged = Lattice.abst results in
+  assert_equal
+    ~cmp
+    ~msg:string ~printer:Lattice.string_of_lattice_value
+    (Lattice.abst1 expected) merged
+
 let test_multiple_calls () =
   "(begin
      (define sq (lambda (x)
@@ -60,10 +70,37 @@ let test_widen () =
          (+ (f (- n 1)) (g)))))
      (f 10))" => AbsInteger
 
+let test_church_numerals () =
+  let church x =
+    "(begin
+  (define zero
+    (lambda (f x)
+      x))
+    (define inc
+      (lambda (n)
+        (lambda (f x)
+          (f (n f x)))))
+    (define plus
+      (lambda (m n)
+        (lambda (f x)
+          (m f (n f x)))))" ^ x ^ ")" in
+  let test_clo s =
+    test_match (church s)
+      (AbsUnique (Closure (([], []), Cesk_base.empty_env)))
+      (fun (x : Lattice.t) (y : Lattice.t) ->
+         List.exists (function
+             | AbsUnique (Closure _) -> true
+             | _  -> false)
+           (Lattice.conc y)); in
+  test_clo "zero";
+  test_clo "(inc zero)";
+  test_clo "(plus (inc (inc (inc zero))) (plus (inc (inc zero)) (inc zero)))"
+
 let suite =
   "Advanced tests" >:::
     ["multiple calls" >:: test_multiple_calls;
      "recursive calls" >:: test_recursive_calls;
      "fibonacci" >:: test_fibo;
      "widen" >:: test_widen;
+     "church numerals" >:: test_church_numerals;
     ]
