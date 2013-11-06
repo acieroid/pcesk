@@ -38,5 +38,4 @@ $ ./main.byte < foo.scm
 0
 #+END_SRC
 ** Stuff to do
-  - Use a lattice of finite width
   - Add more complex examples (fibonacci, church numerals, …)

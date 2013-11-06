@@ -52,7 +52,7 @@ let step_lambda node state = function
 let step_begin node state = function
   | [] ->
     [{ state with
-       exp = Value (AbsUnique Unspecified);
+       exp = Value (value_of_prim_value Unspecified);
        change = Epsilon;
        time = tick state }]
   | (_, tag) as n :: rest ->
@@ -64,10 +64,9 @@ let step_define node state = function
   | [Scheme_ast.Identifier name, tag] ->
     let a = alloc state tag in
     let env' = env_extend state.env name a in
-    let unsp = AbsUnique Unspecified in
-    let store = store_extend state.store a (Lattice.abst1 unsp) in
+    let store = store_extend state.store a (Lattice.abst1 (AbsUnique Unspecified)) in
     [{ state with
-       exp = Value unsp;
+       exp = Value (value_of_prim_value Unspecified);
        env = env';
        store = store;
        change = Epsilon;
@@ -161,11 +160,11 @@ let step (state : state) : state list =
           (store_lookup state.store (env_lookup state.env x)) in
       List.map (state_produce_value state) values
     | Scheme_ast.String s ->
-      [state_produce_value state (AbsUnique (String s))]
+      [state_produce_value state (value_of_prim_value (String s))]
     | Scheme_ast.Integer n ->
-      [state_produce_value state (AbsUnique (Integer n))]
+      [state_produce_value state (value_of_prim_value (Integer n))]
     | Scheme_ast.Boolean b ->
-      [state_produce_value state (AbsUnique (Boolean b))]
+      [state_produce_value state (value_of_prim_value (Boolean b))]
     | Scheme_ast.List ((Scheme_ast.Identifier kw, tag') :: args)
       when is_keyword kw ->
       step_keyword kw (e, tag) args state
@@ -205,7 +204,7 @@ let step (state : state) : state list =
       let a = alloc state tag in
       let env' = env_extend env name a in
       let store = store_extend state.store a (Lattice.abst1 v) in
-      [{ exp = Value (AbsUnique Unspecified);
+      [{ exp = Value (value_of_prim_value Unspecified);
          env = env';
          store = store;
          addr = c;
@@ -234,7 +233,7 @@ let step (state : state) : state list =
       let a = env_lookup env id in
       let store = store_update state.store a (Lattice.abst1 v) in
       [{ state with
-         exp = Value (AbsUnique Unspecified);
+         exp = Value (value_of_prim_value Unspecified);
          store = store;
          addr = c;
          change = Epsilon;
@@ -252,7 +251,7 @@ let empty_time = []
 let empty_address = TagAddr (0, empty_time)
 
 let empty_state = {
-  exp = Value (AbsUnique (Integer 0));
+  exp = Value (value_of_prim_value (Integer 0));
   env = empty_env;
   store = empty_store;
   addr = empty_address;

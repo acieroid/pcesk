@@ -89,7 +89,16 @@ let string_of_value = function
   | AbsSymbol -> "Sym"
   | AbsList -> "List"
 
-(** Some operations on abstract values *)
+(** Some operations on primitive values and (abstract) values *)
+let value_of_prim_value = function
+  (* some values are directly abstracted, to avoid having infinite width
+     in the value lattice *)
+  | String _ -> AbsString
+  | Integer _ -> AbsInteger
+  | Symbol _ -> AbsSymbol
+  | Cons _ -> AbsList
+  | v -> AbsUnique v
+
 let value_equals x y = compare x y = 0
 
 let merge x y = match x, y with

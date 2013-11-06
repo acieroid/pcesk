@@ -30,7 +30,7 @@ let test_recursive_calls () =
        (if (= n 0)
          \"done\"
          (count (- n 1)))))
-     (count 200))" => AbsUnique (String "done");
+     (count 200))" => AbsString;
   "(begin
      (define fact (lambda (n)
        (if (= n 0)
