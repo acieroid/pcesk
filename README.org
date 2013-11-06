@@ -19,23 +19,36 @@ To compile this project, you'll also need ocamlbuild (generally
 provided with ocaml). It has been tested with OCaml 4.01, but should
 probably work with older versions too. To compile, simply launch
 =make=. To launch the test suite, execute =make test=.
-** Running
-Currently, the program to analyze is read from stdin, so launch
-=main.byte= and type your program (or pipe it), and the following
-informations will be printed:
-  1. a trace of the states computed, with eval states being printed
-     in red, and continuation states being printed in green
-  2. the different results computed (it might be that the same
-     results is duplicated, thus corresponding to different paths in
-     the state graph). Generally, those different results will be
-     merged together to obtain a unique result.
+** Usage
+#+BEGIN_SRC shell
+$ ./main.byte -help
+usage: ./main.byte [-v] [-i input] [-g graph_output]
+  -v : verbose mode (disable by default)
+  -i : input file (stdin by default)
+  -g : output file for the generated graph (nothing by default)
+  -help  Display this list of options
+  --help  Display this list of options
+#+END_SRC
+
+When the verbose mode is activated, it will also print a trace of the
+states computed (before the results), with eval states being printed
+in red, and continuation states being printed in green.
+
+When a graph output file is given (=-g=), a graph of the computed
+states will be output in this file, using Graphviz's dot format. An
+image file can then be generated (=dot -Tpng foo.dot > foo.png=)
+
+Finally, the results computed will be printed, one per line (multiple
+results can computed). Generally, those different results will be
+merged together to obtain a unique result.
 
 For example:
 #+BEGIN_SRC shell
 $ echo '(begin (define f (lambda (x) x)) (f 0))' > foo.scm
-$ ./main.byte < foo.scm
-<execution trace...>
+$ ./main.byte -i foo.scm
 0
 #+END_SRC
 ** Stuff to do
   - Add more complex examples (church numerals, …)
+  - Support multiple threads of execution
+  - Add parallel operators (spawn, join)

@@ -50,11 +50,7 @@ let alloc_kont state node = KontAddr (node, state.time)
 
 (** Time *)
 
-(* k of the k-CFA *)
-(* TODO: set it as a parameter *)
-let k = 0
-
 let tick (state : state) : time = match state.exp with
   | Node (((Scheme_ast.List _), _) as node) ->
-    BatList.take k (node :: state.time)
+    BatList.take !Params.k (node :: state.time)
   | _ -> state.time
