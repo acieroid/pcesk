@@ -1,3 +1,4 @@
+(* An environment binds names to some values (in our case, addresses) *)
 module type ENV =
   sig
     type +'a t
@@ -35,5 +36,6 @@ module Env : ENV =
                        n ^ ":" ^ (f a))
                       (EnvMap.bindings env))) ^ ")"
       | None ->
-        "env(" ^ (String.concat "," (List.map fst (EnvMap.bindings env))) ^ ")"
+        "env(" ^ (String.concat ","
+                    (List.map fst (EnvMap.bindings env))) ^ ")"
   end

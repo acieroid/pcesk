@@ -39,23 +39,11 @@ and addr =
 and env = addr Env.t
 type tag = int
 
+(** String conversion *)
+
 let string_of_time t =
   "[" ^ (String.concat ","
            (List.map Scheme_ast.string_of_node t)) ^ "]"
-
-module Addr = struct
-  type t = addr
-  let compare = Pervasives.compare
-  let string_of_address = function
-    | TagAddr (n, t) ->
-      "TagAddr(" ^ (string_of_int n) ^ "," ^ (string_of_time t) ^ ")"
-    | VarAddr (s, t) ->
-      "VarAddr(" ^ s ^ "," ^ (string_of_time t) ^ ")"
-    | KontAddr (n, t) ->
-      "KontAddr(" ^ (Scheme_ast.string_of_node n) ^ "," ^ (string_of_time t) ^ ")"
-end
-
-(** String conversion *)
 
 let string_of_kont = function
   | OperatorKont (t, _, _, _) -> "Operator-" ^ (string_of_int t)
@@ -89,6 +77,20 @@ let string_of_value = function
   | AbsSymbol -> "Sym"
   | AbsList -> "List"
 
+(** Addresses *)
+
+module Addr = struct
+  type t = addr
+  let compare = Pervasives.compare
+  let string_of_address = function
+    | TagAddr (n, t) ->
+      "TagAddr(" ^ (string_of_int n) ^ "," ^ (string_of_time t) ^ ")"
+    | VarAddr (s, t) ->
+      "VarAddr(" ^ s ^ "," ^ (string_of_time t) ^ ")"
+    | KontAddr (n, t) ->
+      "KontAddr(" ^ (Scheme_ast.string_of_node n) ^ "," ^ (string_of_time t) ^ ")"
+end
+
 (** Some operations on primitive values and (abstract) values *)
 let value_of_prim_value = function
   (* some values are directly abstracted, to avoid having infinite width
@@ -100,6 +102,19 @@ let value_of_prim_value = function
   | v -> AbsUnique v
 
 let value_equals x y = compare x y = 0
+
+let value_subsumes x y = match x, y with
+  | AbsUnique a, AbsUnique b -> a = b
+  | AbsString, AbsString
+  | AbsInteger, AbsInteger
+  | AbsBoolean, AbsBoolean
+  | AbsSymbol, AbsSymbol
+  | AbsList, AbsList
+  | AbsString, AbsUnique (String _)
+  | AbsInteger, AbsUnique (Integer _)
+  | AbsBoolean, AbsUnique (Boolean _)
+  | AbsSymbol, AbsUnique (Symbol _) -> true
+  | _ -> false
 
 let merge x y = match x, y with
   | AbsUnique (Primitive _), AbsUnique (Primitive _) -> None
@@ -130,19 +145,6 @@ let merge x y = match x, y with
   | AbsUnique (Cons _), AbsList
   | AbsUnique Nil, AbsList -> Some AbsList
   | _ -> None
-
-let value_subsumes x y = match x, y with
-  | AbsUnique a, AbsUnique b -> a = b
-  | AbsString, AbsString
-  | AbsInteger, AbsInteger
-  | AbsBoolean, AbsBoolean
-  | AbsSymbol, AbsSymbol
-  | AbsList, AbsList
-  | AbsString, AbsUnique (String _)
-  | AbsInteger, AbsUnique (Integer _)
-  | AbsBoolean, AbsUnique (Boolean _)
-  | AbsSymbol, AbsUnique (Symbol _) -> true
-  | _ -> false
 
 let value_op_int f x y = match x, y with
   | AbsInteger, _ | _, AbsInteger -> Some AbsInteger

@@ -46,7 +46,7 @@ let install_primitives (state : state) : state =
     let a = alloc_var state name in
     {state with
      env = env_extend state.env name a;
-     store = store_extend state.store a (Lattice.abst1 (AbsUnique (Primitive name)));
+     store = store_extend1 state.store a (AbsUnique (Primitive name));
      time = tick state}
   in
   List.fold_left inst state primitives

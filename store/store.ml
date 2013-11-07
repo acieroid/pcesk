@@ -1,6 +1,8 @@
 open Address
 open Lattice
 
+(* The store binds addresses to (possibly multiple) abstract values,
+   stored inside a lattice *)
 module type STORE =
   functor (Addr : ADDRESS) ->
   functor (Lattice : LATTICE) ->
@@ -27,6 +29,7 @@ module type STORE =
     val string_of_store : t -> string
   end
 
+(* Implementation of store using OCaml's Map *)
 module Store : STORE =
   functor (Addr : ADDRESS) ->
   functor (Lattice : LATTICE) ->

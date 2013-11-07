@@ -17,7 +17,7 @@ let state_push_old state node store addr =
 
 let state_push state node kont =
   let a = alloc_kont state node in
-  let store = store_extend state.store a (Lattice.abst1 (AbsUnique (Kont kont))) in
+  let store = store_extend1 state.store a (AbsUnique (Kont kont)) in
   { state with
     exp = Node node;
     addr = a;
@@ -39,11 +39,13 @@ let step_lambda node state = function
       | (Scheme_ast.List args_node, tag) ->
         let args = List.map (function
             | (Scheme_ast.Identifier x, tag) -> (x, tag)
-            | _ -> raise (Malformed ("lambda argument list", node))) args_node in
+            | _ -> raise (Malformed ("lambda argument list", node)))
+            args_node in
         begin match body with
           | [] -> raise (Malformed ("lambda without body", node))
           | body ->
-            [state_produce_value state (AbsUnique (Closure ((args, body), state.env)))]
+            [state_produce_value state
+               (AbsUnique (Closure ((args, body), state.env)))]
         end
       | _ -> raise NotYetImplemented
     end
@@ -64,7 +66,7 @@ let step_define node state = function
   | [Scheme_ast.Identifier name, tag] ->
     let a = alloc state tag in
     let env' = env_extend state.env name a in
-    let store = store_extend state.store a (Lattice.abst1 (AbsUnique Unspecified)) in
+    let store = store_extend1 state.store a (AbsUnique Unspecified) in
     [{ state with
        exp = Value (value_of_prim_value Unspecified);
        env = env';
@@ -100,8 +102,7 @@ let keywords = [("lambda", step_lambda);
 
 let is_keyword kw = List.mem_assoc kw keywords
 
-let step_keyword (kw : string) (node : node) (args : node list)
-    (state : state) : state list =
+let step_keyword kw node args state =
   try
     let f = List.assoc kw keywords in
     f node state args
@@ -110,22 +111,23 @@ let step_keyword (kw : string) (node : node) (args : node list)
 
 (** State manipulation *)
 
-let apply_function (rator : value) (rands : value list)
-    (state : state) : state list = match rator with
+let apply_function rator rands state = match rator with
   | AbsUnique (Closure ((ids, body), env)) ->
     if List.length ids != List.length rands then
       raise (InvalidNumberOfArguments (List.length ids, List.length rands));
     let args = List.combine ids rands in
-    let addrs, state = List.fold_right (fun ((name, tag), value) (addrs, state) ->
-        let a = alloc state tag in
-        (name, value, a) :: addrs, {state with time = tick state})
+    let addrs, state = List.fold_right
+        (fun ((name, tag), value) (addrs, state) ->
+           let a = alloc state tag in
+           (name, value, a) :: addrs, {state with time = tick state})
         args ([], state) in
     let extended_env = List.fold_left
         (fun env (name, value, a) ->
            env_extend env name a) state.env addrs
     and extended_store = List.fold_left
         (fun store (name, value, a) ->
-           store_extend store a (Lattice.abst1 value)) state.store addrs in
+           store_extend1 store a value)
+        state.store addrs in
     begin match body with
       | [] -> failwith "Should not happen"
       | [form] ->
@@ -143,15 +145,14 @@ let apply_function (rator : value) (rands : value list)
     end
   | AbsUnique (Primitive prim) ->
     begin match apply_primitive prim rands with
-    | Some v ->
-      [{ state with
-         exp = Value v;
-         change = Pop;
-         time = tick state}]
-    | None -> []
+      | Some v ->
+        [{ state with
+           exp = Value v;
+           change = Pop;
+           time = tick state}]
+      | None -> []
     end
   | _ -> []
-
 
 let string_of_konts state addr =
   String.concat "|"
@@ -160,27 +161,27 @@ let string_of_konts state addr =
          | v -> None)
         (Lattice.conc (store_lookup state.store addr)))
 
-let step (state : state) : state list =
-  let step_node (e, tag) =
-    match e with
-    | Scheme_ast.Identifier x ->
-      let values = Lattice.conc
-          (store_lookup state.store (env_lookup state.env x)) in
-      List.map (state_produce_value state) values
-    | Scheme_ast.String s ->
-      [state_produce_value state (value_of_prim_value (String s))]
-    | Scheme_ast.Integer n ->
-      [state_produce_value state (value_of_prim_value (Integer n))]
-    | Scheme_ast.Boolean b ->
-      [state_produce_value state (value_of_prim_value (Boolean b))]
-    | Scheme_ast.List ((Scheme_ast.Identifier kw, tag') :: args)
-      when is_keyword kw ->
-      step_keyword kw (e, tag) args state
-    | Scheme_ast.List ((_, tag) as rator :: rands) ->
-      let kont = OperatorKont (tag, rands, state.env, state.addr) in
-      [state_push state rator kont]
-    | _ -> raise (EvaluationStuck (e, tag))
-  and step_value v kont =
+let step_node state (e, tag) =
+  match e with
+  | Scheme_ast.Identifier x ->
+    let values = Lattice.conc
+        (store_lookup state.store (env_lookup state.env x)) in
+    List.map (state_produce_value state) values
+  | Scheme_ast.String s ->
+    [state_produce_value state (value_of_prim_value (String s))]
+  | Scheme_ast.Integer n ->
+    [state_produce_value state (value_of_prim_value (Integer n))]
+  | Scheme_ast.Boolean b ->
+    [state_produce_value state (value_of_prim_value (Boolean b))]
+  | Scheme_ast.List ((Scheme_ast.Identifier kw, tag') :: args)
+    when is_keyword kw ->
+    step_keyword kw (e, tag) args state
+  | Scheme_ast.List ((_, tag) as rator :: rands) ->
+    let kont = OperatorKont (tag, rands, state.env, state.addr) in
+    [state_push state rator kont]
+  | _ -> raise (EvaluationStuck (e, tag))
+
+let step_value state v kont =
     match kont with
     (** Operator *)
     | OperatorKont (_, [], env, c) ->
@@ -221,7 +222,7 @@ let step (state : state) : state list =
     | DefineKont (tag, name, env, c) ->
       let a = alloc state tag in
       let env' = env_extend env name a in
-      let store = store_extend state.store a (Lattice.abst1 v) in
+      let store = store_extend1 state.store a v in
       [{ exp = Value (value_of_prim_value Unspecified);
          env = env';
          store = store;
@@ -260,10 +261,11 @@ let step (state : state) : state list =
          time = tick state }]
     (** Halt *)
     | HaltKont -> [{ state with change = Epsilon; time = tick state }]
-  in
-  match state.exp with
-  | Node n -> step_node n
-  | Value v -> List.flatten (List.map (step_value v) (extract_konts state))
+
+let step state = match state.exp with
+  | Node n -> step_node state n
+  | Value v -> List.flatten (List.map (step_value state v)
+                               (extract_konts state))
 
 (** Injection *)
 
@@ -280,10 +282,10 @@ let empty_state = {
   time = empty_time;
 }
 
-let inject (e : node) : state * addr =
+let inject e =
   let state = install_primitives empty_state in
   let a_halt = alloc_kont state e in
-  let store = store_extend state.store a_halt (Lattice.abst1 (AbsUnique (Kont HaltKont))) in
+  let store = store_extend1 state.store a_halt (AbsUnique (Kont HaltKont)) in
   ({ state with
      exp = Node e;
      store = store;
@@ -296,10 +298,12 @@ let inject (e : node) : state * addr =
 let string_of_konts konts =
   String.concat "|" (List.map string_of_kont konts)
 
-let string_of_state (state : state) : string =
+let string_of_state state =
   (match state.exp with
-   | Node n -> (string_of_int (Hashtbl.hash state)) ^ "@node \027[31m" ^ (Scheme_ast.string_of_node n) ^ "\027[0m"
-   | Value v -> (string_of_int (Hashtbl.hash state)) ^ "@value \027[32m" ^ (string_of_value v) ^ "\027[0m")
+   | Node n -> (string_of_int (Hashtbl.hash state)) ^ "@node \027[31m" ^
+                 (Scheme_ast.string_of_node n) ^ "\027[0m"
+   | Value v -> (string_of_int (Hashtbl.hash state)) ^ "@value \027[32m" ^
+                  (string_of_value v) ^ "\027[0m")
 
 let string_of_update state state' =
   let str pop = match state'.change with
@@ -318,7 +322,7 @@ module StateSet = Set.Make(struct
     let compare = Pervasives.compare
   end)
 
-let eval (e : node) : (value * env * store) list * G.t =
+let eval e =
   let (initial_state, a_halt) = inject e in
   let extract_final state =
     match state.exp, state.addr with

@@ -87,7 +87,7 @@ let test_church_numerals () =
   let test_clo s =
     test_match (church s)
       (AbsUnique (Closure (([], []), Cesk_base.empty_env)))
-      (fun (x : Lattice.t) (y : Lattice.t) ->
+      (fun x y ->
          List.exists (function
              | AbsUnique (Closure _) -> true
              | _  -> false)

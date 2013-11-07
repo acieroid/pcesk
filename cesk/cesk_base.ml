@@ -36,6 +36,9 @@ let store_update store a v =
                   (Lattice.string_of_lattice_value v) ^ ")\n"); *)
   Store.update store a v
 
+let store_extend1 store a v =
+  store_extend store a (Lattice.abst1 v)
+
 let extract_konts state =
   BatList.filter_map (function AbsUnique (Kont k) -> Some k | v -> None)
     (Lattice.conc (store_lookup state.store state.addr))
@@ -50,7 +53,8 @@ let alloc_kont state node = KontAddr (node, state.time)
 
 (** Time *)
 
-let tick (state : state) : time = match state.exp with
+let tick state : time = match state.exp with
+  (* update the time only at a call site *)
   | Node (((Scheme_ast.List _), _) as node) ->
     BatList.take !Params.k (node :: state.time)
   | _ -> state.time

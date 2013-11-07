@@ -38,4 +38,3 @@ let string_of_exception = function
   | EvaluationStuck n ->
     "Evaluation is stuck at node " ^ (Scheme_ast.string_of_node n)
   | e -> raise e
-

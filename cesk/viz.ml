@@ -1,6 +1,7 @@
 open Types
 open Cesk_types
 open Cesk_base
+open Graph
 
 module GraphNode = struct
   type t = state
@@ -16,12 +17,12 @@ module GraphEdge = struct
   let default = ""
 end
 
-module G = Graph.Persistent.Digraph.ConcreteBidirectionalLabeled(GraphNode)(GraphEdge)
+module G = Persistent.Digraph.ConcreteBidirectionalLabeled(GraphNode)(GraphEdge)
 
 module DotArg =
 struct
   include G
-  let edge_attributes ((a, e, b) : E.t) = [`Label e]
+  let edge_attributes ((_, e, _) : E.t) = [`Label e]
   let default_edge_attributes _ = []
   let get_subgraph _ = None
   let vertex_attributes (state : V.t) =
@@ -32,9 +33,11 @@ struct
                   `Label (BatString.escaped (string_of_value v))]
   let vertex_name (state : V.t) =
     let konts = extract_konts state in
+    let state_id = (string_of_int (Hashtbl.hash state)) ^
+                     (string_of_int (Hashtbl.hash konts)) in
     match state.exp with
-    | Node n -> "node_" ^ (string_of_int (Hashtbl.hash state)) ^ (string_of_int (Hashtbl.hash konts))
-    | Value v -> "value_" ^ (string_of_int (Hashtbl.hash state)) ^ (string_of_int (Hashtbl.hash konts))
+    | Node n -> "node_" ^ state_id
+    | Value v -> "value_" ^ state_id
   let default_vertex_attributes _ = []
   let graph_attributes _ = []
 end
