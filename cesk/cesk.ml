@@ -197,6 +197,12 @@ let step (state : state) : state list =
          addr = c;
          change = Epsilon;
          time = tick state }]
+    | BeginKont (_, [node], env, c) ->
+      [{ state with
+         exp = Node node;
+         addr = c;
+         change = Epsilon;
+         time = tick state }]
     | BeginKont (_, ((_, tag) as node) :: rest, env, c) ->
       let kont = BeginKont (tag, rest, env, c) in
       [state_push state node kont]
