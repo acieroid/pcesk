@@ -146,11 +146,19 @@ let apply_function (rator : value) (rands : value list)
     | Some v ->
       [{ state with
          exp = Value v;
-         change = Epsilon;
+         change = Pop;
          time = tick state}]
     | None -> []
     end
   | _ -> []
+
+
+let string_of_konts state addr =
+  String.concat "|"
+    (BatList.filter_map (function
+         | AbsUnique (Kont k) -> Some (string_of_kont k)
+         | v -> None)
+        (Lattice.conc (store_lookup state.store addr)))
 
 let step (state : state) : state list =
   let step_node (e, tag) =
@@ -173,7 +181,9 @@ let step (state : state) : state list =
       [state_push state rator kont]
     | _ -> raise (EvaluationStuck (e, tag))
   and step_value v kont =
+    print_string (string_of_kont kont); print_newline ();
     match kont with
+    (** Operator *)
     | OperatorKont (_, [], env, c) ->
       apply_function v [] { state with
                             env = env;
@@ -182,7 +192,9 @@ let step (state : state) : state list =
     | OperatorKont (_, ((_, tag) as rand) :: rands, env, c) ->
       let kont = OperandsKont (tag, v, rands, [], env, c) in
       [{(state_push state rand kont) with env = env}]
+    (** Operands *)
     | OperandsKont (_, rator, [], values, env, c) ->
+      print_string ("applying, next kont is: " ^ (string_of_konts state c));
       let rands = List.rev (v :: values) in
       apply_function rator rands { state with
                                    env = env;
@@ -191,6 +203,7 @@ let step (state : state) : state list =
     | OperandsKont (_, rator, ((_, tag) as rand) :: rands, values, env, c) ->
       let kont = OperandsKont (tag, rator, rands, v :: values, env, c) in
       [{(state_push state rand kont) with env = env }]
+    (** Begin *)
     | BeginKont (_, [], _, c) ->
       [{ state with
          exp = Value v;
@@ -206,6 +219,7 @@ let step (state : state) : state list =
     | BeginKont (_, ((_, tag) as node) :: rest, env, c) ->
       let kont = BeginKont (tag, rest, env, c) in
       [state_push state node kont]
+    (** Define *)
     | DefineKont (tag, name, env, c) ->
       let a = alloc state tag in
       let env' = env_extend env name a in
@@ -214,8 +228,9 @@ let step (state : state) : state list =
          env = env';
          store = store;
          addr = c;
-         change = Epsilon;
+         change = Pop;
          time = tick state }]
+    (** If *)
     | IfKont (_, consequent, alternative, env, c) ->
       let new_state = { state with
                         addr = c;
@@ -235,6 +250,7 @@ let step (state : state) : state list =
       else
         (* either true or false *)
         [state_true; state_false]
+    (** Set *)
     | SetKont (_, id, env, c) ->
       let a = env_lookup env id in
       let store = store_update state.store a (Lattice.abst1 v) in
@@ -244,6 +260,7 @@ let step (state : state) : state list =
          addr = c;
          change = Epsilon;
          time = tick state }]
+    (** Halt *)
     | HaltKont -> [{ state with change = Epsilon; time = tick state }]
   in
   match state.exp with
@@ -286,10 +303,17 @@ let string_of_state (state : state) : string =
    | Node n -> (string_of_int (Hashtbl.hash state)) ^ "@node \027[31m" ^ (Scheme_ast.string_of_node n) ^ "\027[0m"
    | Value v -> (string_of_int (Hashtbl.hash state)) ^ "@value \027[32m" ^ (string_of_value v) ^ "\027[0m")
 
-let string_of_update state state' = match state'.change with
-  | Epsilon -> "ε"
-  | Pop -> "-" ^ (string_of_konts (extract_konts state))
-  | Push -> "+" ^ (string_of_konts (extract_konts state'))
+let string_of_update state state' =
+  let str pop = match state'.change with
+    | Epsilon -> "ε"
+    | Pop -> pop
+    | Push -> "+" ^ (string_of_konts (extract_konts state')) in
+  (* Some special cases to have it working correctly.
+     Could probably be made in a cleaner way *)
+  match state.exp, state'.exp with
+  | Node _, _ -> str ("-" ^ (string_of_konts (extract_konts state)))
+  | Value _, Value _ -> str ("-" ^ (string_of_konts (extract_konts state')))
+  | Value _, Node _ -> str "ε"
 
 module StateSet = Set.Make(struct
     type t = state
