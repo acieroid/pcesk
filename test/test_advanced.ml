@@ -96,6 +96,19 @@ let test_church_numerals () =
   test_clo "(inc zero)";
   test_clo "(plus (inc (inc (inc zero))) (plus (inc (inc zero)) (inc zero)))"
 
+let test_infinite () =
+  let test_no_result string =
+    let node = Scheme_parser.parse (Scheme_lexer.lex_string string) in
+    let res, _ = Cesk.eval node in
+    let results = List.map (fun (r, _, _) -> r) res in
+    assert_equal
+      ~msg:string ~printer:(fun l ->
+          "[" ^ (String.concat ", "
+                   (List.map string_of_value l)) ^ "]")
+      [] results in
+  test_no_result "(begin (define f (lambda () (f))) (f))";
+  test_no_result "(begin (define t (lambda (x) (t (+ x 1)))) (t 0))"
+
 let suite =
   "Advanced tests" >:::
     ["multiple calls" >:: test_multiple_calls;
@@ -103,4 +116,5 @@ let suite =
      "fibonacci" >:: test_fibo;
      "widen" >:: test_widen;
      "church numerals" >:: test_church_numerals;
+     "infinitely recursive functions" >:: test_infinite;
     ]

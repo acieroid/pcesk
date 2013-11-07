@@ -181,7 +181,6 @@ let step (state : state) : state list =
       [state_push state rator kont]
     | _ -> raise (EvaluationStuck (e, tag))
   and step_value v kont =
-    print_string (string_of_kont kont); print_newline ();
     match kont with
     (** Operator *)
     | OperatorKont (_, [], env, c) ->
@@ -194,7 +193,6 @@ let step (state : state) : state list =
       [{(state_push state rand kont) with env = env}]
     (** Operands *)
     | OperandsKont (_, rator, [], values, env, c) ->
-      print_string ("applying, next kont is: " ^ (string_of_konts state c));
       let rands = List.rev (v :: values) in
       apply_function rator rands { state with
                                    env = env;
