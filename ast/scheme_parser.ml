@@ -2,11 +2,11 @@ open Scheme_tokens
 open Scheme_ast
 
 let parse stream =
-  let rec parse' tag stream = match stream with parser
-    | [< 'IDENTIFIER i >] -> (Identifier i, tag+1)
-    | [< 'INTEGER n >] -> (Integer n, tag+1)
-    | [< 'STRING s >] -> (String s, tag+1)
-    | [< 'BOOLEAN b >] -> (Boolean b, tag+1)
+  let rec parse' tag stream : scheme_node * int = match stream with parser
+    | [< 'IDENTIFIER i >] -> ((Identifier i, tag+1), tag+1)
+    | [< 'INTEGER n >] -> ((Integer n, tag+1), tag+1)
+    | [< 'STRING s >] -> ((String s, tag+1), tag+1)
+    | [< 'BOOLEAN b >] -> ((Boolean b, tag+1), tag+1)
     | [< 'LPAR; 'IDENTIFIER kwd >] -> parseKeyword tag kwd stream
 
   and parseKeyword tag kwd stream = match kwd with
@@ -15,51 +15,52 @@ let parse stream =
     | "define" -> parseDefine tag stream
     | "if" -> parseIf tag stream
     | "set!" -> parseSet tag stream
-    | f -> parseFuncall tag (Identifier f, tag+1) stream
+    | f -> parseFuncall tag f stream
 
-  and parseBegin tag = parser
-    | [< (body, tag') = parseList (tag+1) >] -> (Begin body, tag+1)
+  and parseBegin tag : scheme_token Stream.t -> scheme_node * int = parser
+    | [< (body, tag') = parseList (tag+1) >] ->
+      ((Begin body, tag+1), tag')
 
-  and parseLambda tag = parser
+  and parseLambda tag : scheme_token Stream.t -> scheme_node * int = parser
     | [< 'LPAR; (args, tag') = parseArgs (tag+1);
          (body, tag'') = parseList tag' >] ->
       begin match body with
       | [] -> failwith "Anonymous function without body"
-      | _ -> (Lambda (args, body), tag+1)
+      | _ -> ((Lambda (args, body), tag+1), tag'')
       end
 
-  and parseDefine tag = parser
+  and parseDefine tag : scheme_token Stream.t -> scheme_node * int = parser
     | [< 'LPAR; 'IDENTIFIER n; (args, tag') = parseArgs (tag+2);
          (body, tag'') = parseList tag' >] ->
       begin match body with
       | [] -> failwith ("Function without body: " ^ n)
-      | _ -> (DefineFun ((n, tag+2), args, body), tag+1)
+      | _ -> ((DefineFun ((n, tag+2), args, body), tag+1), tag'')
       end
-    | [< 'IDENTIFIER n; e = parse' (tag+2) >] ->
-      (Define ((n, tag+2), e), tag+1)
+    | [< 'IDENTIFIER n; (e, tag') = parse' (tag+2) >] ->
+      ((Define ((n, tag+2), e), tag+1), tag')
 
-  and parseIf tag = parser
+  and parseIf tag : scheme_token Stream.t -> scheme_node * int = parser
     | [< (cond, tag') = parse' (tag+1);
          (cons, tag'') = parse' tag';
          (alt, tag''') = parse' tag'' >] ->
-      (If ((cond, tag'), (cons, tag''), (alt, tag''')), tag+1)
+      ((If (cond, cons, alt), tag+1), tag''')
 
-  and parseSet tag = parser
-    | [< 'IDENTIFIER v; e = parse' (tag+2) >] ->
-      (Set ((v, tag+2), e), tag+1)
+  and parseSet tag : scheme_token Stream.t -> scheme_node * int = parser
+    | [< 'IDENTIFIER v; (e, tag') = parse' (tag+2) >] ->
+      ((Set ((v, tag+2), e), tag+1), tag')
 
-  and parseFuncall tag f = parser
-    | [< (args, tag') = parseList (tag+1) >] ->
-      (Funcall (f, args), tag+1)
+  and parseFuncall tag f : scheme_token Stream.t -> scheme_node * int = parser
+    | [< (args, tag') = parseList (tag+2) >] ->
+      ((Funcall (((Identifier f), tag+2), args), tag+1), tag')
 
-  and parseArgs tag stream = match stream with parser
+  and parseArgs tag : scheme_token Stream.t -> var list * int = parser
     | [< 'RPAR >] -> ([], tag)
     | [< 'IDENTIFIER v; (rest, tag') = parseArgs (tag+1) >] ->
-      ((v, tag+1) :: rest, tag'+1)
+      ((v, tag+1) :: rest, tag')
 
-  and parseList tag stream = match stream with parser
+  and parseList tag stream : (scheme_node list) * int = match stream with parser
     | [< 'RPAR >] -> ([], tag)
     | [< (car, tag') = parse' tag; (cdr, tag'') = parseList tag' >] ->
-      ((car, tag') :: cdr, tag'')
+      (car :: cdr, tag'')
   in
-  parse' 0 stream
+  fst (parse' 0 stream)
