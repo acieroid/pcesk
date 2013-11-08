@@ -13,6 +13,8 @@ let parse stream =
     | "begin" -> parseBegin tag stream
     | "lambda" -> parseLambda tag stream
     | "define" -> parseDefine tag stream
+    | "if" -> parseIf tag stream
+    | "set!" -> parseSet tag stream
     | f -> parseFuncall tag (Identifier f, tag+1) stream
 
   and parseBegin tag = parser
@@ -36,6 +38,15 @@ let parse stream =
     | [< 'IDENTIFIER n; e = parse' (tag+2) >] ->
       (Define ((n, tag+2), e), tag+1)
 
+  and parseIf tag = parser
+    | [< (cond, tag') = parse' (tag+1);
+         (cons, tag'') = parse' tag';
+         (alt, tag''') = parse' tag'' >] ->
+      (If ((cond, tag'), (cons, tag''), (alt, tag''')), tag+1)
+
+  and parseSet tag = parser
+    | [< 'IDENTIFIER v; e = parse' (tag+2) >] ->
+      (Set ((v, tag+2), e), tag+1)
 
   and parseFuncall tag f = parser
     | [< (args, tag') = parseList (tag+1) >] ->
