@@ -40,7 +40,7 @@ let parse stream =
       | [] -> failwith ("Function without body: " ^ n)
       | _ -> ((DefineFun ((n, tag+2), args, body), tag+1), tag'')
       end
-    | [< 'IDENTIFIER n; (e, tag') = parse' (tag+2) >] ->
+    | [< 'IDENTIFIER n; (e, tag') = parse' (tag+2); 'RPAR >] ->
       ((Define ((n, tag+2), e), tag+1), tag')
 
   and parseIf tag = parser
