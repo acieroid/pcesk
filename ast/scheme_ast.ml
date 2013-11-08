@@ -28,23 +28,23 @@ let rec string_of_exp = function
   | Begin [] -> "(begin)"
   | Begin body ->
     "(begin " ^ (string_of_nodes " " body) ^ ")"
-  | Define ((name, t), value) ->
-    "(define " ^ name ^ "@" ^ (string_of_int t) ^ " " ^ (string_of_node value) ^ ")"
-  | DefineFun ((name, t), args, body) ->
-    "(define (" ^ name ^ "@" ^ (string_of_int t) ^ " " ^ (string_of_vars " " args) ^ ") " ^
+  | Define ((name, _), value) ->
+    "(define " ^ name ^ " " ^ (string_of_node value) ^ ")"
+  | DefineFun ((name, _), args, body) ->
+    "(define (" ^ name ^ " " ^ (string_of_vars " " args) ^ ") " ^
       (string_of_nodes " " body) ^ ")"
   | If (cond, cons, alt) ->
     "(if " ^ (string_of_node cond) ^ " " ^
       (string_of_node cons) ^ " " ^
         (string_of_node alt) ^ ")"
-  | Set ((v, t), e) ->
-    "(set! " ^ v ^ "@" ^ (string_of_int t) ^ " " ^ (string_of_node e) ^ ")"
+  | Set ((v, _), e) ->
+    "(set! " ^ v ^ " " ^ (string_of_node e) ^ ")"
 
 and string_of_node (exp, tag) =
-  (string_of_exp exp) ^ "@" ^ (string_of_int tag)
+  (string_of_exp exp) (* ^ "@" ^ (string_of_int tag) *)
 
 and string_of_nodes sep nodes =
   String.concat sep (List.map string_of_node nodes)
 
 and string_of_vars sep vars =
-    String.concat sep (List.map (fun (v, t) -> v ^ "@" ^ (string_of_int t)) vars)
+    String.concat sep (List.map fst vars)
