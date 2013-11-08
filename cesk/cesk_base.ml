@@ -53,8 +53,8 @@ let alloc_kont state node = KontAddr (node, state.time)
 
 (** Time *)
 
-let tick state : time = match state.exp with
+let tick state = match state.exp with
   (* update the time only at a call site *)
-  | Node (((Scheme_ast.List _), _) as node) ->
+  | Node (((Scheme_ast.Funcall _), _) as node) ->
     BatList.take !Params.k (node :: state.time)
   | _ -> state.time

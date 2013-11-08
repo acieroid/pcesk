@@ -33,25 +33,11 @@ let state_produce_value state value =
 
 (** Keywords *)
 
-let step_lambda node state = function
-  | args_node :: body ->
-    begin match args_node with
-      | (Scheme_ast.List args_node, tag) ->
-        let args = List.map (function
-            | (Scheme_ast.Identifier x, tag) -> (x, tag)
-            | _ -> raise (Malformed ("lambda argument list", node)))
-            args_node in
-        begin match body with
-          | [] -> raise (Malformed ("lambda without body", node))
-          | body ->
-            [state_produce_value state
-               (AbsUnique (Closure ((args, body), state.env)))]
-        end
-      | _ -> raise NotYetImplemented
-    end
-  | _ -> raise (Malformed ("lambda without arguments", node))
+let step_lambda state tag args body =
+  [state_produce_value state
+     (AbsUnique (Closure ((args, body), state.env)))]
 
-let step_begin node state = function
+let step_begin state tag = function
   | [] ->
     [{ state with
        exp = Value (value_of_prim_value Unspecified);
@@ -61,53 +47,17 @@ let step_begin node state = function
     let kont = BeginKont (tag, rest, state.env, state.addr) in
     [state_push state n kont]
 
-let step_define node state = function
-  | [] -> raise (Malformed ("define without arguments", node))
-  | [Scheme_ast.Identifier name, tag] ->
-    let a = alloc state tag in
-    let env' = env_extend state.env name a in
-    let store = store_extend1 state.store a (AbsUnique Unspecified) in
-    [{ state with
-       exp = Value (value_of_prim_value Unspecified);
-       env = env';
-       store = store;
-       change = Epsilon;
-       time = tick state }]
-  | (Scheme_ast.Identifier name, tag) :: value :: [] ->
-    let kont = DefineKont (tag, name, state.env, state.addr) in
-    [state_push state value kont]
-  | (Scheme_ast.List ((Scheme_ast.Identifier name, tag) :: args), _) :: body ->
-    raise NotYetImplemented
-  | _ -> raise (Malformed ("define with too much arguments", node))
+let step_define state tag name value =
+  let kont = DefineKont (tag, name, state.env, state.addr) in
+  [state_push state value kont]
 
-let step_if node state = function
-  | cond :: consequent :: [] ->
-    raise NotYetImplemented
-  | (_, tag) as cond :: consequent :: alternative :: [] ->
-    let kont = IfKont (tag, consequent, alternative, state.env, state.addr) in
-    [state_push state cond kont]
-  | _ -> raise (Malformed ("if with an invalid number of arguments", node))
+let step_if state tag cond cons alt =
+  let kont = IfKont (tag, cons, alt, state.env, state.addr) in
+  [state_push state cond kont]
 
-let step_set node state = function
-  | (Scheme_ast.Identifier id, tag) :: value :: [] ->
-    let kont = SetKont (tag, id, state.env, state.addr) in
-    [state_push state value kont]
-  | _ -> raise (Malformed ("set! with invalid arguments", node))
-
-let keywords = [("lambda", step_lambda);
-                ("begin", step_begin);
-                ("define", step_define);
-                ("if", step_if);
-                ("set!", step_set)]
-
-let is_keyword kw = List.mem_assoc kw keywords
-
-let step_keyword kw node args state =
-  try
-    let f = List.assoc kw keywords in
-    f node state args
-  with
-    Not_found -> raise (InvalidKeyword kw)
+let step_set state tag id value =
+  let kont = SetKont (tag, id, state.env, state.addr) in
+  [state_push state value kont]
 
 (** State manipulation *)
 
@@ -140,8 +90,9 @@ let apply_function rator rands state = match rator with
            time = tick state}]
       | _ ->
         (* Multiple forms in body, implicit begin *)
-        (* TODO: should pass the node corresponding to the lambda *)
-        step_keyword "begin" (List.hd body) body state
+        (* TODO: tag should be the tag of the whole body *)
+        let (_, tag) = (List.hd body) in
+        step_begin state tag body
     end
   | AbsUnique (Primitive prim) ->
     begin match apply_primitive prim rands with
@@ -173,13 +124,22 @@ let step_node state (e, tag) =
     [state_produce_value state (value_of_prim_value (Integer n))]
   | Scheme_ast.Boolean b ->
     [state_produce_value state (value_of_prim_value (Boolean b))]
-  | Scheme_ast.List ((Scheme_ast.Identifier kw, tag') :: args)
-    when is_keyword kw ->
-    step_keyword kw (e, tag) args state
-  | Scheme_ast.List ((_, tag) as rator :: rands) ->
+  | Scheme_ast.Lambda (vars, body) ->
+    step_lambda state tag vars body
+  | Scheme_ast.Begin body ->
+    step_begin state tag body
+  | Scheme_ast.Define ((name, tag), value) ->
+    step_define state tag name value
+  | Scheme_ast.DefineFun _ ->
+    raise NotYetImplemented
+  | Scheme_ast.If (cond, cons, alt) ->
+    step_if state tag cond cons alt
+  | Scheme_ast.Set ((var, tag), value) ->
+    step_set state tag var value
+  | Scheme_ast.Funcall (((_, tag) as rator), rands) ->
     let kont = OperatorKont (tag, rands, state.env, state.addr) in
     [state_push state rator kont]
-  | _ -> raise (EvaluationStuck (e, tag))
+(*  | _ -> raise (EvaluationStuck (e, tag)) *)
 
 let step_value state v kont =
     match kont with
