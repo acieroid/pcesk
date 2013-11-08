@@ -46,11 +46,11 @@ let parse stream =
   and parseIf tag = parser
     | [< (cond, tag') = parse' (tag+1);
          (cons, tag'') = parse' tag';
-         (alt, tag''') = parse' tag'' >] ->
+         (alt, tag''') = parse' tag''; 'RPAR >] ->
       ((If (cond, cons, alt), tag+1), tag''')
 
   and parseSet tag = parser
-    | [< 'IDENTIFIER v; (e, tag') = parse' (tag+2) >] ->
+    | [< 'IDENTIFIER v; (e, tag') = parse' (tag+2); 'RPAR >] ->
       ((Set ((v, tag+2), e), tag+1), tag')
 
   and parseFuncallRest tag f = parser
