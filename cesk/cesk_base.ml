@@ -49,6 +49,8 @@ let alloc state tag = TagAddr (tag, state.time)
 
 let alloc_var state name = VarAddr (name, state.time)
 
+let alloc_prim state name = PrimAddr (name, state.time)
+
 let alloc_kont state node = KontAddr (node, state.time)
 
 (** Time *)

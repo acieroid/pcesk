@@ -43,7 +43,7 @@ let apply_primitive (name : string) (args : value list) : value option =
 
 let install_primitives (state : state) : state =
   let inst state (name, _) =
-    let a = alloc_var state name in
+    let a = alloc_prim state name in
     {state with
      env = env_extend state.env name a;
      store = store_extend1 state.store a (AbsUnique (Primitive name));

@@ -23,7 +23,8 @@ module type STORE =
        address *)
     val join : t -> t -> t
     (* Narrow a store, keeping only the elements whose address is
-       contained in the set of address *)
+       contained in the set of address.
+       Also keep the non-reclaimable addresses *)
     val narrow : t -> Addr.t list -> t
     (* Convert a store to a string *)
     val string_of_store : t -> string
@@ -78,7 +79,9 @@ module Store : STORE =
       | Some (v1, _), Some (v2, _) -> Some (Lattice.join v1 v2, NotFresh)) s s'
 
     let narrow store addrs =
-      StoreMap.filter (fun a _ -> List.mem a addrs) store
+      StoreMap.filter (fun a _ ->
+          (not (Addr.is_reclaimable a)) || List.mem a addrs)
+        store
 
     let string_of_store store =
       "env(" ^ (String.concat ","
@@ -126,6 +129,7 @@ module Assoc_store : STORE =
 
     let narrow store addrs =
       List.filter (fun (a, _) ->
+          (not (Addr.is_reclaimable a)) ||
           (List.exists (fun a' -> Addr.compare a a' = 0) addrs))
         store
 

@@ -4,6 +4,7 @@ open Cesk_base
 open Exceptions
 open Primitives
 open Viz
+open Garbage_collection
 
 (** Helper functions *)
 
@@ -179,6 +180,7 @@ let step_value state v kont =
       [state_push state node kont]
     (** letrec *)
     | LetRecKont (_, (name, tag), bindings, body, env, c) ->
+      (* TODO: alloc_var instead? *)
       let a = alloc state tag in
       let env = env_extend state.env name a in
       let store = store_extend1 state.store a v in
