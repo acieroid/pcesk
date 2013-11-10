@@ -50,5 +50,8 @@ $ ./main.byte -i foo.scm
 #+END_SRC
 ** Stuff to do
   - Add more complex examples
+  - Abstract garbage collection
+  - Widening with single-threaded store
+  - Add call/cc ?
   - Support multiple threads of execution
   - Add parallel operators (spawn, join)
