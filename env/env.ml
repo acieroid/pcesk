@@ -1,3 +1,8 @@
+module StringSet = Set.Make(struct
+    type t = string
+    let compare = Pervasives.compare
+  end)
+
 (* An environment binds names to some values (in our case, addresses) *)
 module type ENV =
   sig
@@ -9,6 +14,11 @@ module type ENV =
     val lookup : 'a t -> string -> 'a
     (* Add a new binding to the environment (might shadow a previous one) *)
     val extend : 'a t -> string -> 'a -> 'a t
+    (* Restrict the environment to the names in the given set *)
+    val restrict : 'a t -> StringSet.t -> 'a t
+    (* Return the range of the environment (ie. the list of values
+        contained in it *)
+    val range : 'a t -> 'a list
     (* Return a string representation of the environment *)
     val string_of_env : ?print:('a -> string) -> 'a t -> string
   end
@@ -28,6 +38,12 @@ module Env : ENV =
 
     let extend env name address =
       EnvMap.add name address env
+
+    let restrict env names =
+      EnvMap.filter (fun name _ -> StringSet.mem name names) env
+
+    let range env =
+      List.map snd (EnvMap.bindings env)
 
     let string_of_env ?print env = match print with
       | Some f ->
