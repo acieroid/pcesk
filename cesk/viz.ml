@@ -28,7 +28,7 @@ struct
   let vertex_attributes (state : V.t) =
     match state.exp with
     | Node n -> [`Shape `Box; `Style `Filled; `Fillcolor 0xFFDDDD;
-                 `Label (BatString.escaped (Scheme_ast.string_of_node n))]
+                 `Label (BatString.escaped (Ast.string_of_node n))]
     | Value v -> [`Shape `Box; `Style `Filled; `Fillcolor 0xDDFFDD;
                   `Label (BatString.escaped (string_of_value v))]
   let vertex_name (state : V.t) =

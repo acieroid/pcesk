@@ -2,7 +2,7 @@ open OUnit
 open Types
 
 let (=>) string expected =
-  let node = Scheme_parser.parse (Scheme_lexer.lex_string string) in
+  let node = Parser.parse (Lexer.lex_string string) in
   let res, _ = Cesk.eval node in
   assert_equal (List.length res) 1;
   let r, _, _ = List.hd res in

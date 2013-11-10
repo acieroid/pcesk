@@ -1,5 +1,5 @@
-open Scheme_tokens
-open Scheme_ast
+open Tokens
+open Ast
 
 let parse stream =
   let rec parse' tag stream = match stream with parser

@@ -7,8 +7,8 @@ module Store = Assoc_store(Addr)(Lattice)
 module Exploration = Exploration.Bfs
 
 type exp =
-  | Node of node   (* eval state *)
-  | Value of value (* continuation state *)
+  | Node of Ast.node (* eval state *)
+  | Value of value   (* continuation state *)
 type kont_op =
   | Push
   | Pop

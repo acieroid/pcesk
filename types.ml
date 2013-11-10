@@ -2,8 +2,7 @@ open Env
 
 (** Types *)
 
-type node = Scheme_ast.scheme_node
-type lam = (string * int) list * (node list)
+type lam = (string * int) list * (Ast.node list)
 type prim_value =
   | String of string
   | Integer of int
@@ -23,19 +22,19 @@ and value =
   | AbsSymbol
   | AbsList
 and kont =
-  | OperatorKont of int * node list * env * addr
-  | OperandsKont of int * value * node list * value list * env * addr
-  | BeginKont of int * node list * env * addr
-  | DefineKont of int * string * env * addr
-  | IfKont of int * node * node * env * addr
+  | OperatorKont of int * Ast.node list * env * addr
+  | OperandsKont of int * value * Ast.node list * value list * env * addr
+  | BeginKont of int * Ast.node list * env * addr
+  | LetRecKont of int * Ast.var * (Ast.var * Ast.node) list * Ast.node list
+  | IfKont of int * Ast.node * Ast.node * env * addr
   | SetKont of int * string * env * addr
   | HaltKont
 and prim = string * (value list -> value option)
-and time = node list
+and time = Ast.node list
 and addr =
   | TagAddr of int * time
   | VarAddr of string * time
-  | KontAddr of node * time
+  | KontAddr of Ast.node * time
 and env = addr Env.t
 type tag = int
 
@@ -43,13 +42,13 @@ type tag = int
 
 let string_of_time t =
   "[" ^ (String.concat ","
-           (List.map Scheme_ast.string_of_node t)) ^ "]"
+           (List.map Ast.string_of_node t)) ^ "]"
 
 let string_of_kont = function
   | OperatorKont (t, _, _, _) -> "Operator-" ^ (string_of_int t)
   | OperandsKont (t, _, _, _, _, _) -> "Operands-" ^ (string_of_int t)
   | BeginKont (t, _, _, _) -> "Begin-" ^ (string_of_int t)
-  | DefineKont (t, _, _, _) -> "Define-" ^ (string_of_int t)
+  | LetRecKont (t, _, _, _) -> "LetRec-" ^ (string_of_int t)
   | IfKont (t, _, _, _, _) -> "If-" ^ (string_of_int t)
   | SetKont (t, _, _, _) -> "Set-" ^ (string_of_int t)
   | HaltKont -> "Halt"
@@ -88,7 +87,7 @@ module Addr = struct
     | VarAddr (s, t) ->
       "VarAddr(" ^ s ^ "," ^ (string_of_time t) ^ ")"
     | KontAddr (n, t) ->
-      "KontAddr(" ^ (Scheme_ast.string_of_node n) ^ "," ^ (string_of_time t) ^ ")"
+      "KontAddr(" ^ (Ast.string_of_node n) ^ "," ^ (string_of_time t) ^ ")"
 end
 
 (** Some operations on primitive values and (abstract) values *)

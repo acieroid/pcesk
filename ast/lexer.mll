@@ -1,5 +1,5 @@
 {
-  open Scheme_tokens
+  open Tokens
   open Lexing
   exception SchemeLexingError of position
 }

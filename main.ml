@@ -19,16 +19,15 @@ let _ =
     (fun x -> raise (Arg.Bad ("Bad argument : " ^ x)))
     usage;
   try
-    let node = Scheme_parser.parse (Scheme_lexer.lex !input) in
-    (*let res, graph = Cesk.eval node in
+    let node = Parser.parse (Lexer.lex !input) in
+    let res, graph = Cesk.eval node in
     List.iter (fun (value, env, store) ->
         print_string (string_of_value value); print_newline ())
       res;
     begin match !graph_file with
       | Some f -> Viz.output_graph f graph
       | None -> ()
-    end;*)
-    print_string (Scheme_ast.string_of_node node); print_newline ();
+    end;
     close_in !input
   with
   | e -> print_string (Exceptions.string_of_exception e)

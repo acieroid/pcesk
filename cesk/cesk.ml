@@ -47,10 +47,6 @@ let step_begin state tag = function
     let kont = BeginKont (tag, rest, state.env, state.addr) in
     [state_push state n kont]
 
-let step_define state tag name value =
-  let kont = DefineKont (tag, name, state.env, state.addr) in
-  [state_push state value kont]
-
 let step_if state tag cond cons alt =
   let kont = IfKont (tag, cons, alt, state.env, state.addr) in
   [state_push state cond kont]
@@ -114,29 +110,25 @@ let string_of_konts state addr =
 
 let step_node state (e, tag) =
   match e with
-  | Scheme_ast.Identifier x ->
+  | Ast.Identifier x ->
     let values = Lattice.conc
         (store_lookup state.store (env_lookup state.env x)) in
     List.map (state_produce_value state) values
-  | Scheme_ast.String s ->
+  | Ast.String s ->
     [state_produce_value state (value_of_prim_value (String s))]
-  | Scheme_ast.Integer n ->
+  | Ast.Integer n ->
     [state_produce_value state (value_of_prim_value (Integer n))]
-  | Scheme_ast.Boolean b ->
+  | Ast.Boolean b ->
     [state_produce_value state (value_of_prim_value (Boolean b))]
-  | Scheme_ast.Lambda (vars, body) ->
+  | Ast.Lambda (vars, body) ->
     step_lambda state tag vars body
-  | Scheme_ast.Begin body ->
+  | Ast.Begin body ->
     step_begin state tag body
-  | Scheme_ast.Define ((name, tag), value) ->
-    step_define state tag name value
-  | Scheme_ast.DefineFun _ ->
-    raise NotYetImplemented
-  | Scheme_ast.If (cond, cons, alt) ->
+  | Ast.If (cond, cons, alt) ->
     step_if state tag cond cons alt
-  | Scheme_ast.Set ((var, tag), value) ->
+  | Ast.Set ((var, tag), value) ->
     step_set state tag var value
-  | Scheme_ast.Funcall (((_, tag) as rator), rands) ->
+  | Ast.Funcall (((_, tag) as rator), rands) ->
     let kont = OperatorKont (tag, rands, state.env, state.addr) in
     [state_push state rator kont]
 (*  | _ -> raise (EvaluationStuck (e, tag)) *)
@@ -178,17 +170,6 @@ let step_value state v kont =
     | BeginKont (_, ((_, tag) as node) :: rest, env, c) ->
       let kont = BeginKont (tag, rest, env, c) in
       [state_push state node kont]
-    (** Define *)
-    | DefineKont (tag, name, env, c) ->
-      let a = alloc state tag in
-      let env' = env_extend env name a in
-      let store = store_extend1 state.store a v in
-      [{ exp = Value (value_of_prim_value Unspecified);
-         env = env';
-         store = store;
-         addr = c;
-         change = Pop;
-         time = tick state }]
     (** If *)
     | IfKont (_, consequent, alternative, env, c) ->
       let new_state = { state with
@@ -261,7 +242,7 @@ let string_of_konts konts =
 let string_of_state state =
   (match state.exp with
    | Node n -> (string_of_int (Hashtbl.hash state)) ^ "@node \027[31m" ^
-                 (Scheme_ast.string_of_node n) ^ "\027[0m"
+                 (Ast.string_of_node n) ^ "\027[0m"
    | Value v -> (string_of_int (Hashtbl.hash state)) ^ "@value \027[32m" ^
                   (string_of_value v) ^ "\027[0m")
 

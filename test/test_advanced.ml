@@ -5,7 +5,7 @@ open Set_lattice
 module Lattice = Set_lattice(struct let size = 5 end)
 
 let (=>) string expected =
-  let node = Scheme_parser.parse (Scheme_lexer.lex_string string) in
+  let node = Parser.parse (Lexer.lex_string string) in
   let res, _ = Cesk.eval node in
   let results = List.map (fun (r, _, _) -> r) res in
   let merged = Lattice.abst results in

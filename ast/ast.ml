@@ -2,18 +2,18 @@ open Util
 
 type tag = int
 type var = string * tag
-type scheme_exp =
+type exp =
   | Identifier of string
   | String of string
   | Integer of int
   | Boolean of bool
-  | Funcall of scheme_node * scheme_node list
-  | Lambda of var list * scheme_node list
-  | Begin of scheme_node list
-  | LetRec of (var * scheme_node) list * scheme_node list
-  | If of scheme_node * scheme_node * scheme_node
-  | Set of var * scheme_node
-and scheme_node = scheme_exp * int
+  | Funcall of node * node list
+  | Lambda of var list * node list
+  | Begin of node list
+  | LetRec of (var * node) list * node list
+  | If of node * node * node
+  | Set of var * node
+and node = exp * int
 
 let rec string_of_exp = function
   | Identifier s -> s

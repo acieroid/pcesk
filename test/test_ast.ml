@@ -4,7 +4,7 @@ open Util
 open Free_variables
 
 let (=>) string expected =
-  let node = Scheme_parser.parse (Scheme_lexer.lex_string string) in
+  let node = Parser.parse (Lexer.lex_string string) in
   assert_equal ~msg:string ~printer:string_of_string_set
     expected (free_variables node)
 
