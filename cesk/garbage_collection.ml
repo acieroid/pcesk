@@ -61,3 +61,22 @@ and live_location_kont store = function
 and live_locations_store store addr =
   let vs = Lattice.conc (store_lookup store addr) in
   union (List.map (live_locations_value store) vs)
+
+let gc state =
+  let rec reachable grey black =
+    if AddressSet.is_empty grey then
+      black
+    else
+      let addr = AddressSet.choose grey in
+      let black' = AddressSet.add addr black in
+      let grey' = AddressSet.diff
+          (union [grey;
+                  live_locations_store state.store addr])
+          black' in
+      reachable grey' black' in
+  let grey = union [live_locations state.store state.exp state.env;
+                    live_locations_store state.store state.addr]
+  and black = AddressSet.singleton state.addr in
+  let locations = reachable grey black in
+  let store = Store.narrow state.store (AddressSet.elements locations) in
+  { state with store = store }
