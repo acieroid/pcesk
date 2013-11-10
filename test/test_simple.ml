@@ -28,18 +28,17 @@ let test_begin () =
   "(begin 1 2 3)" => Integer 3;
   "(begin (+ 1 2) (+ 2 3) (+ 3 (begin 4 5)))" => Integer 8
 
-let test_define_simple () =
-  "(begin (define x 1) x)" => Integer 1;
-  "(begin (define x (+ 1 2)) (define y (+ x x)) y)" => Integer 6;
-  "(begin (define x 1))" => Unspecified
+let test_letrec () =
+  "(letrec ((x 1)) x)" => Integer 1;
+  "(letrec ((x 1) (y x)) y)" => Integer 1
 
 let test_if () =
   "(if #t 1 2)" => Integer 1;
   "(if #f 1 2)" => Integer 2
 
 let test_set () =
-  "(begin (define x 1) (set! x 2) x)" => Integer 2;
-  "(begin (define x 1) (set! x (+ x x)) x)" => Integer 2
+  "(letrec ((x 1)) (set! x 2) x)" => Integer 2;
+  "(letrec ((x 1)) (set! x (+ x x)) x)" => Integer 2
 
 let test_primitives () =
   "(+ 1)" => Integer 1;
@@ -63,7 +62,7 @@ let suite =
      "lambda with one argument" >:: test_lambda1;
      "lambda with two arguments" >:: test_lambda2;
      "begin" >:: test_begin;
-     "simple define" >:: test_define_simple;
+     "letrec" >:: test_letrec;
      "if" >:: test_if;
      "set" >:: test_set;
      "primitives" >:: test_primitives;
