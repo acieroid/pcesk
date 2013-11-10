@@ -14,7 +14,7 @@ let (=>) string expected =
     (Lattice.abst1 expected) merged
 
 let test_match string expected cmp =
-  let node = Scheme_parser.parse (Scheme_lexer.lex_string string) in
+  let node = Parser.parse (Lexer.lex_string string) in
   let res, _ = Cesk.eval node in
   let results = List.map (fun (r, _, _) -> r) res in
   let merged = Lattice.abst results in
@@ -98,7 +98,7 @@ let test_church_numerals () =
 
 let test_infinite () =
   let test_no_result string =
-    let node = Scheme_parser.parse (Scheme_lexer.lex_string string) in
+    let node = Parser.parse (Lexer.lex_string string) in
     let res, _ = Cesk.eval node in
     let results = List.map (fun (r, _, _) -> r) res in
     assert_equal

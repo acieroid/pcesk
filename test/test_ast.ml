@@ -12,12 +12,11 @@ let test_free_variables () =
   "(lambda (x) x)" => StringSet.empty;
   "42" => StringSet.empty;
   "#t" => StringSet.empty;
-  "(begin
-     (define f (lambda (x) (if (= x 0) 0 (f (- x 1)))))
+  "(letrec ((f (lambda (x) (if (= x 0) 0 (f (- x 1))))))
      (+ (f 10) 5))" => StringSet.empty;
-  "(lambda (x y) (+ x y z)" => (StringSet.singleton "z");
-  "(begin (define x 1) (set! y (+ x 1)) (if (> y z) y (+ x z)))" =>
-    (string_set_of_list ["y"; "z"])
+  "(lambda (x y) (+ x y z))" => (StringSet.singleton "z");
+  "(letrec ((x 1)) (set! y (+ x 1)) (if (> y z) y (+ x z)))" =>
+    (string_set_of_list ["z"; "y"])
 
 let suite =
   "AST tests" >:::

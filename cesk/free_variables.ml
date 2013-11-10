@@ -1,4 +1,4 @@
-open Scheme_ast
+open Ast
 open Util
 open Primitives
 
@@ -16,11 +16,13 @@ let free_variables node =
     | Begin body ->
       List.fold_left StringSet.union StringSet.empty
         (List.map free_variables' body)
-    | Define ((name, _), value) ->
-      StringSet.diff (free_variables' value) (StringSet.singleton name)
-    | DefineFun ((name, _), args, body) ->
-      StringSet.diff (free_variables' ((Lambda (args, body), 0)))
-        (StringSet.singleton name)
+    | LetRec (bindings, body) ->
+      let free_in_body = List.fold_left StringSet.union StringSet.empty
+          (List.map free_variables' body)
+      and free_in_bindings = List.fold_left StringSet.union StringSet.empty
+          (List.map (fun (_, v) -> free_variables' v) bindings) in
+      StringSet.diff (StringSet.union free_in_body free_in_bindings)
+        (string_set_of_list (List.map (fun ((v, _), _) -> v) bindings))
     | If (cond, cons, alt) ->
       StringSet.union (free_variables' cond)
         (StringSet.union (free_variables' cons) (free_variables' alt))
