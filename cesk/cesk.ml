@@ -43,9 +43,15 @@ let step_begin state tag = function
        exp = Value (value_of_prim_value Unspecified);
        change = Epsilon;
        time = tick state }]
-  | (_, tag) as n :: rest ->
+  | (_, tag) as node :: rest ->
     let kont = BeginKont (tag, rest, state.env, state.addr) in
-    [state_push state n kont]
+    [state_push state node kont]
+
+let step_letrec state tag bindings body = match bindings with
+  | [] -> step_begin state tag body
+  | ((_, tag) as var, node) :: rest ->
+     let kont = LetRecKont (tag, var, rest, body, state.addr) in
+     [state_push state node kont]
 
 let step_if state tag cond cons alt =
   let kont = IfKont (tag, cons, alt, state.env, state.addr) in
@@ -124,6 +130,8 @@ let step_node state (e, tag) =
     step_lambda state tag vars body
   | Ast.Begin body ->
     step_begin state tag body
+  | Ast.LetRec (bindings, body) ->
+    step_letrec state tag bindings body
   | Ast.If (cond, cons, alt) ->
     step_if state tag cond cons alt
   | Ast.Set ((var, tag), value) ->
@@ -131,7 +139,6 @@ let step_node state (e, tag) =
   | Ast.Funcall (((_, tag) as rator), rands) ->
     let kont = OperatorKont (tag, rands, state.env, state.addr) in
     [state_push state rator kont]
-(*  | _ -> raise (EvaluationStuck (e, tag)) *)
 
 let step_value state v kont =
     match kont with
@@ -154,7 +161,7 @@ let step_value state v kont =
     | OperandsKont (_, rator, ((_, tag) as rand) :: rands, values, env, c) ->
       let kont = OperandsKont (tag, rator, rands, v :: values, env, c) in
       [{(state_push state rand kont) with env = env }]
-    (** Begin *)
+    (** begin *)
     | BeginKont (_, [], _, c) ->
       [{ state with
          exp = Value v;
@@ -170,7 +177,24 @@ let step_value state v kont =
     | BeginKont (_, ((_, tag) as node) :: rest, env, c) ->
       let kont = BeginKont (tag, rest, env, c) in
       [state_push state node kont]
-    (** If *)
+    (** letrec *)
+    | LetRecKont (_, (name, tag), bindings, body, c) ->
+      let a = alloc state tag in
+      let env = env_extend state.env name a in
+      let store = store_extend1 state.store a v in
+      begin match bindings with
+      | [] ->
+        begin match body with
+        | [] -> failwith "letrec: empty body"
+        | (_, tag) as node :: rest ->
+          let kont = BeginKont (tag, rest, env, c) in
+          [state_push { state with env; store } node kont]
+        end
+      | ((_, tag) as var, node) :: rest ->
+        let kont = LetRecKont (tag, var, rest, body, c) in
+        [state_push { state with env; store } node kont]
+      end
+    (** if *)
     | IfKont (_, consequent, alternative, env, c) ->
       let new_state = { state with
                         addr = c;
@@ -190,7 +214,7 @@ let step_value state v kont =
       else
         (* either true or false *)
         [state_true; state_false]
-    (** Set *)
+    (** set! *)
     | SetKont (_, id, env, c) ->
       let a = env_lookup env id in
       let store = store_update state.store a (Lattice.abst1 v) in

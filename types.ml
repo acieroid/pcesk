@@ -25,7 +25,8 @@ and kont =
   | OperatorKont of int * Ast.node list * env * addr
   | OperandsKont of int * value * Ast.node list * value list * env * addr
   | BeginKont of int * Ast.node list * env * addr
-  | LetRecKont of int * Ast.var * (Ast.var * Ast.node) list * Ast.node list
+  | LetRecKont of int * Ast.var * (Ast.var * Ast.node) list *
+                    Ast.node list * addr
   | IfKont of int * Ast.node * Ast.node * env * addr
   | SetKont of int * string * env * addr
   | HaltKont
@@ -48,7 +49,7 @@ let string_of_kont = function
   | OperatorKont (t, _, _, _) -> "Operator-" ^ (string_of_int t)
   | OperandsKont (t, _, _, _, _, _) -> "Operands-" ^ (string_of_int t)
   | BeginKont (t, _, _, _) -> "Begin-" ^ (string_of_int t)
-  | LetRecKont (t, _, _, _) -> "LetRec-" ^ (string_of_int t)
+  | LetRecKont (t, _, _, _, _) -> "LetRec-" ^ (string_of_int t)
   | IfKont (t, _, _, _, _) -> "If-" ^ (string_of_int t)
   | SetKont (t, _, _, _) -> "Set-" ^ (string_of_int t)
   | HaltKont -> "Halt"
