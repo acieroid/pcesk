@@ -1,7 +1,4 @@
-module StringSet = Set.Make(struct
-    type t = string
-    let compare = Pervasives.compare
-  end)
+open Util
 
 (* An environment binds names to some values (in our case, addresses) *)
 module type ENV =
