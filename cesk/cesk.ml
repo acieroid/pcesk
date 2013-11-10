@@ -50,7 +50,7 @@ let step_begin state tag = function
 let step_letrec state tag bindings body = match bindings with
   | [] -> step_begin state tag body
   | ((_, tag) as var, node) :: rest ->
-     let kont = LetRecKont (tag, var, rest, body, state.addr) in
+     let kont = LetRecKont (tag, var, rest, body, state.env, state.addr) in
      [state_push state node kont]
 
 let step_if state tag cond cons alt =
@@ -178,7 +178,7 @@ let step_value state v kont =
       let kont = BeginKont (tag, rest, env, c) in
       [state_push state node kont]
     (** letrec *)
-    | LetRecKont (_, (name, tag), bindings, body, c) ->
+    | LetRecKont (_, (name, tag), bindings, body, env, c) ->
       let a = alloc state tag in
       let env = env_extend state.env name a in
       let store = store_extend1 state.store a v in
@@ -191,7 +191,7 @@ let step_value state v kont =
           [state_push { state with env; store } node kont]
         end
       | ((_, tag) as var, node) :: rest ->
-        let kont = LetRecKont (tag, var, rest, body, c) in
+        let kont = LetRecKont (tag, var, rest, body, env, c) in
         [state_push { state with env; store } node kont]
       end
     (** if *)
