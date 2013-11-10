@@ -3,9 +3,6 @@ open Types
 open Util
 open Free_variables
 
-let string_of_string_set s =
-  "[" ^ (String.concat ", " (StringSet.elements s)) ^ "]"
-
 let (=>) string expected =
   let node = Scheme_parser.parse (Scheme_lexer.lex_string string) in
   assert_equal ~msg:string ~printer:string_of_string_set
