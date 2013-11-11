@@ -50,9 +50,12 @@ let step_begin state tag = function
 
 let step_letrec state tag bindings body = match bindings with
   | [] -> step_begin state tag body
-  | ((_, tag) as var, node) :: rest ->
-     let kont = LetRecKont (tag, var, rest, body, state.env, state.addr) in
-     [state_push state node kont]
+  | ((name, tag), node) :: rest ->
+    let a = alloc state tag in
+    let env = env_extend state.env name a in
+    let store = store_extend1 state.store a (AbsUnique Unspecified) in
+    let kont = LetRecKont (tag, a, rest, body, env, state.addr) in
+     [state_push { state with env; store } node kont]
 
 let step_if state tag cond cons alt =
   let kont = IfKont (tag, cons, alt, state.env, state.addr) in
@@ -179,11 +182,8 @@ let step_value state v kont =
       let kont = BeginKont (tag, rest, env, c) in
       [state_push state node kont]
     (** letrec *)
-    | LetRecKont (_, (name, tag), bindings, body, env, c) ->
-      (* TODO: alloc_var instead? *)
-      let a = alloc state tag in
-      let env = env_extend state.env name a in
-      let store = store_extend1 state.store a v in
+    | LetRecKont (_, a, bindings, body, env, c) ->
+      let store = store_update state.store a (Lattice.abst1 v) in
       begin match bindings with
       | [] ->
         begin match body with
@@ -192,8 +192,12 @@ let step_value state v kont =
           let kont = BeginKont (tag, rest, env, c) in
           [state_push { state with env; store } node kont]
         end
-      | ((_, tag) as var, node) :: rest ->
-        let kont = LetRecKont (tag, var, rest, body, env, c) in
+      | ((name, tag), node) :: rest ->
+        let a = alloc state tag in
+        let env = env_extend env name a in
+        (* Need to supply an initial value for the abstract gc *)
+        let store = store_extend1 state.store a (AbsUnique Unspecified) in
+        let kont = LetRecKont (tag, a, rest, body, env, c) in
         [state_push { state with env; store } node kont]
       end
     (** if *)

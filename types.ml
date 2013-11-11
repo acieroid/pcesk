@@ -25,7 +25,7 @@ and kont =
   | OperatorKont of int * Ast.node list * env * addr
   | OperandsKont of int * value * Ast.node list * value list * env * addr
   | BeginKont of int * Ast.node list * env * addr
-  | LetRecKont of int * Ast.var * (Ast.var * Ast.node) list *
+  | LetRecKont of int * addr * (Ast.var * Ast.node) list *
                     Ast.node list * env * addr
   | IfKont of int * Ast.node * Ast.node * env * addr
   | SetKont of int * string * env * addr

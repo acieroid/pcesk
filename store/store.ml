@@ -121,7 +121,8 @@ module Assoc_store : STORE =
         | [], l | l, [] -> l @ acc
         | hd::tl, hd'::tl' ->
           match compare (fst hd) (fst hd') with
-          | 0 -> loop (((fst hd), (Lattice.join (snd hd) (snd hd'))) :: acc) (tl, tl')
+          | 0 -> loop (((fst hd), (Lattice.join (snd hd) (snd hd'))) :: acc)
+                   (tl, tl')
           | n when n < 0 -> loop (hd :: acc) (tl, hd'::tl')
           | _ -> loop (hd' :: acc) (hd::tl, tl')
       in

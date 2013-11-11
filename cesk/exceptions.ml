@@ -14,7 +14,6 @@ exception PrimWrongArgType of string * value
 exception PrimWrongNumberOfArgs of string * int
 
 let string_of_exception = function
-  | e -> raise e
   | NotYetImplemented ->
     "Not yet implemented"
   | PrimWrongArgType (s, v) ->
