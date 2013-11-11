@@ -6,5 +6,6 @@ let suites = [
 ]
 
 let _ =
+  (* TODO: run tests with other parameters (k-CFA, abstract GC, …) *)
   let _ = List.map OUnit.run_test_tt_main suites in
   ()

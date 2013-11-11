@@ -234,7 +234,7 @@ let step_value state v kont =
     | HaltKont -> [{ state with change = Epsilon; time = tick state }]
 
 let step state =
-  (* let state = gc state in *)
+  let state = if !Params.gc then gc state else state in
   match state.exp with
   | Node n -> step_node state n
   | Value v -> List.flatten (List.map (step_value state v)

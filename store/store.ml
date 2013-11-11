@@ -74,9 +74,10 @@ module Store : STORE =
 
     let join s s' =
       StoreMap.merge (fun a x y -> match x, y with
-      | None, None -> None
-      | Some v, None | None, Some v -> Some v
-      | Some (v1, _), Some (v2, _) -> Some (Lattice.join v1 v2, NotFresh)) s s'
+          | None, None -> None
+          | Some v, None | None, Some v -> Some v
+          | Some (v1, _), Some (v2, _) ->
+            Some (Lattice.join v1 v2, NotFresh)) s s'
 
     let narrow store addrs =
       StoreMap.filter (fun a _ ->
@@ -84,11 +85,11 @@ module Store : STORE =
         store
 
     let string_of_store store =
-      "env(" ^ (String.concat ","
-                  (List.map (fun (a, (v, _)) ->
-                       (Addr.string_of_address a) ^ ":" ^
-                         (Lattice.string_of_lattice_value v))
-                      (StoreMap.bindings store))) ^ ")"
+      "store(" ^ (String.concat ","
+                    (List.map (fun (a, (v, _)) ->
+                         (Addr.string_of_address a) ^ ":" ^
+                           (Lattice.string_of_lattice_value v))
+                        (StoreMap.bindings store))) ^ ")"
 
   end
 
@@ -136,9 +137,9 @@ module Assoc_store : STORE =
         store
 
     let string_of_store store =
-      "env(" ^ (String.concat ","
-                  (List.map (fun (a, v) ->
-                       (Addr.string_of_address a) ^ ":" ^
-                         (Lattice.string_of_lattice_value v))
-                      store))
+      "store(" ^ (String.concat ","
+                    (List.map (fun (a, v) ->
+                         (Addr.string_of_address a) ^ ":" ^
+                           (Lattice.string_of_lattice_value v))
+                        store))
   end

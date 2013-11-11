@@ -6,12 +6,16 @@ let graph_file = ref None
 let usage = "usage: " ^ (Sys.argv.(0)) ^ " [-v] [-i input] [-g graph_output]"
 
 let speclist = [
-  ("-v", Arg.Int (fun n -> Params.verbose := n),
+  ("-v", Arg.Set_int Params.verbose,
    ": verbose level (0 by default)");
   ("-i", Arg.String (fun s -> input := open_in s),
    ": input file (stdin by default)");
   ("-g", Arg.String (fun s -> graph_file := Some s),
    ": output file for the generated graph (nothing by default)");
+  ("-k", Arg.Set_int Params.k,
+   ": polyvariance (k-CFA) (k=0 by default)");
+  ("-gc", Arg.Set Params.gc,
+   ": turn on abstract garbage collection (disabled by default)")
 ]
 
 let _ =
