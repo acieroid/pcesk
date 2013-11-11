@@ -21,11 +21,12 @@ probably work with older versions too. To compile, simply launch
 =make=. To launch the test suite, execute =make test=.
 ** Usage
 #+BEGIN_SRC shell
-$ ./main.byte -help
-usage: ./main.byte [-v] [-i input] [-g graph_output]
-  -v : verbose mode (disable by default)
+usage: ./main.byte [-v level] [-i input] [-g graph_output] [-k polyvariance] [-gc]
+  -v : verbose level (0 by default)
   -i : input file (stdin by default)
   -g : output file for the generated graph (nothing by default)
+  -k : polyvariance (k-CFA) (k=0 by default)
+  -gc : turn on abstract garbage collection (disabled by default)
   -help  Display this list of options
   --help  Display this list of options
 #+END_SRC
@@ -49,8 +50,8 @@ $ ./main.byte -i foo.scm
 0
 #+END_SRC
 ** Stuff to do
-  - Add more complex examples
-  - Abstract garbage collection
+  - Debug abstract garbage collection (some addresses that shouldn't
+    be reclaimed are, when using recursive functions)
   - Widening with single-threaded store
   - Add call/cc ?
   - Support multiple threads of execution

@@ -13,7 +13,8 @@ let input = ref stdin
 (* Output for the dot file *)
 let graph_file = ref None
 
-let usage = "usage: " ^ (Sys.argv.(0)) ^ " [-v] [-i input] [-g graph_output]"
+let usage = "usage: " ^ (Sys.argv.(0)) ^
+              " [-v level] [-i input] [-g graph_output] [-k polyvariance] [-gc]"
 
 let speclist = [
   ("-v", Arg.Set_int verbose,
