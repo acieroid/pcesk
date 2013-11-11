@@ -24,16 +24,22 @@ let print_store store =
 let empty_store = Store.empty
 let store_lookup store a =
   try
-    Store.lookup store a
+    let v = Store.lookup store a in
+    if !Params.verbose >= 2 then
+      print_string ("store_lookup(" ^ (Addr.string_of_address a) ^ ") -> " ^
+                      (Lattice.string_of_lattice_value v) ^ ")\n");
+    v
   with
     Not_found -> raise (UnboundAddress a)
 let store_extend store a v =
-  (* print_string ("store_extend(" ^ (Addr.string_of_address a) ^ ", " ^
-                (Lattice.string_of_lattice_value v) ^ ")\n"); *)
+  if !Params.verbose >= 2 then
+    print_string ("store_extend(" ^ (Addr.string_of_address a) ^ ", " ^
+                    (Lattice.string_of_lattice_value v) ^ ")\n");
   Store.alloc store a v
 let store_update store a v =
-  (* print_string ("store_update(" ^ (Addr.string_of_address a) ^ ", " ^
-                  (Lattice.string_of_lattice_value v) ^ ")\n"); *)
+  if !Params.verbose >= 2 then
+    print_string ("store_update(" ^ (Addr.string_of_address a) ^ ", " ^
+                    (Lattice.string_of_lattice_value v) ^ ")\n");
   Store.update store a v
 
 let store_extend1 store a v =

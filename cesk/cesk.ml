@@ -233,7 +233,9 @@ let step_value state v kont =
     (** Halt *)
     | HaltKont -> [{ state with change = Epsilon; time = tick state }]
 
-let step state = match state.exp with
+let step state =
+  (* let state = gc state in *)
+  match state.exp with
   | Node n -> step_node state n
   | Value v -> List.flatten (List.map (step_value state v)
                                (extract_konts state))
@@ -324,7 +326,7 @@ let eval e =
             let graph' =
               List.fold_left G.add_edge_e
                 (List.fold_left G.add_vertex graph dests) edges in
-            if !Params.verbose then begin
+            if !Params.verbose >= 1 then begin
               print_string ("==> " ^ (string_of_state state) ^ "\n");
               List.iter (fun state' ->
                   print_string ("    " ^

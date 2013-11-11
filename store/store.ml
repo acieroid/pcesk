@@ -111,6 +111,7 @@ module Assoc_store : STORE =
     let alloc store addr value =
       (addr, value) :: (BatList.remove_assoc addr store)
 
+    (* TODO: should join if necessary *)
     let update store addr value =
       let _ = List.assoc addr store in
       (addr, value) :: (BatList.remove_assoc addr store)

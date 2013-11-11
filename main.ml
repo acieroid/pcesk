@@ -6,8 +6,8 @@ let graph_file = ref None
 let usage = "usage: " ^ (Sys.argv.(0)) ^ " [-v] [-i input] [-g graph_output]"
 
 let speclist = [
-  ("-v", Arg.Set Params.verbose,
-   ": verbose mode (disable by default)");
+  ("-v", Arg.Int (fun n -> Params.verbose := n),
+   ": verbose level (0 by default)");
   ("-i", Arg.String (fun s -> input := open_in s),
    ": input file (stdin by default)");
   ("-g", Arg.String (fun s -> graph_file := Some s),
