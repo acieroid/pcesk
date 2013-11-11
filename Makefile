@@ -15,7 +15,8 @@ test_bin:
 	ocamlbuild $(OPTS) -tags $(TAGS) -pkgs $(PKGS) $(TEST).$(EXTENSION)
 
 test: test_bin
-	./$(TEST).$(EXTENSION)
+	./$(TEST).$(EXTENSION) -k 0
+	./$(TEST).$(EXTENSION) -k 1
 
 clean:
 	ocamlbuild -clean

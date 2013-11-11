@@ -1,3 +1,5 @@
+open Params
+
 let suites = [
   Test_ast.suite;
   Test_lattice.suite;
@@ -5,7 +7,10 @@ let suites = [
   Test_advanced.suite;
 ]
 
-let _ =
-  (* TODO: run tests with other parameters (k-CFA, abstract GC, …) *)
+let () =
+  Arg.parse speclist
+    (fun x -> raise (Arg.Bad ("Bad argument : " ^ x)))
+    usage;
+  print_string ("Running tests with: \n" ^ (string_of_configuration ()) ^ "\n");
   let _ = List.map OUnit.run_test_tt_main suites in
   ()
