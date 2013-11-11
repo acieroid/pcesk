@@ -196,7 +196,7 @@ let step_value state v kont =
         let a = alloc state tag in
         let env = env_extend env name a in
         (* Need to supply an initial value for the abstract gc *)
-        let store = store_extend1 state.store a (AbsUnique Unspecified) in
+        let store = store_extend1 store a (AbsUnique Unspecified) in
         let kont = LetRecKont (tag, a, rest, body, env, c) in
         [state_push { state with env; store } node kont]
       end
