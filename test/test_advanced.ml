@@ -82,7 +82,8 @@ let test_church_numerals () =
            (Lattice.conc y)); in
   test_clo "zero";
   test_clo "(inc zero)";
-  test_clo "(plus (inc (inc (inc zero))) (plus (inc (inc zero)) (inc zero)))"
+  test_clo "(plus (inc (inc (inc zero))) (plus (inc (inc zero)) (inc zero)))";
+  church "((inc (inc zero)) (lambda (x) (+ x 1)) 0)" => AbsUnique (Integer 2)
 
 let test_infinite () =
   let test_no_result string =
