@@ -45,14 +45,12 @@ struct
   let vertex_attributes (state : V.t) =
     match state.exp with
     | Node n -> [`Shape `Box; `Style `Filled; `Fillcolor 0xFFDDDD;
-                 `Label (BatString.escaped (Ast.string_of_node n))]
+                 `Label (BatString.escaped
+                           (BatString.slice ~last:50 (Ast.string_of_node n)))]
     | Value v -> [`Shape `Box; `Style `Filled; `Fillcolor 0xDDFFDD;
                   `Label (BatString.escaped (string_of_value v))]
   let vertex_name (state : V.t) =
-    let konts = extract_konts state in
-    let state_id = (string_of_int (Hashtbl.hash state)) ^
-                     (string_of_int (Hashtbl.hash konts)) ^
-                     (string_of_int (node_id state)) in
+    let state_id = (string_of_int (node_id state)) in
     match state.exp with
     | Node n -> "node_" ^ state_id
     | Value v -> "value_" ^ state_id

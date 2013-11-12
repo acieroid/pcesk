@@ -66,7 +66,10 @@ let rec string_of_prim_value = function
       (string_of_prim_value cdr) ^")"
   | Nil -> "()"
   | Unspecified -> "#<unspecified>"
-  | Closure _ -> "#<closure>"
+  | Closure ((args, body), _) ->
+    "#<closure (lambda (" ^ (String.concat " "
+                       (List.map fst args)) ^ ") " ^
+      (Ast.string_of_nodes " " body) ^ ")>"
   | Primitive name -> "#<primitive " ^ name ^ ">"
   | Kont k -> "#<continuation " ^ (string_of_kont k) ^ ">"
 
