@@ -84,7 +84,7 @@ let test_church_numerals ctx =
   test_clo "(inc zero)";
   test_clo "(plus zero zero)";
   test_clo "(plus (inc (inc (inc zero))) (plus (inc (inc zero)) (inc zero)))";
-  church "((inc (inc zero)) (lambda (x) (+ x 1)) 0)" => AbsUnique (Integer 2)
+  church "((inc (inc zero)) (lambda (x) (+ x 1)) 0)" => AbsInteger
 
 let test_infinite ctx =
   let test_no_result string =

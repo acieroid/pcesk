@@ -3,7 +3,7 @@ open Store
 open Set_lattice
 
 module Lattice = Set_lattice(struct let size = 10 end)
-module Store = Assoc_store(Addr)(Lattice)
+module Store = Store(Addr)(Lattice)
 module Exploration = Exploration.Bfs
 
 type exp =
