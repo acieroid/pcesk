@@ -25,29 +25,29 @@ let test_match string expected cmp =
 
 let test_multiple_calls () =
   "(letrec ((sq (lambda (x) (* x x))))
-     (sq 2)
-     (sq 3))" => AbsInteger;
+  (sq 2)
+  (sq 3))" => AbsInteger;
   "(letrec ((inc (lambda (x) (+ x 1))))
-     (inc (inc 2)))" => AbsInteger
+  (inc (inc 2)))" => AbsInteger
 
 let test_recursive_calls () =
   "(letrec ((count (lambda (n)
-                     (if (= n 0)
-                       \"done\"
-                       (count (- n 1))))))
-     (count 200))" => AbsString;
+                  (if (= n 0)
+                    \"done\"
+                    (count (- n 1))))))
+  (count 200))" => AbsString;
   "(letrec ((fact (lambda (n)
-                    (if (= n 0)
-                      1
-                      (* n (fact (- n 1)))))))
-     (fact 5))" => AbsInteger
+                 (if (= n 0)
+                   1
+                   (* n (fact (- n 1)))))))
+  (fact 5))" => AbsInteger
 
 let test_fibo () =
   "(letrec ((fib (lambda (n)
-                   (if (< n 2)
-                     n
-                     (+ (fib (- n 1)) (fib (- n 2)))))))
-     (fib 4))" => AbsInteger
+                (if (< n 2)
+                  n
+                  (+ (fib (- n 1)) (fib (- n 2)))))))
+  (fib 4))" => AbsInteger
 
 let test_widen () =
   (* If the CESK machine does not widen the values at a certain points,
@@ -55,23 +55,23 @@ let test_widen () =
      "level" of the lattice, but with different values (in case the
      lattice as an infinite width) *)
   "(letrec ((g (lambda ()
-                 1))
-            (f (lambda (n)
-                 (if (= n 0)
-                   0
-                   (+ (f (- n 1)) (g))))))
-     (f 10))" => AbsInteger
+              1))
+         (f (lambda (n)
+              (if (= n 0)
+                0
+                (+ (f (- n 1)) (g))))))
+  (f 10))" => AbsInteger
 
 let test_church_numerals () =
   let church x =
     "(letrec ((zero (lambda (f x) x))
-              (inc (lambda (n)
-                     (lambda (f x)
-                       (f (n f x)))))
-              (plus (lambda (m n)
-                      (lambda (f x)
-                        (m f (n f x))))))
-       " ^ x ^ ")" in
+         (inc (lambda (n)
+                (lambda (f x)
+                  (f (n f x)))))
+         (plus (lambda (m n)
+                 (lambda (f x)
+                   (m f (n f x))))))
+  " ^ x ^ ")" in
   let test_clo s =
     test_match (church s)
       (AbsUnique (Closure (([], []), Cesk_base.empty_env)))
@@ -82,6 +82,7 @@ let test_church_numerals () =
            (Lattice.conc y)); in
   test_clo "zero";
   test_clo "(inc zero)";
+  test_clo "(plus zero zero)";
   test_clo "(plus (inc (inc (inc zero))) (plus (inc (inc zero)) (inc zero)))";
   church "((inc (inc zero)) (lambda (x) (+ x 1)) 0)" => AbsUnique (Integer 2)
 
