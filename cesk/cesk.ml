@@ -1,3 +1,4 @@
+open Util
 open Types
 open Cesk_types
 open Cesk_base
@@ -79,7 +80,7 @@ let apply_function rator rands state = match rator with
         args ([], state) in
     let extended_env = List.fold_left
         (fun env (name, value, a) ->
-           env_extend env name a) state.env addrs
+           env_extend env name a) env addrs
     and extended_store = List.fold_left
         (fun store (name, value, a) ->
            store_extend1 store a value)
@@ -154,7 +155,7 @@ let step_value state v kont =
                             time = tick state }
     | OperatorKont (_, ((_, tag) as rand) :: rands, env, c) ->
       let kont = OperandsKont (tag, v, rands, [], env, c) in
-      [{(state_push state rand kont) with env = env}]
+      [state_push { state with env } rand kont]
     (** Operands *)
     | OperandsKont (_, rator, [], values, env, c) ->
       let rands = List.rev (v :: values) in
@@ -164,7 +165,7 @@ let step_value state v kont =
                                    time = tick state }
     | OperandsKont (_, rator, ((_, tag) as rand) :: rands, values, env, c) ->
       let kont = OperandsKont (tag, rator, rands, v :: values, env, c) in
-      [{(state_push state rand kont) with env = env }]
+      [state_push { state with env } rand kont]
     (** begin *)
     | BeginKont (_, [], _, c) ->
       [{ state with
@@ -180,7 +181,7 @@ let step_value state v kont =
          time = tick state }]
     | BeginKont (_, ((_, tag) as node) :: rest, env, c) ->
       let kont = BeginKont (tag, rest, env, c) in
-      [state_push state node kont]
+      [state_push { state with env } node kont]
     (** letrec *)
     | LetRecKont (_, a, bindings, body, env, c) ->
       let store = store_update state.store a (Lattice.abst1 v) in
@@ -203,6 +204,7 @@ let step_value state v kont =
     (** if *)
     | IfKont (_, consequent, alternative, env, c) ->
       let new_state = { state with
+                        env;
                         addr = c;
                         change = Pop;
                         time = tick state } in
