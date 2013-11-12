@@ -11,3 +11,7 @@ let string_set_of_vars l =
 
 let string_of_string_set s =
   "{" ^ (String.concat ", " (StringSet.elements s)) ^ "}"
+
+let debug s =
+  if !Params.verbose >= Params.debug_level then
+    begin print_string (String.concat "" s); print_newline (); end

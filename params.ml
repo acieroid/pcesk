@@ -7,6 +7,9 @@ let gc = ref false
 (* Verbosity level *)
 let verbose = ref 0
 
+(* Verbosity level at which debug messages will be printed *)
+let debug_level = 2
+
 (* Input file *)
 let input = ref stdin
 
