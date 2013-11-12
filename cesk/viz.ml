@@ -3,6 +3,23 @@ open Cesk_types
 open Cesk_base
 open Graph
 
+
+(* Hack to avoid merged states in dot output *)
+let id = ref 0
+let new_id () =
+  id := !id + 1;
+  !id
+
+let nodes = Hashtbl.create 100
+
+let node_id node =
+  if Hashtbl.mem nodes node then
+    Hashtbl.find nodes node
+  else
+    let id = new_id () in
+    Hashtbl.add nodes node id;
+    id
+
 module GraphNode = struct
   type t = state
   let compare = Pervasives.compare
@@ -34,7 +51,8 @@ struct
   let vertex_name (state : V.t) =
     let konts = extract_konts state in
     let state_id = (string_of_int (Hashtbl.hash state)) ^
-                     (string_of_int (Hashtbl.hash konts)) in
+                     (string_of_int (Hashtbl.hash konts)) ^
+                     (string_of_int (node_id state)) in
     match state.exp with
     | Node n -> "node_" ^ state_id
     | Value v -> "value_" ^ state_id
