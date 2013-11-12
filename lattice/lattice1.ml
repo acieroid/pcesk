@@ -1,6 +1,6 @@
 open Types
 open Lattice
-open OUnit
+open OUnit2
 
 module Lattice1 : LATTICE =
 struct
@@ -73,7 +73,7 @@ let op_un f x = match x with
   | Unique v -> Unique (f v)
   | _ -> Top
 
-let test () =
+let test ctx =
   (* Abstraction *)
   assert_equal ~msg:"5" (abst1 (Integer 5)) (Unique (Integer 5));
   assert_equal ~msg:"5,6" (abst [Integer 5; Integer 6]) Num;

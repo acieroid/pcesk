@@ -1,4 +1,4 @@
-open OUnit
+open OUnit2
 open Types
 open Util
 open Free_variables
@@ -8,7 +8,7 @@ let (=>) string expected =
   assert_equal ~msg:string ~printer:string_of_string_set
     expected (free_variables node)
 
-let test_free_variables () =
+let test_free_variables ctx =
   "(lambda (x) x)" => StringSet.empty;
   "42" => StringSet.empty;
   "#t" => StringSet.empty;

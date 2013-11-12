@@ -12,5 +12,5 @@ let () =
     (fun x -> raise (Arg.Bad ("Bad argument : " ^ x)))
     usage;
   print_string ("Running tests with: \n" ^ (string_of_configuration ()) ^ "\n");
-  let _ = List.map OUnit.run_test_tt_main suites in
+  let _ = List.map OUnit2.run_test_tt_main suites in
   ()

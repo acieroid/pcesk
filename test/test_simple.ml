@@ -1,4 +1,4 @@
-open OUnit
+open OUnit2
 open Types
 
 let (=>) string expected =
@@ -11,36 +11,36 @@ let (=>) string expected =
     | None -> false in
   assert_equal ~cmp ~msg:string ~printer:string_of_value (AbsUnique expected) r
 
-let test_atoms () =
+let test_atoms ctx =
   "1" => Integer 1;
   "\"foo\"" => String "foo";
   "#t" => Boolean true;
   "#f" => Boolean false
 
-let test_lambda1 () =
+let test_lambda1 ctx =
   "((lambda (x) x) 42)" => Integer 42
 
-let test_lambda2 () =
+let test_lambda2 ctx =
   "((lambda (x y) x) 1 2)" => Integer 1;
   "((lambda (x y) y) 1 2)" => Integer 2
 
-let test_begin () =
+let test_begin ctx =
   "(begin 1 2 3)" => Integer 3;
   "(begin (+ 1 2) (+ 2 3) (+ 3 (begin 4 5)))" => Integer 8
 
-let test_letrec () =
+let test_letrec ctx =
   "(letrec ((x 1)) x)" => Integer 1;
   "(letrec ((x 1) (y x)) y)" => Integer 1
 
-let test_if () =
+let test_if ctx =
   "(if #t 1 2)" => Integer 1;
   "(if #f 1 2)" => Integer 2
 
-let test_set () =
+let test_set ctx =
   "(letrec ((x 1)) (set! x 2) x)" => Integer 2;
   "(letrec ((x 1)) (set! x (+ x x)) x)" => Integer 2
 
-let test_primitives () =
+let test_primitives ctx =
   "(+ 1)" => Integer 1;
   "(+ 1 2)" => Integer 3;
   "(+ 1 2 3)" => Integer 6;

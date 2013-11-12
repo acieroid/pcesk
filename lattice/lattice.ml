@@ -38,5 +38,5 @@ sig
   val op_un : (value -> value option) -> t -> t
 
   (* Run unit tests on the lattice (see OUnit) *)
-  val test : unit -> unit
+  val test : OUnit2.test_ctxt -> unit
 end

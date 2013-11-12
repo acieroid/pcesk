@@ -1,6 +1,6 @@
 open Types
 open Lattice
-open OUnit
+open OUnit2
 
 (** TODO: since the number of possible abstract values in the same lattice
     elements will always be bounded (assuming that the number of closures,
@@ -94,7 +94,7 @@ module Set_lattice : functor (Size : SIZE) -> LATTICE =
       | Values vs -> Values (filter_option (List.map f vs))
       | _ -> Top
 
-    let test () =
+    let test ctx =
       let test name = assert_equal ~printer:string_of_lattice_value ~msg:name in
       let five = AbsUnique (Integer 5)
       and six = AbsUnique (Integer 6)

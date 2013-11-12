@@ -1,4 +1,4 @@
-open OUnit
+open OUnit2
 open Types
 open Set_lattice
 
@@ -23,14 +23,14 @@ let test_match string expected cmp =
     ~msg:string ~printer:Lattice.string_of_lattice_value
     (Lattice.abst1 expected) merged
 
-let test_multiple_calls () =
+let test_multiple_calls ctx =
   "(letrec ((sq (lambda (x) (* x x))))
   (sq 2)
   (sq 3))" => AbsInteger;
   "(letrec ((inc (lambda (x) (+ x 1))))
   (inc (inc 2)))" => AbsInteger
 
-let test_recursive_calls () =
+let test_recursive_calls ctx =
   "(letrec ((count (lambda (n)
                   (if (= n 0)
                     \"done\"
@@ -42,14 +42,14 @@ let test_recursive_calls () =
                    (* n (fact (- n 1)))))))
   (fact 5))" => AbsInteger
 
-let test_fibo () =
+let test_fibo ctx =
   "(letrec ((fib (lambda (n)
                 (if (< n 2)
                   n
                   (+ (fib (- n 1)) (fib (- n 2)))))))
   (fib 4))" => AbsInteger
 
-let test_widen () =
+let test_widen ctx =
   (* If the CESK machine does not widen the values at a certain points,
      this example will keep running, with values staying at the same
      "level" of the lattice, but with different values (in case the
@@ -62,7 +62,7 @@ let test_widen () =
                 (+ (f (- n 1)) (g))))))
   (f 10))" => AbsInteger
 
-let test_church_numerals () =
+let test_church_numerals ctx =
   let church x =
     "(letrec ((zero (lambda (f x) x))
          (inc (lambda (n)
@@ -86,7 +86,7 @@ let test_church_numerals () =
   test_clo "(plus (inc (inc (inc zero))) (plus (inc (inc zero)) (inc zero)))";
   church "((inc (inc zero)) (lambda (x) (+ x 1)) 0)" => AbsUnique (Integer 2)
 
-let test_infinite () =
+let test_infinite ctx =
   let test_no_result string =
     let node = Parser.parse (Lexer.lex_string string) in
     let res, _ = Cesk.eval node in

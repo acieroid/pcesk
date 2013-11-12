@@ -1,4 +1,4 @@
-open OUnit
+open OUnit2
 open Types
 (* open Lattice1 *)
 (* open Cp_lattice *)
