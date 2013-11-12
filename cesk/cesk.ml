@@ -146,52 +146,52 @@ let step_node state (e, tag) =
     [state_push state rator kont]
 
 let step_value state v kont =
-    match kont with
-    (** Operator *)
-    | OperatorKont (_, [], env, c) ->
-      apply_function v [] { state with
-                            env = env;
-                            addr = c;
-                            time = tick state }
-    | OperatorKont (_, ((_, tag) as rand) :: rands, env, c) ->
-      let kont = OperandsKont (tag, v, rands, [], env, c) in
-      [state_push { state with env } rand kont]
-    (** Operands *)
-    | OperandsKont (_, rator, [], values, env, c) ->
-      let rands = List.rev (v :: values) in
-      apply_function rator rands { state with
-                                   env = env;
-                                   addr = c;
-                                   time = tick state }
-    | OperandsKont (_, rator, ((_, tag) as rand) :: rands, values, env, c) ->
-      let kont = OperandsKont (tag, rator, rands, v :: values, env, c) in
-      [state_push { state with env } rand kont]
-    (** begin *)
-    | BeginKont (_, [], _, c) ->
-      [{ state with
-         exp = Value v;
-         addr = c;
-         change = Epsilon;
-         time = tick state }]
-    | BeginKont (_, [node], env, c) ->
-      [{ state with
-         exp = Node node;
-         addr = c;
-         change = Epsilon;
-         time = tick state }]
-    | BeginKont (_, ((_, tag) as node) :: rest, env, c) ->
-      let kont = BeginKont (tag, rest, env, c) in
-      [state_push { state with env } node kont]
-    (** letrec *)
-    | LetRecKont (_, a, bindings, body, env, c) ->
-      let store = store_update state.store a (Lattice.abst1 v) in
-      begin match bindings with
+  match kont with
+  (** Operator *)
+  | OperatorKont (_, [], env, c) ->
+    apply_function v [] { state with
+                          env = env;
+                          addr = c;
+                          time = tick state }
+  | OperatorKont (_, ((_, tag) as rand) :: rands, env, c) ->
+    let kont = OperandsKont (tag, v, rands, [], env, c) in
+    [state_push { state with env } rand kont]
+  (** Operands *)
+  | OperandsKont (_, rator, [], values, env, c) ->
+    let rands = List.rev (v :: values) in
+    apply_function rator rands { state with
+                                 env = env;
+                                 addr = c;
+                                 time = tick state }
+  | OperandsKont (_, rator, ((_, tag) as rand) :: rands, values, env, c) ->
+    let kont = OperandsKont (tag, rator, rands, v :: values, env, c) in
+    [state_push { state with env } rand kont]
+  (** begin *)
+  | BeginKont (_, [], _, c) ->
+    [{ state with
+       exp = Value v;
+       addr = c;
+       change = Epsilon;
+       time = tick state }]
+  | BeginKont (_, [node], env, c) ->
+    [{ state with
+       exp = Node node;
+       addr = c;
+       change = Epsilon;
+       time = tick state }]
+  | BeginKont (_, ((_, tag) as node) :: rest, env, c) ->
+    let kont = BeginKont (tag, rest, env, c) in
+    [state_push { state with env } node kont]
+  (** letrec *)
+  | LetRecKont (_, a, bindings, body, env, c) ->
+    let store = store_update state.store a (Lattice.abst1 v) in
+    begin match bindings with
       | [] ->
         begin match body with
-        | [] -> failwith "letrec: empty body"
-        | (_, tag) as node :: rest ->
-          let kont = BeginKont (tag, rest, env, c) in
-          [state_push { state with env; store } node kont]
+          | [] -> failwith "letrec: empty body"
+          | (_, tag) as node :: rest ->
+            let kont = BeginKont (tag, rest, env, c) in
+            [state_push { state with env; store } node kont]
         end
       | ((name, tag), node) :: rest ->
         let a = alloc state tag in
@@ -200,40 +200,40 @@ let step_value state v kont =
         let store = store_extend1 store a (AbsUnique Unspecified) in
         let kont = LetRecKont (tag, a, rest, body, env, c) in
         [state_push { state with env; store } node kont]
-      end
-    (** if *)
-    | IfKont (_, consequent, alternative, env, c) ->
-      let new_state = { state with
-                        env;
-                        addr = c;
-                        change = Pop;
-                        time = tick state } in
-      let state_true = { new_state with exp = Node consequent }
-      and state_false = { new_state with exp = Node alternative }
-      and l_false = Lattice.abst1 (AbsUnique (Boolean false))
-      and l_v = Lattice.abst1 v in
-      let proj = Lattice.meet l_v l_false in
-      if Lattice.is_bottom proj then
-        (* v can't be false *)
-        [state_true]
-      else if l_v = l_false then
-        (* v is false *)
-        [state_false]
-      else
-        (* either true or false *)
-        [state_true; state_false]
-    (** set! *)
-    | SetKont (_, id, env, c) ->
-      let a = env_lookup env id in
-      let store = store_update state.store a (Lattice.abst1 v) in
-      [{ state with
-         exp = Value (value_of_prim_value Unspecified);
-         store = store;
-         addr = c;
-         change = Epsilon;
-         time = tick state }]
-    (** Halt *)
-    | HaltKont -> [{ state with change = Epsilon; time = tick state }]
+    end
+  (** if *)
+  | IfKont (_, consequent, alternative, env, c) ->
+    let new_state = { state with
+                      env;
+                      addr = c;
+                      change = Pop;
+                      time = tick state } in
+    let state_true = { new_state with exp = Node consequent }
+    and state_false = { new_state with exp = Node alternative }
+    and l_false = Lattice.abst1 (AbsUnique (Boolean false))
+    and l_v = Lattice.abst1 v in
+    let proj = Lattice.meet l_v l_false in
+    if Lattice.is_bottom proj then
+      (* v can't be false *)
+      [state_true]
+    else if l_v = l_false then
+      (* v is false *)
+      [state_false]
+    else
+      (* either true or false *)
+      [state_true; state_false]
+  (** set! *)
+  | SetKont (_, id, env, c) ->
+    let a = env_lookup env id in
+    let store = store_update state.store a (Lattice.abst1 v) in
+    [{ state with
+       exp = Value (value_of_prim_value Unspecified);
+       store = store;
+       addr = c;
+       change = Epsilon;
+       time = tick state }]
+  (** Halt *)
+  | HaltKont -> [{ state with change = Epsilon; time = tick state }]
 
 let step state =
   let state = if !Params.gc then gc state else state in
