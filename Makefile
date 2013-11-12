@@ -5,6 +5,7 @@ TAGS      = annot,debug
 LIBS      =
 PKGS      = ocamlgraph,oUnit,batteries
 EXTENSION = byte
+RUN_TEST  = ./$(TEST).$(EXTENSION)
 
 .PHONY: all test test_bin clean
 
@@ -15,8 +16,9 @@ test_bin:
 	ocamlbuild $(OPTS) -tags $(TAGS) -pkgs $(PKGS) $(TEST).$(EXTENSION)
 
 test: test_bin
-	./$(TEST).$(EXTENSION) -k 0
-	./$(TEST).$(EXTENSION) -k 1
+	$(RUN_TEST) -k 0
+	$(RUN_TEST) -k 0 -gc
+	$(RUN_TEST) -k 1
 
 clean:
 	ocamlbuild -clean

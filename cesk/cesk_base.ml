@@ -1,3 +1,4 @@
+open Util
 open Types
 open Env
 open Cesk_types
@@ -22,24 +23,24 @@ let print_store store =
   print_string ("store(" ^ (Store.string_of_store store) ^ ")\n")
 
 let empty_store = Store.empty
+
 let store_lookup store a =
   try
     let v = Store.lookup store a in
-    if !Params.verbose >= 2 then
-      print_string ("store_lookup(" ^ (Addr.string_of_address a) ^ ") -> " ^
-                      (Lattice.string_of_lattice_value v) ^ ")\n");
+    (* debug ["store_lookup("; Addr.string_of_address a; ") -> ";
+           Lattice.string_of_lattice_value v; ")"]; *)
     v
   with
     Not_found -> raise (UnboundAddress a)
+
 let store_extend store a v =
-  if !Params.verbose >= 2 then
-    print_string ("store_extend(" ^ (Addr.string_of_address a) ^ ", " ^
-                    (Lattice.string_of_lattice_value v) ^ ")\n");
+  (* debug ["store_extend("; Addr.string_of_address a; ", ";
+         Lattice.string_of_lattice_value v; ")"]; *)
   Store.alloc store a v
+
 let store_update store a v =
-  if !Params.verbose >= 2 then
-    print_string ("store_update(" ^ (Addr.string_of_address a) ^ ", " ^
-                    (Lattice.string_of_lattice_value v) ^ ")\n");
+  (* debug ["store_update("; Addr.string_of_address a; ", ";
+         Lattice.string_of_lattice_value v; ")"]; *)
   Store.update store a v
 
 let store_extend1 store a v =

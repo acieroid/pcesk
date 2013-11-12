@@ -1,3 +1,4 @@
+open Util
 open Types
 open Cesk_types
 open Cesk_base
@@ -13,17 +14,21 @@ let rec live_locations store exp env = match exp with
   | Node n -> live_locations_node store env n
 
 and live_locations_value store = function
-  | AbsUnique (Kont k) -> live_location_kont store k
+  | AbsUnique (Kont k) -> live_locations_kont store k
+  | AbsUnique (Closure ((args, body), env)) ->
+    live_locations_env
+      (Env.restrict env
+         (free_variables ((Ast.Lambda (args, body), 0))))
   | _ -> AddressSet.empty
 
 and live_locations_node store env node =
-  live_location_env (Env.restrict env (free_variables node))
+  live_locations_env (Env.restrict env (free_variables node))
 
-and live_location_env env =
+and live_locations_env env =
   List.fold_left (fun s a -> AddressSet.add a s) AddressSet.empty
     (Env.range env)
 
-and live_location_kont store = function
+and live_locations_kont store = function
   | HaltKont -> AddressSet.empty
   | OperatorKont (_, args, env, addr) ->
     AddressSet.add addr
@@ -48,13 +53,13 @@ and live_location_kont store = function
          [union (List.map (live_locations_node store env) body);
           union (List.map (fun (_, n) -> live_locations_node store env n)
                    bindings);
-         live_locations_store store addr])
+          live_locations_store store addr])
   | IfKont (_, cons, alt, env, addr) ->
     AddressSet.add addr
       (union
-        [live_locations_node store env cons;
-         live_locations_node store env alt;
-         live_locations_store store addr])
+         [live_locations_node store env cons;
+          live_locations_node store env alt;
+          live_locations_store store addr])
   | SetKont (_, _, env, addr) ->
     AddressSet.add addr (live_locations_store store addr)
 

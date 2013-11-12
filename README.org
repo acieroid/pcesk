@@ -50,8 +50,8 @@ $ ./main.byte -i foo.scm
 0
 #+END_SRC
 ** Stuff to do
-  - Debug abstract garbage collection (some addresses that shouldn't
-    be reclaimed are, when using recursive functions)
+  - Debug abstract garbage collection (stack overflow on some
+    examples)
   - Widening with single-threaded store
   - Add call/cc ?
   - Support multiple threads of execution
