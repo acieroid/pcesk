@@ -11,7 +11,8 @@ sig
   val size : int
 end
 
-(** TODO: use set instead of list (but it requires a compare function for values) *)
+(** TODO: use set instead of list (but it requires a compare function
+    for values) *)
 module Set_lattice : functor (Size : SIZE) -> LATTICE =
   functor (Size : SIZE) ->
   struct
@@ -26,6 +27,8 @@ module Set_lattice : functor (Size : SIZE) -> LATTICE =
       | Values of value list
       | Top
       | Bot
+
+    let bottom = Bot
 
     let is_bottom = function
       | Bot -> true

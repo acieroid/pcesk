@@ -54,7 +54,7 @@ let step_letrec state tag bindings body = match bindings with
   | ((name, tag), node) :: rest ->
     let a = alloc state tag in
     let env = env_extend state.env name a in
-    let store = store_extend1 state.store a (AbsUnique Unspecified) in
+    let store = store_extend state.store a Lattice.bottom in
     let kont = LetRecKont (tag, a, rest, body, env, state.addr) in
      [state_push { state with env; store } node kont]
 
@@ -196,8 +196,7 @@ let step_value state v kont =
       | ((name, tag), node) :: rest ->
         let a = alloc state tag in
         let env = env_extend env name a in
-        (* Need to supply an initial value for the abstract gc *)
-        let store = store_extend1 store a (AbsUnique Unspecified) in
+        let store = store_extend store a Lattice.bottom  in
         let kont = LetRecKont (tag, a, rest, body, env, c) in
         [state_push { state with env; store } node kont]
     end

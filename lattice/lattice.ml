@@ -7,6 +7,9 @@ sig
   (* An element of the lattice *)
   type t
 
+  (* Bottom element *)
+  val bottom : t
+
   (* Check if this lattice value is the bottom one *)
   val is_bottom : t -> bool
 
