@@ -47,13 +47,15 @@ and live_locations_kont visited store = function
       (union
          [union (List.map (live_locations_node visited store env) body);
           live_locations_store visited store addr])
-  | LetRecKont (_, _, bindings, body, env, addr) ->
-    AddressSet.add addr
-      (union
-         [union (List.map (live_locations_node visited store env) body);
-          union (List.map (fun (_, n) -> live_locations_node visited store env n)
-                   bindings);
-          live_locations_store visited store addr])
+  | LetRecKont (_, a, bindings, body, env, addr) ->
+    AddressSet.add a
+      (AddressSet.add addr
+         (union
+            [union (List.map (live_locations_node visited store env) body);
+             union (List.map (fun (_, n) -> live_locations_node
+                                 visited store env n)
+                      bindings);
+             live_locations_store visited store addr]))
   | IfKont (_, cons, alt, env, addr) ->
     AddressSet.add addr
       (union
