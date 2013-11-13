@@ -39,7 +39,7 @@ module G = Persistent.Digraph.ConcreteBidirectionalLabeled(GraphNode)(GraphEdge)
 module DotArg =
 struct
   include G
-  let edge_attributes ((_, e, _) : E.t) = [`Label e]
+  let edge_attributes ((_, e, _) : E.t) = [`Label (BatString.escaped e)]
   let default_edge_attributes _ = []
   let get_subgraph _ = None
   let vertex_attributes (state : V.t) =
