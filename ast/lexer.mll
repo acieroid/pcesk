@@ -42,4 +42,9 @@ rule lexer = parse
 
  let lex channel = to_stream (Lexing.from_channel channel)
  let lex_string string = to_stream (Lexing.from_string string)
+ let lex_input_file file =
+   let f = open_in ("input/" ^ file) in
+   let res = lex f in
+   close_in f;
+   res
 }

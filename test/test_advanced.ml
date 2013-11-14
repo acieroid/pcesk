@@ -13,91 +13,78 @@ let (=>) string expected =
     ~msg:string ~printer:Lattice.string_of_lattice_value
     (Lattice.abst1 expected) merged
 
-let test_match string expected cmp =
-  let node = Parser.parse (Lexer.lex_string string) in
+let ($=>) f expected =
+  let node = Parser.parse (Lexer.lex_input_file f) in
+  let res, _ = Cesk.eval node in
+  let results = List.map (fun (r, _, _) -> r) res in
+  let merged = Lattice.abst results in
+  assert_equal
+    ~msg:f ~printer:Lattice.string_of_lattice_value
+    (Lattice.abst1 expected) merged
+
+let test_match f expected cmp =
+  let node = Parser.parse (Lexer.lex_input_file f) in
   let res, _ = Cesk.eval node in
   let results = List.map (fun (r, _, _) -> r) res in
   let merged = Lattice.abst results in
   assert_equal
     ~cmp
-    ~msg:string ~printer:Lattice.string_of_lattice_value
+    ~msg:f ~printer:Lattice.string_of_lattice_value
     (Lattice.abst1 expected) merged
 
 let test_multiple_calls ctx =
-  "(letrec ((sq (lambda (x) (* x x))))
-  (sq 2)
-  (sq 3))" => AbsInteger;
-  "(letrec ((inc (lambda (x) (+ x 1))))
-  (inc (inc 2)))" => AbsInteger
+  "sq.scm" $=> AbsInteger;
+  "inc.scm" $=> AbsInteger
 
 let test_recursive_calls ctx =
+  (* TODO: I don't know why, but there is a "bad file descriptor" exception
+     before lexing the string "done" when reading from count.scm, and only
+     when it is made from the test suite (running with -i input/count.scm works
+     perfectly). *)
   "(letrec ((count (lambda (n)
                   (if (= n 0)
                     \"done\"
                     (count (- n 1))))))
   (count 200))" => AbsString;
-  "(letrec ((fact (lambda (n)
-                 (if (= n 0)
-                   1
-                   (* n (fact (- n 1)))))))
-  (fact 5))" => AbsInteger
+  "fact.scm" $=> AbsInteger
 
 let test_fibo ctx =
-  "(letrec ((fib (lambda (n)
-                (if (< n 2)
-                  n
-                  (+ (fib (- n 1)) (fib (- n 2)))))))
-  (fib 4))" => AbsInteger
+  "fib.scm" $=> AbsInteger
 
 let test_widen ctx =
   (* If the CESK machine does not widen the values at a certain points,
      this example will keep running, with values staying at the same
      "level" of the lattice, but with different values (in case the
      lattice as an infinite width) *)
-  "(letrec ((g (lambda ()
-              1))
-         (f (lambda (n)
-              (if (= n 0)
-                0
-                (+ (f (- n 1)) (g))))))
-  (f 10))" => AbsInteger
+  "widen.scm" $=> AbsInteger
 
 let test_church_numerals ctx =
-  let church x =
-    "(letrec ((zero (lambda (f x) x))
-         (inc (lambda (n)
-                (lambda (f x)
-                  (f (n f x)))))
-         (plus (lambda (m n)
-                 (lambda (f x)
-                   (m f (n f x))))))
-  " ^ x ^ ")" in
-  let test_clo s =
-    test_match (church s)
+  let test_clo f =
+    test_match f
       (AbsUnique (Closure (([], []), Cesk_base.empty_env)))
       (fun x y ->
          List.exists (function
              | AbsUnique (Closure _) -> true
              | _  -> false)
            (Lattice.conc y)); in
-  test_clo "zero";
-  test_clo "(inc zero)";
-  test_clo "(plus zero zero)";
-  test_clo "(plus (inc (inc (inc zero))) (plus (inc (inc zero)) (inc zero)))";
-  church "((inc (inc zero)) (lambda (x) (+ x 1)) 0)" => AbsInteger
+  test_clo "church-0.scm";
+  test_clo "church-1.scm";
+  test_clo "church-2.scm";
+  test_clo "church-6.scm";
+  "church-2-num.scm" $=> AbsInteger
 
 let test_infinite ctx =
-  let test_no_result string =
-    let node = Parser.parse (Lexer.lex_string string) in
+  let test_no_result f =
+    let node = Parser.parse (Lexer.lex_input_file f) in
     let res, _ = Cesk.eval node in
     let results = List.map (fun (r, _, _) -> r) res in
     assert_equal
-      ~msg:string ~printer:(fun l ->
+      ~msg:f ~printer:(fun l ->
           "[" ^ (String.concat ", "
                    (List.map string_of_value l)) ^ "]")
       [] results in
-  test_no_result "(letrec ((f (lambda () (f)))) (f))";
-  test_no_result "(letrec ((t (lambda (x) (t (+ x 1))))) (t 0))"
+  test_no_result "infinite-1.scm";
+  test_no_result "infinite-2.scm"
 
 let suite =
   "Advanced tests" >:::
