@@ -16,6 +16,9 @@ let input = ref stdin
 (* Output for the dot file *)
 let graph_file = ref None
 
+(* Print only useful information *)
+let quiet = ref false
+
 let usage = "usage: " ^ (Sys.argv.(0)) ^
               " [-v level] [-i input] [-g graph_output] [-k polyvariance] [-gc]"
 
@@ -29,7 +32,9 @@ let speclist = [
   ("-k", Arg.Set_int k,
    ": polyvariance (k-CFA) (k=0 by default)");
   ("-gc", Arg.Set gc,
-   ": turn on abstract garbage collection (disabled by default)")
+   ": turn on abstract garbage collection (disabled by default)");
+  ("-quiet", Arg.Set quiet,
+   ": don't print the results nor the parameters used, only the time and graph size");
 ]
 
 
