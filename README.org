@@ -21,12 +21,13 @@ probably work with older versions too. To compile, simply launch
 =make=. To launch the test suite, execute =make test=.
 ** Usage
 #+BEGIN_SRC shell
-usage: ./main.byte [-v level] [-i input] [-g graph_output] [-k polyvariance] [-gc]
+usage: ./main.byte [-v level] [-i input] [-g graph_output] [-k polyvariance] [-gc] [-quiet]
   -v : verbose level (0 by default)
   -i : input file (stdin by default)
   -g : output file for the generated graph (nothing by default)
   -k : polyvariance (k-CFA) (k=0 by default)
   -gc : turn on abstract garbage collection (disabled by default)
+  -quiet : don't print the results nor the parameters used, only the time and graph size
   -help  Display this list of options
   --help  Display this list of options
 #+END_SRC
@@ -39,15 +40,22 @@ When a graph output file is given (=-g=), a graph of the computed
 states will be output in this file, using Graphviz's dot format. An
 image file can then be generated (=dot -Tpng foo.dot > foo.png=)
 
-Finally, the results computed will be printed, one per line (multiple
+The results computed will be printed, one per line (multiple
 results can computed). Generally, those different results will be
 merged together to obtain a unique result.
 
+The last line printed contains the number of nodes in the state
+graph, the number of edges, and the time it took to compute it.
+
 For example:
 #+BEGIN_SRC shell
-$ echo '(begin (define f (lambda (x) x)) (f 0))' > foo.scm
-$ ./main.byte -i foo.scm
-0
+$ ./main.byte -i input/count.scm -gc
+Running with:
+        k = 0
+        gc = on
+Str
+Str
+49/49/0.008
 #+END_SRC
 ** Stuff to do
   - Compare the gains with abstract garbage collection turned on

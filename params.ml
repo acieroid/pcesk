@@ -20,7 +20,7 @@ let graph_file = ref None
 let quiet = ref false
 
 let usage = "usage: " ^ (Sys.argv.(0)) ^
-              " [-v level] [-i input] [-g graph_output] [-k polyvariance] [-gc]"
+              " [-v level] [-i input] [-g graph_output] [-k polyvariance] [-gc] [-quiet]"
 
 let speclist = [
   ("-v", Arg.Set_int verbose,
