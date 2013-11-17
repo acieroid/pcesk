@@ -72,7 +72,7 @@ let step_callcc state tag exp =
 
 (** State manipulation *)
 
-let apply_function rator rands state = match rator with
+let rec apply_function rator rands state = match rator with
   | AbsUnique (Closure ((ids, body), env)) ->
     if List.length ids != List.length rands then
       raise (InvalidNumberOfArguments (List.length ids, List.length rands));
@@ -114,16 +114,14 @@ let apply_function rator rands state = match rator with
            time = tick state}]
       | None -> []
     end
+  | AbsUnique (Kont k) ->
+    begin match rands with
+    | [rand] -> step_value state rand  k
+    | _ -> []
+    end
   | _ -> []
 
-let string_of_konts state addr =
-  String.concat "|"
-    (BatList.filter_map (function
-         | AbsUnique (Kont k) -> Some (string_of_kont k)
-         | v -> None)
-        (Lattice.conc (store_lookup state.store addr)))
-
-let step_node state (e, tag) =
+and step_node state (e, tag) =
   match e with
   | Ast.Identifier x ->
     let values = Lattice.conc
@@ -151,7 +149,7 @@ let step_node state (e, tag) =
     let kont = OperatorKont (tag, rands, state.env, state.addr) in
     [state_push state rator kont]
 
-let step_value state v kont =
+and step_value state v kont =
   match kont with
   (** Operator *)
   | OperatorKont (_, [], env, c) ->
@@ -242,8 +240,8 @@ let step_value state v kont =
     let state' =  { state with
                     env = env;
                     addr = c;
-                    time = tick state }
-    and ks = extract_konts state in
+                    time = tick state } in
+    let ks = extract_konts state' in
     List.concat (List.map (fun k ->
         apply_function v [AbsUnique (Kont k)] state')
         ks)
