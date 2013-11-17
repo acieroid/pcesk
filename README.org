@@ -61,6 +61,5 @@ Str
   - Compare the gains with abstract garbage collection turned on
   - Don't push continuations when evaluating some atomic values
     (eg. (+ 1 2) can be evaluated in one step instead of 6)
-  - Add call/cc ?
   - Support multiple threads of execution
   - Add parallel operators (spawn, join)
