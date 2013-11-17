@@ -86,6 +86,9 @@ let test_infinite ctx =
   test_no_result "infinite-1.scm";
   test_no_result "infinite-2.scm"
 
+let test_callcc ctx =
+  "callcc-0.scm" $=> AbsInteger
+
 let suite =
   "Advanced tests" >:::
     ["multiple calls" >:: test_multiple_calls;
@@ -94,4 +97,5 @@ let suite =
      "widen" >:: test_widen;
      "church numerals" >:: test_church_numerals;
      "infinitely recursive functions" >:: test_infinite;
+     "call/cc" >:: test_callcc;
     ]
