@@ -27,6 +27,8 @@ let free_variables node =
       StringSet.union (free_variables' cond)
         (StringSet.union (free_variables' cons) (free_variables' alt))
     | Set ((name, _), value) ->
-      StringSet.add name (free_variables' value) in
+      StringSet.add name (free_variables' value)
+    | Callcc n ->
+      free_variables' n in
   StringSet.diff (free_variables' node)
     (string_set_of_list (List.map fst primitives))

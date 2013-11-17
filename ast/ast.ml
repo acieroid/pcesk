@@ -13,6 +13,7 @@ type exp =
   | LetRec of (var * node) list * node list
   | If of node * node * node
   | Set of var * node
+  | Callcc of node
 and node = exp * int
 
 let rec string_of_exp = function
@@ -38,6 +39,8 @@ let rec string_of_exp = function
       (string_of_node alt) ^ ")"
   | Set ((v, _), e) ->
     "(set! " ^ v ^ " " ^ (string_of_node e) ^ ")"
+  | Callcc e ->
+    "(callcc " ^ (string_of_node e) ^ ")"
 
 and string_of_node (exp, tag) =
   (string_of_exp exp) (* ^ "@" ^ (string_of_int tag) *)

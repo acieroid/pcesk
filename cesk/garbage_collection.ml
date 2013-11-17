@@ -64,6 +64,8 @@ and live_locations_kont visited store = function
           live_locations_store visited store addr])
   | SetKont (_, _, env, addr) ->
     AddressSet.add addr (live_locations_store visited store addr)
+  | CallccKont (_, env, addr) ->
+    AddressSet.add addr (live_locations_store visited store addr)
 
 and live_locations_store visited store addr =
   if AddressSet.mem addr visited then

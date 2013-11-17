@@ -19,6 +19,7 @@ let parse stream =
     | "letrec" -> parse_letrec tag
     | "if" -> parse_if tag
     | "set!" -> parse_set tag
+    | "call/cc" -> parse_callcc tag
     | f -> parse_funcall_rest tag ((Identifier f), tag+2)
 
   and parse_begin tag = parser
@@ -56,6 +57,10 @@ let parse stream =
   and parse_set tag = parser
     | [< 'IDENTIFIER v; (e, tag') = parse' (tag+2); 'RPAR >] ->
       ((Set ((v, tag+2), e), tag+1), tag')
+
+  and parse_callcc tag = parser
+    | [< (e, tag') = parse' (tag+1); 'RPAR >] ->
+      ((Callcc e, tag+1), tag')
 
   and parse_funcall_rest tag f = parser
     | [< (args, tag') = parse_list (tag+2) >] ->

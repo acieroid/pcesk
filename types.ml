@@ -29,6 +29,7 @@ and kont =
                     Ast.node list * env * addr
   | IfKont of int * Ast.node * Ast.node * env * addr
   | SetKont of int * string * env * addr
+  | CallccKont of int * env * addr
   | HaltKont
 and prim = string * (value list -> value option)
 and time = Ast.node list
@@ -53,6 +54,7 @@ let string_of_kont = function
   | LetRecKont (t, _, _, _, _, _) -> "LetRec-" ^ (string_of_int t)
   | IfKont (t, _, _, _, _) -> "If-" ^ (string_of_int t)
   | SetKont (t, _, _, _) -> "Set-" ^ (string_of_int t)
+  | CallccKont (t, _, _) -> "Callcc-" ^ (string_of_int t)
   | HaltKont -> "Halt"
 
 let rec string_of_prim_value = function

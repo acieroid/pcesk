@@ -66,6 +66,10 @@ let step_set state tag id value =
   let kont = SetKont (tag, id, state.env, state.addr) in
   [state_push state value kont]
 
+let step_callcc state tag exp =
+  let kont = CallccKont (tag, state.env, state.addr) in
+  [state_push state exp kont]
+
 (** State manipulation *)
 
 let apply_function rator rands state = match rator with
@@ -141,6 +145,8 @@ let step_node state (e, tag) =
     step_if state tag cond cons alt
   | Ast.Set ((var, tag), value) ->
     step_set state tag var value
+  | Ast.Callcc (exp, tag) ->
+    step_callcc state tag (exp, tag)
   | Ast.Funcall (((_, tag) as rator), rands) ->
     let kont = OperatorKont (tag, rands, state.env, state.addr) in
     [state_push state rator kont]
@@ -231,6 +237,16 @@ let step_value state v kont =
        addr = c;
        change = Epsilon;
        time = tick state }]
+  (** call/cc *)
+  | CallccKont (tag, env, c) ->
+    let state' =  { state with
+                    env = env;
+                    addr = c;
+                    time = tick state }
+    and ks = extract_konts state in
+    List.concat (List.map (fun k ->
+        apply_function v [AbsUnique (Kont k)] state')
+        ks)
   (** Halt *)
   | HaltKont -> [{ state with change = Epsilon; time = tick state }]
 
