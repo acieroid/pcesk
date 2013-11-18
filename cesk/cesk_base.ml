@@ -13,8 +13,7 @@ let env_lookup env name =
   with
     Not_found -> raise (UnboundIdentifier name)
 let env_extend env name a =
-  (* print_string ("extend(" ^ name ^ ", " ^
-                  (Addr.string_of_address a) ^ ")\n"); *)
+  (* debug ["extend("; name; ", "; Addr.string_of_address a; ")"]; *)
   Env.extend env name a
 
 (** Store *)

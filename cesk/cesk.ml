@@ -101,7 +101,6 @@ let rec apply_function rator rands state = match rator with
            time = tick state}]
       | _ ->
         (* Multiple forms in body, implicit begin *)
-        (* TODO: tag should be the tag of the whole body *)
         let (_, tag) = (List.hd body) in
         step_begin state tag body
     end
@@ -288,10 +287,8 @@ let string_of_konts konts =
 
 let string_of_state state =
   (match state.exp with
-   | Node n -> (string_of_int (Hashtbl.hash state)) ^ "@node \027[31m" ^
-                 (Ast.string_of_node n) ^ "\027[0m"
-   | Value v -> (string_of_int (Hashtbl.hash state)) ^ "@value \027[32m" ^
-                  (string_of_value v) ^ "\027[0m")
+   | Node n -> "\027[31m" ^ (Ast.string_of_node n) ^ "\027[0m"
+   | Value v -> "\027[32m" ^ (string_of_value v) ^ "\027[0m")
 
 let string_of_update state state' =
   let str pop = match state'.change with

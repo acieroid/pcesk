@@ -94,7 +94,7 @@ module Store : STORE =
   end
 
 (* Simple implementation of a store using association lists.
-   It appears to be faster than with OCaml's map *)
+   Not fully correct (and thus not used) *)
 module Assoc_store : STORE =
   functor (Addr : ADDRESS) ->
   functor (Lattice : LATTICE) ->

@@ -13,6 +13,7 @@ sig
   val pick : 'a t -> 'a
 end
 
+(* Depth-first search *)
 module Dfs : EXPLORATION =
 struct
   type 'a t = 'a Stack.t
@@ -31,6 +32,7 @@ struct
     Stack.pop stack
 end
 
+(* Breadth-first search *)
 module Bfs : EXPLORATION =
 struct
   type 'a t = 'a Queue.t

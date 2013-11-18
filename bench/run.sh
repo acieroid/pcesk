@@ -8,14 +8,15 @@ function run {
   shift
   RES=$($CMD -i "$FILE" "$@")
   if [ "$?" -eq "$FAIL" ]; then
-    echo -n "--- "
+    echo -n -e "---\t"
   else
-    echo -n $RES " "
+    echo -n -e $RES "\t"
   fi
 }
 
+printf "%25.25s\t%s\t\t%s\t\t%s\t\t%s\n" "file" "0" "0+gc" "1" "1+gc"
 for f in $FILES; do
-  echo -n $f " "
+  printf "%25.25s\t" $f
   run $f -k 0
   run $f -k 0 -gc
   run $f -k 1
