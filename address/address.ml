@@ -1,5 +1,3 @@
-open Types
-
 module type ADDRESS =
 sig
   type t

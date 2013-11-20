@@ -256,9 +256,7 @@ let step state =
 
 (** Injection *)
 
-let empty_time = []
-
-let empty_address = TagAddr (0, empty_time)
+let empty_address = TagAddr (0, Time.initial)
 
 let empty_state = {
   exp = Value (value_of_prim_value (Integer 0));
@@ -266,7 +264,7 @@ let empty_state = {
   store = empty_store;
   addr = empty_address;
   change = Epsilon;
-  time = empty_time;
+  time = Time.initial;
 }
 
 let inject e =

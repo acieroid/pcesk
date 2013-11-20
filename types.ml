@@ -1,6 +1,9 @@
 open Env
+open Time
 
 (** Types *)
+
+module Time = AbstractTime
 
 type lam = (string * int) list * (Ast.node list)
 type prim_value =
@@ -32,7 +35,7 @@ and kont =
   | CallccKont of int * env * addr
   | HaltKont
 and prim = string * (value list -> value option)
-and time = Ast.node list
+and time = Time.t
 and addr =
   | TagAddr of int * time
   | VarAddr of string * time
@@ -42,10 +45,6 @@ and env = addr Env.t
 type tag = int
 
 (** String conversion *)
-
-let string_of_time t =
-  "[" ^ (String.concat ","
-           (List.map Ast.string_of_node t)) ^ "]"
 
 let string_of_kont = function
   | OperatorKont (t, _, _, _) -> "Operator-" ^ (string_of_int t)
@@ -93,13 +92,13 @@ module Addr = struct
     | _ -> true
   let string_of_address = function
     | TagAddr (n, t) ->
-      "TagAddr(" ^ (string_of_int n) ^ "," ^ (string_of_time t) ^ ")"
+      "TagAddr(" ^ (string_of_int n) ^ "," ^ (Time.string_of_time t) ^ ")"
     | VarAddr (s, t) ->
-      "VarAddr(" ^ s ^ "," ^ (string_of_time t) ^ ")"
+      "VarAddr(" ^ s ^ "," ^ (Time.string_of_time t) ^ ")"
     | PrimAddr (s, t) ->
-      "PrimAddr(" ^ s ^ "," ^ (string_of_time t) ^ ")"
+      "PrimAddr(" ^ s ^ "," ^ (Time.string_of_time t) ^ ")"
     | KontAddr (n, t) ->
-      "KontAddr(" ^ (Ast.string_of_node n) ^ "," ^ (string_of_time t) ^ ")"
+      "KontAddr(" ^ (Ast.string_of_node n) ^ "," ^ (Time.string_of_time t) ^ ")"
 end
 
 module AddressSet = Set.Make(struct
