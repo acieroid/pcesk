@@ -1,5 +1,4 @@
-module type ADDRESS =
-sig
+module type ADDRESS = sig
   type t
   val compare : t -> t -> int
   val is_reclaimable : t -> bool

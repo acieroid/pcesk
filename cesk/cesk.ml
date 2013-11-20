@@ -42,7 +42,7 @@ let step_lambda state tag args body =
 let step_begin state tag = function
   | [] ->
     [{ state with
-       exp = Value (value_of_prim_value Unspecified);
+       exp = Value (aval Unspecified);
        change = Epsilon;
        time = tick state }]
   | (_, tag) as node :: rest ->
@@ -127,11 +127,11 @@ and step_node state (e, tag) =
         (store_lookup state.store (env_lookup state.env x)) in
     List.map (state_produce_value state) values
   | Ast.String s ->
-    [state_produce_value state (value_of_prim_value (String s))]
+    [state_produce_value state (aval (String s))]
   | Ast.Integer n ->
-    [state_produce_value state (value_of_prim_value (Integer n))]
+    [state_produce_value state (aval (Integer n))]
   | Ast.Boolean b ->
-    [state_produce_value state (value_of_prim_value (Boolean b))]
+    [state_produce_value state (aval (Boolean b))]
   | Ast.Lambda (vars, body) ->
     step_lambda state tag vars body
   | Ast.Begin body ->
@@ -229,7 +229,7 @@ and step_value state v kont =
     let a = env_lookup env id in
     let store = store_update state.store a (Lattice.abst1 v) in
     [{ state with
-       exp = Value (value_of_prim_value Unspecified);
+       exp = Value (aval Unspecified);
        store = store;
        addr = c;
        change = Epsilon;
@@ -259,7 +259,7 @@ let step state =
 let empty_address = TagAddr (0, Time.initial)
 
 let empty_state = {
-  exp = Value (value_of_prim_value (Integer 0));
+  exp = Value (aval (Integer 0));
   env = empty_env;
   store = empty_store;
   addr = empty_address;

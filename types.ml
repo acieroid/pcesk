@@ -3,6 +3,7 @@ open Time
 
 (** Types *)
 
+(* TODO: should be used as a functor parameter *)
 module Time = AbstractTime
 
 type lam = (string * int) list * (Ast.node list)
@@ -111,7 +112,17 @@ let string_of_address_set set =
                                (AddressSet.elements set))) ^ "}"
 
 (** Some operations on primitive values and (abstract) values *)
-let value_of_prim_value = function
+module type AVAL =
+sig
+  val aval : prim_value -> value
+end
+
+module ConcreteAval = struct
+  let aval v = AbsUnique v
+end
+
+module AbstractAval = struct
+  let aval = function
   (* some values are directly abstracted, to avoid having infinite width
      in the value lattice *)
   | String _ -> AbsString
@@ -119,6 +130,10 @@ let value_of_prim_value = function
   | Symbol _ -> AbsSymbol
   | Cons _ -> AbsList
   | v -> AbsUnique v
+end
+
+(* TODO: should be used as a functor parameter *)
+let aval = AbstractAval.aval
 
 let value_equals x y = compare x y = 0
 
