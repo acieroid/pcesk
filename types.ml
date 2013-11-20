@@ -3,7 +3,8 @@ open Time
 
 (** Types *)
 
-(* TODO: should be used as a functor parameter *)
+(* To use concrete values, change this to ConcreteTime and change aval
+   to ConcreteAval.aval (later in this file) *)
 module Time = AbstractTime
 
 type lam = (string * int) list * (Ast.node list)
@@ -132,7 +133,6 @@ module AbstractAval = struct
   | v -> AbsUnique v
 end
 
-(* TODO: should be used as a functor parameter *)
 let aval = AbstractAval.aval
 
 let value_equals x y = compare x y = 0
