@@ -3,7 +3,7 @@ open Pcesk_types
 
 (** Stepping *)
 
-let step (threads, store) =
+let step (threads, store, tcount) =
   let step_context tid c =
     (* TODO: handle spawn, join and cas *)
     let state = state_of_context c store in
@@ -17,7 +17,8 @@ let step (threads, store) =
            threads
            (ThreadMap.singleton tid
               (ContextSet.singleton (context_of_state state))),
-         state.store))
+         state.store,
+         tcount))
       states' in
   let step_contexts (tid, cs) =
     List.concat (List.map (step_context tid) (ContextSet.elements cs)) in
@@ -28,7 +29,8 @@ let inject e =
   let state, a_halt = Cesk.inject e in
   (((ThreadMap.singleton ConcreteTID.initial
        (ContextSet.singleton (context_of_state state))),
-   state.store),
+   state.store,
+   ThreadCountMap.empty),
    a_halt)
 
 (** Evaluation *)
@@ -39,7 +41,7 @@ module PStateSet = Set.Make(struct
 
 let eval e =
   let (initial_state, a_halt) = inject e in
-  let extract_finals (threads, store) =
+  let extract_finals (threads, store, tcount) =
     let initial_thread_contexts =
       ContextSet.elements
         (ThreadMap.find ConcreteTID.initial threads) in

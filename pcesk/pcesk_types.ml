@@ -34,8 +34,11 @@ module ContextSet = Set.Make (struct
     let compare = Pervasives.compare
 end)
 
+type thread_count = Zero | One | Inf
+module ThreadCountMap = Map.Make(ConcreteTID)
+
 type threads = ContextSet.t ThreadMap.t
-type pstate = threads * store
+type pstate = threads * store * thread_count ThreadCountMap.t
 
 let context_set_of_list l =
   let rec context_set_of_list' l acc = match l with
@@ -49,7 +52,7 @@ let string_of_context c = match c.cexp with
   | Node n -> "\027[31m" ^ (Ast.string_of_node n) ^ "\027[0m"
   | Value v -> "\027[32m" ^ (string_of_value v) ^ "\027[0m"
 
-let string_of_pstate prefix (threads, store) =
+let string_of_pstate prefix (threads, store, tcount) =
   prefix ^ "{" ^
     (String.concat ("\n" ^ prefix)
        (List.map (fun (tid, cs) ->
