@@ -21,12 +21,13 @@ probably work with older versions too. To compile, simply launch
 =make=. To launch the test suite, execute =make test=.
 ** Usage
 #+BEGIN_SRC shell
-usage: ./main.byte [-v level] [-i input] [-g graph_output] [-k polyvariance] [-gc] [-quiet]
+usage: ./main.byte [-v level] [-i input] [-g graph_output] [-k polyvariance] [-gc] [-p] [-quiet]
   -v : verbose level (0 by default)
   -i : input file (stdin by default)
   -g : output file for the generated graph (nothing by default)
   -k : polyvariance (k-CFA) (k=0 by default)
   -gc : turn on abstract garbage collection (disabled by default)
+  -p : turn on parallelism with spawn and join (disabled by default)
   -quiet : don't print the results nor the parameters used, only the time and graph size
   -help  Display this list of options
   --help  Display this list of options
@@ -58,8 +59,9 @@ Str
 49/49/0.008
 #+END_SRC
 ** Stuff to do
-  - Compare the gains with abstract garbage collection turned on
+  - Implement spawn
+  - Implement join
+  - Abstract the thread ids
+  - Strong updates on thread ids
   - Don't push continuations when evaluating some atomic values
     (eg. (+ 1 2) can be evaluated in one step instead of 6)
-  - Support multiple threads of execution
-  - Add parallel operators (spawn, join)
