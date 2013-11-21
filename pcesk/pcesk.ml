@@ -1,3 +1,4 @@
+open Util
 open Types
 open Cesk_types
 
@@ -8,6 +9,7 @@ module type TID = sig
   val initial : t
   val compare : t -> t -> int
   val next : t -> t
+  val string_of_tid : t -> string
 end
 
 module ConcreteTID = struct
@@ -15,6 +17,7 @@ module ConcreteTID = struct
   let initial = 1
   let compare = Pervasives.compare
   let next t = t+1
+  let string_of_tid = string_of_int
 end
 
 module ThreadMap = Map.Make (ConcreteTID)
@@ -48,14 +51,15 @@ let string_of_context c = match c.cexp with
   | Value v -> "\027[32m" ^ (string_of_value v) ^ "\027[0m"
 
 let string_of_pstate prefix (threads, store) =
-  prefix ^
+  prefix ^ "{" ^
     (String.concat ("\n" ^ prefix)
        (List.map (fun (tid, cs) ->
-            "{" ^ (String.concat ", " (List.map string_of_context
+            (ConcreteTID.string_of_tid tid) ^ ": " ^
+              "{" ^ (String.concat ", " (List.map string_of_context
                                          (ContextSet.elements cs))) ^
               "}")
           (ThreadMap.bindings threads))) ^
-    "\n"
+    "}"
 
 (** Conversion between CESK state and PCESK state *)
 
@@ -92,7 +96,7 @@ let step (threads, store) =
               (ContextSet.singleton (context_of_state state))),
          state.store))
       states' in
-  let step_conrtexts (tid, cs) =
+  let step_contexts (tid, cs) =
     List.concat (List.map (step_context tid) (ContextSet.elements cs)) in
   List.concat (List.map step_contexts (ThreadMap.bindings threads))
 
@@ -112,15 +116,16 @@ module PStateSet = Set.Make(struct
 
 let eval e =
   let (initial_state, a_halt) = inject e in
-  let extract_final (threads, store) =
-    let initial_thread =
-      (* TODO: check this for every context found *)
-      List.hd (ContextSet.elements
-                 (ThreadMap.find ConcreteTID.initial threads)) in
-    match initial_thread.cexp, initial_thread.caddr with
-    | Value result, addr when addr = a_halt ->
-      Some (result, initial_thread.cenv, store)
-    | _ -> None
+  let extract_finals (threads, store) =
+    let initial_thread_contexts =
+      ContextSet.elements
+        (ThreadMap.find ConcreteTID.initial threads) in
+    List.fold_left (fun acc c ->
+        match c.cexp, c.caddr with
+        | Value result, addr when addr = a_halt ->
+          (result, c.cenv, store) :: acc
+        | _ -> acc)
+      [] initial_thread_contexts
   and todo = Exploration.create initial_state in
   let rec loop visited finished =
     if Exploration.is_empty todo then
@@ -132,20 +137,22 @@ let eval e =
         loop visited finished
       with
         Not_found ->
-        begin match extract_final pstate with
-          | Some res ->
-            loop (PStateSet.add pstate visited) (res::finished)
-          | None ->
+        begin match extract_finals pstate with
+          | [] ->
             let pstates = step pstate in
             if !Params.verbose >= 1 then begin
-              print_string (string_of_pstate "==>" pstate);
+              print_string (string_of_pstate "==> " pstate);
+              print_newline ();
               List.iter (fun pstate' ->
-                  print_string (string_of_pstate "    " pstate'))
+                  print_string (string_of_pstate "    " pstate');
+                  print_newline ())
                 pstates;
               print_newline ();
             end;
             Exploration.add todo pstates;
             loop (PStateSet.add pstate visited) finished
+          | res ->
+            loop (PStateSet.add pstate visited) (res @ finished)
         end
   in
   loop PStateSet.empty [], Viz.G.empty
