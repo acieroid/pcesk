@@ -81,24 +81,25 @@ let step (threads, store) =
     (* TODO: handle spawn, join and cas *)
     let state = state_of_context c store in
     let states' = Cesk.step state in
-    let contexts' =
-      List.map context_of_state states' in
-    (ThreadMap.merge
-       (fun tid x y -> match x, y with
-          | Some x, Some y -> Some (ContextSet.union x y)
-          | Some x, None | None, Some x -> Some x
-          | None, None -> None)
-       threads
-       (ThreadMap.singleton tid (context_set_of_list contexts')),
-    store) in
-  let step_contexts (tid, cs) =
-    List.map (step_context tid) (ContextSet.elements cs) in
+    List.map (fun state ->
+        (ThreadMap.merge
+           (fun tid x y -> match x, y with
+              | Some x, Some y -> Some (ContextSet.union x y)
+              | Some x, None | None, Some x -> Some x
+              | None, None -> None)
+           threads
+           (ThreadMap.singleton tid
+              (ContextSet.singleton (context_of_state state))),
+         state.store))
+      states' in
+  let step_conrtexts (tid, cs) =
+    List.concat (List.map (step_context tid) (ContextSet.elements cs)) in
   List.concat (List.map step_contexts (ThreadMap.bindings threads))
 
 (** Injection *)
 let inject e =
   let state, a_halt = Cesk.inject e in
-  (((ThreadMap.singleton ConcreteTID.initial 
+  (((ThreadMap.singleton ConcreteTID.initial
        (ContextSet.singleton (context_of_state state))),
    state.store),
    a_halt)
