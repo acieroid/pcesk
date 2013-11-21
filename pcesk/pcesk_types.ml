@@ -34,7 +34,7 @@ module ContextSet = Set.Make (struct
     let compare = Pervasives.compare
 end)
 
-type thread_count = Zero | One | Inf
+type thread_count = One | Infinity
 module ThreadCountMap = Map.Make(ConcreteTID)
 
 type threads = ContextSet.t ThreadMap.t

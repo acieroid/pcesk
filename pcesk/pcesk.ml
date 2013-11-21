@@ -1,17 +1,23 @@
+open Util
 open Cesk_types
 open Pcesk_types
 
 (** Stepping *)
 
 let step (threads, store, tcount) =
-  let step_context tid c =
+  let step_context tid context =
     (* TODO: handle spawn, join and cas *)
-    let state = state_of_context c store in
+    let state = state_of_context context store in
     let states' = Cesk.step state in
     List.map (fun state ->
         (ThreadMap.merge
            (fun tid x y -> match x, y with
-              | Some x, Some y -> Some (ContextSet.union x y)
+              | Some x, Some y ->
+                Some (ContextSet.union
+                        (match ThreadCountMap.find tid tcount with
+                        | One -> ContextSet.remove context x
+                        | Infinity -> x)
+                        y)
               | Some x, None | None, Some x -> Some x
               | None, None -> None)
            threads

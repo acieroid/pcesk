@@ -62,6 +62,5 @@ Str
   - Implement spawn
   - Implement join
   - Abstract the thread ids
-  - Strong updates on thread ids
   - Don't push continuations when evaluating some atomic values
     (eg. (+ 1 2) can be evaluated in one step instead of 6)
