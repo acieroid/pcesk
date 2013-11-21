@@ -1,6 +1,8 @@
 open Types
 open Cesk_types
 
+(** Types and modules *)
+
 module type TID = sig
   type t
   val initial : t
@@ -38,6 +40,24 @@ let context_set_of_list l =
     | [] -> acc
     | hd :: tl -> context_set_of_list' tl (ContextSet.add hd acc) in
   context_set_of_list' l ContextSet.empty
+
+(** String conversions *)
+
+let string_of_context c = match c.cexp with
+  | Node n -> "\027[31m" ^ (Ast.string_of_node n) ^ "\027[0m"
+  | Value v -> "\027[32m" ^ (string_of_value v) ^ "\027[0m"
+
+let string_of_pstate prefix (threads, store) =
+  prefix ^
+    (String.concat ("\n" ^ prefix)
+       (List.map (fun (tid, cs) ->
+            "{" ^ (String.concat ", " (List.map string_of_context
+                                         (ContextSet.elements cs))) ^
+              "}")
+          (ThreadMap.bindings threads))) ^
+    "\n"
+
+(** Conversion between CESK state and PCESK state *)
 
 let state_of_context c store =
   { exp = c.cexp;
@@ -116,6 +136,13 @@ let eval e =
             loop (PStateSet.add pstate visited) (res::finished)
           | None ->
             let pstates = step pstate in
+            if !Params.verbose >= 1 then begin
+              print_string (string_of_pstate "==>" pstate);
+              List.iter (fun pstate' ->
+                  print_string (string_of_pstate "    " pstate'))
+                pstates;
+              print_newline ();
+            end;
             Exploration.add todo pstates;
             loop (PStateSet.add pstate visited) finished
         end
