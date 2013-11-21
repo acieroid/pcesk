@@ -9,6 +9,12 @@ let print_infos time graph =
     (Viz.G.nb_edges graph)
     time
 
+let eval node =
+  if !Params.parallel then
+    Pcesk.eval node
+  else
+    Cesk.eval node
+
 let () =
   Arg.parse speclist
     (fun x -> raise (Arg.Bad ("Bad argument : " ^ x)))
@@ -20,7 +26,7 @@ let () =
     end;
     let node = Parser.parse (Lexer.lex !input) in
     let start = now () in
-    let res, graph = Cesk.eval node in
+    let res, graph = eval node in
     let stop = now () in
     if not !Params.quiet then
       List.iter (fun (value, env, store) ->

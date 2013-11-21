@@ -4,6 +4,9 @@ let k = ref 0
 (* GC turned on or not *)
 let gc = ref false
 
+(* Parallelism turned on or not *)
+let parallel = ref false
+
 (* Verbosity level *)
 let verbose = ref 0
 
@@ -20,7 +23,8 @@ let graph_file = ref None
 let quiet = ref false
 
 let usage = "usage: " ^ (Sys.argv.(0)) ^
-              " [-v level] [-i input] [-g graph_output] [-k polyvariance] [-gc] [-quiet]"
+              " [-v level] [-i input] [-g graph_output] [-k polyvariance]" ^
+              " [-gc] [-p] [-quiet]"
 
 let speclist = [
   ("-v", Arg.Set_int verbose,
@@ -33,6 +37,8 @@ let speclist = [
    ": polyvariance (k-CFA) (k=0 by default)");
   ("-gc", Arg.Set gc,
    ": turn on abstract garbage collection (disabled by default)");
+  ("-p", Arg.Set parallel,
+   ": turn on parallelism with spawn and join (disabled by default)");
   ("-quiet", Arg.Set quiet,
    ": don't print the results nor the parameters used, only the time and graph size");
 ]

@@ -6,6 +6,7 @@ S env
 S ast
 S lattice
 S test
+S pcesk
 B _build
 B _build/address
 B _build/cesk
@@ -14,6 +15,7 @@ B _build/env
 B _build/ast
 B _build/lattice
 B _build/test
+B _build/pcesk
 PKG ocamlgraph
 PKG oUnit
 PKG batteries
