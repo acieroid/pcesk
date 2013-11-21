@@ -26,11 +26,12 @@ let step (threads, store, tcount) =
 
 (** Injection *)
 let inject e =
+  let tid = ConcreteTID.initial in
   let state, a_halt = Cesk.inject e in
-  (((ThreadMap.singleton ConcreteTID.initial
-       (ContextSet.singleton (context_of_state state))),
-   state.store,
-   ThreadCountMap.empty),
+  ((ThreadMap.singleton tid
+      (ContextSet.singleton (context_of_state state)),
+    state.store,
+    ThreadCountMap.singleton tid One),
    a_halt)
 
 (** Evaluation *)
