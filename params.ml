@@ -46,4 +46,5 @@ let speclist = [
 
 let string_of_configuration () =
   "\tk = " ^ (string_of_int !k) ^ "\n" ^
-    "\tgc = " ^ (if !gc then "on" else "off")
+    "\tgc = " ^ (if !gc then "on" else "off") ^ "\n" ^
+    "\tparallelism = " ^ (if !parallel then "on" else "off")
