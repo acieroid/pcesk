@@ -33,6 +33,9 @@ let primitives : prim list =
    (">=", int_comp value_gte);
    ("<", int_comp value_lt);
    ("<=", int_comp value_lte);
+   ("not", function
+     | [hd] -> value_not hd
+     | _ -> None);
   ]
 
 let apply_primitive (name : string) (args : value list) : value option =

@@ -89,6 +89,30 @@ let test_infinite ctx =
 let test_callcc ctx =
   "callcc-0.scm" $=> AbsInteger
 
+let test_blur ctx =
+  "blur.scm" $=> AbsBoolean
+
+let test_cpstak ctx =
+  "cpstak.scm" $=> AbsInteger
+
+let test_eta ctx =
+  "eta.scm" $=> AbsUnique (Boolean false)
+
+let test_gcipd ctx =
+  "gcipd.scm" $=> AbsInteger
+
+let test_kcfa2 ctx =
+  "kcfa2.scm" $=> AbsUnique (Boolean false)
+
+let test_kcfa3 ctx =
+  "kcfa3.scm" $=> AbsUnique (Boolean false)
+
+let test_mj09 ctx =
+  "mj09.scm" $=> AbsInteger
+
+let test_rotate ctx =
+  "rotate.scm" $=> AbsString
+
 let suite =
   "Advanced tests" >:::
     ["multiple calls" >:: test_multiple_calls;
@@ -98,4 +122,14 @@ let suite =
      "church numerals" >:: test_church_numerals;
      "infinitely recursive functions" >:: test_infinite;
      "call/cc" >:: test_callcc;
+     "blur" >:: test_blur;
+     (* Parser problem (only when ran from OUnit) *)
+     (* "CPS tak" >:: test_cpstak; *)
+     "eta" >:: test_eta;
+     "gcipd" >:: test_gcipd;
+     "kcfa2" >:: test_kcfa2;
+     "kcfa3" >:: test_kcfa3;
+     "mj09" >:: test_mj09;
+     (* Parser problem *)
+     (* "rotate" >:: test_rotate; *)
     ]

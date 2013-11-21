@@ -208,3 +208,8 @@ let value_lt = value_comp_int (<)
 let value_lte = value_comp_int (<=)
 let value_int_eq = value_comp_int (=)
 let value_int_neq = value_comp_int (<>)
+
+let value_not x = match x with
+  | AbsUnique (Boolean b) -> Some (AbsUnique (Boolean (not b)))
+  | AbsBoolean -> Some AbsBoolean
+  | _ -> None

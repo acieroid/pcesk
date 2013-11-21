@@ -75,35 +75,36 @@ let step_callcc state tag exp =
 let rec apply_function rator rands state = match rator with
   | AbsUnique (Closure ((ids, body), env)) ->
     if List.length ids != List.length rands then
-      raise (InvalidNumberOfArguments (List.length ids, List.length rands));
-    let args = List.combine ids rands in
-    let addrs, state = List.fold_right
-        (fun ((name, tag), value) (addrs, state) ->
-           let a = alloc state tag in
-           (name, value, a) :: addrs, {state with time = tick state})
-        args ([], state) in
-    let extended_env = List.fold_left
-        (fun env (name, value, a) ->
-           env_extend env name a) env addrs
-    and extended_store = List.fold_left
-        (fun store (name, value, a) ->
-           store_extend1 store a value)
-        state.store addrs in
-    begin match body with
-      | [] -> failwith "Should not happen"
-      | [form] ->
-        (* Only one form in body *)
-        [{ state with
-           exp = Node form;
-           env = extended_env;
-           store = extended_store;
-           change = Pop;
-           time = tick state}]
-      | _ ->
-        (* Multiple forms in body, implicit begin *)
-        let (_, tag) = (List.hd body) in
-        step_begin state tag body
-    end
+      []
+    else
+      let args = List.combine ids rands in
+      let addrs, state = List.fold_right
+          (fun ((name, tag), value) (addrs, state) ->
+             let a = alloc state tag in
+             (name, value, a) :: addrs, {state with time = tick state})
+          args ([], state) in
+      let extended_env = List.fold_left
+          (fun env (name, value, a) ->
+             env_extend env name a) env addrs
+      and extended_store = List.fold_left
+          (fun store (name, value, a) ->
+             store_extend1 store a value)
+          state.store addrs in
+      begin match body with
+        | [] -> failwith "Should not happen"
+        | [form] ->
+          (* Only one form in body *)
+          [{ state with
+             exp = Node form;
+             env = extended_env;
+             store = extended_store;
+             change = Pop;
+             time = tick state}]
+        | _ ->
+          (* Multiple forms in body, implicit begin *)
+          let (_, tag) = (List.hd body) in
+          step_begin state tag body
+      end
   | AbsUnique (Primitive prim) ->
     begin match apply_primitive prim rands with
       | Some v ->
@@ -115,8 +116,8 @@ let rec apply_function rator rands state = match rator with
     end
   | AbsUnique (Kont k) ->
     begin match rands with
-    | [rand] -> step_value state rand  k
-    | _ -> []
+      | [rand] -> step_value state rand  k
+      | _ -> []
     end
   | _ -> []
 
