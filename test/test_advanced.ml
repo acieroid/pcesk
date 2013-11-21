@@ -18,8 +18,9 @@ let ($=>) f expected =
   let res, _ = Cesk.eval node in
   let results = List.map (fun (r, _, _) -> r) res in
   let merged = Lattice.abst results in
+  let cmp x y = not (Lattice.is_bottom (Lattice.meet x y)) in
   assert_equal
-    ~msg:f ~printer:Lattice.string_of_lattice_value
+    ~msg:f ~cmp ~printer:Lattice.string_of_lattice_value
     (Lattice.abst1 expected) merged
 
 let test_match f expected cmp =
@@ -96,16 +97,16 @@ let test_cpstak ctx =
   "cpstak.scm" $=> AbsInteger
 
 let test_eta ctx =
-  "eta.scm" $=> AbsUnique (Boolean false)
+  "eta.scm" $=> AbsBoolean
 
 let test_gcipd ctx =
   "gcipd.scm" $=> AbsInteger
 
 let test_kcfa2 ctx =
-  "kcfa2.scm" $=> AbsUnique (Boolean false)
+  "kcfa2.scm" $=> AbsBoolean
 
 let test_kcfa3 ctx =
-  "kcfa3.scm" $=> AbsUnique (Boolean false)
+  "kcfa3.scm" $=> AbsBoolean
 
 let test_mj09 ctx =
   "mj09.scm" $=> AbsInteger

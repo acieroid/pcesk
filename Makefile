@@ -17,8 +17,8 @@ test_bin:
 	ocamlbuild $(OPTS) -tags $(TAGS) -pkgs $(PKGS) $(TEST).$(EXTENSION)
 
 test: test_bin
-	$(RUN_TEST) -k 0
 	$(RUN_TEST) -k 0 -gc
+	$(RUN_TEST) -k 0
 	$(RUN_TEST) -k 1 -gc
 	$(RUN_TEST) -k 1 # Will very likely timeout
 
