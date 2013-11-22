@@ -1,13 +1,21 @@
 open Cesk_types
 open Pcesk_types
+open Garbage_collection
 
 (** Stepping *)
 
+let step_state state = match state.exp with
+  | Node ((Ast.Spawn _, _) as n)
+  | Node ((Ast.Join _, _) as n)
+  | Node ((Ast.Cas _, _) as n) ->
+    let state = if !Params.gc then gc state else state in
+    failwith "TODO"
+  | _ -> Cesk.step state
+
 let step (threads, store, tcount) =
   let step_context tid context =
-    (* TODO: handle spawn, join and cas *)
     let state = state_of_context context store in
-    let states' = Cesk.step state in
+    let states' = step_state state in
     List.map (fun state ->
         (ThreadMap.merge
            (fun tid x y -> match x, y with
