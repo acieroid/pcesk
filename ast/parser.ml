@@ -20,6 +20,9 @@ let parse stream =
     | "if" -> parse_if tag
     | "set!" -> parse_set tag
     | "call/cc" -> parse_callcc tag
+    | "spawn" -> parse_spawn tag
+    | "join" -> parse_join tag
+    | "cas" -> parse_cas tag
     | f -> parse_funcall_rest tag ((Identifier f), tag+2)
 
   and parse_begin tag = parser
@@ -61,6 +64,19 @@ let parse stream =
   and parse_callcc tag = parser
     | [< (e, tag') = parse' (tag+1); 'RPAR >] ->
       ((Callcc e, tag+1), tag')
+
+  and parse_spawn tag = parser
+    | [< (e, tag') = parse' (tag+1); 'RPAR >] ->
+      ((Spawn e, tag+1), tag')
+
+  and parse_join tag = parser
+    | [< (e, tag') = parse' (tag+1); 'RPAR >] ->
+      ((Join e, tag+1), tag')
+
+  and parse_cas tag = parser
+    | [< 'IDENTIFIER v; (e1, tag') = parse' (tag+2);
+         (e2, tag'') = parse' tag' >] ->
+      ((Cas ((v, tag+2), e1, e2), tag+1), tag'')
 
   and parse_funcall_rest tag f = parser
     | [< (args, tag') = parse_list (tag+2) >] ->

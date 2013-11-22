@@ -14,6 +14,9 @@ type exp =
   | If of node * node * node
   | Set of var * node
   | Callcc of node
+  | Spawn of node
+  | Join of node (* argument of join should be an atomic expression *)
+  | Cas of var * node * node (* both node arguments should be atomic *)
 and node = exp * int
 
 let rec string_of_exp = function
@@ -41,6 +44,12 @@ let rec string_of_exp = function
     "(set! " ^ v ^ " " ^ (string_of_node e) ^ ")"
   | Callcc e ->
     "(callcc " ^ (string_of_node e) ^ ")"
+  | Spawn e ->
+    "(spawn " ^ (string_of_node e) ^ ")"
+  | Join e ->
+    "(join " ^ (string_of_node e) ^ ")"
+  | Cas ((v, _), e1, e2) ->
+    "(cas " ^ v ^ " " ^ (string_of_node e1) ^ " " ^ (string_of_node e2) ^ ")"
 
 and string_of_node (exp, tag) =
   (string_of_exp exp) (* ^ "@" ^ (string_of_int tag) *)
