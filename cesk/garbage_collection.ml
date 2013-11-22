@@ -1,4 +1,3 @@
-open Util
 open Types
 open Cesk_types
 open Cesk_base

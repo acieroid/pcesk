@@ -1,8 +1,6 @@
-open Util
 open Types
 open Cesk_types
 open Cesk_base
-open Exceptions
 open Primitives
 open Viz
 open Garbage_collection
@@ -148,6 +146,9 @@ and step_node state (e, tag) =
   | Ast.Funcall (((_, tag) as rator), rands) ->
     let kont = OperatorKont (tag, rands, state.env, state.addr) in
     [state_push state rator kont]
+  | Ast.Spawn _
+  | Ast.Join _
+  | Ast.Cas (_, _, _) -> failwith "Can't deal with parallelism in CESK machine"
 
 and step_value state v kont =
   match kont with

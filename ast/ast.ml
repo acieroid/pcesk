@@ -1,5 +1,5 @@
 type tag = int
-type var = string * tag
+   type var = string * tag
 type exp =
   | Identifier of string
   | String of string

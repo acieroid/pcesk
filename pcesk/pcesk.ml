@@ -1,4 +1,3 @@
-open Util
 open Cesk_types
 open Pcesk_types
 
