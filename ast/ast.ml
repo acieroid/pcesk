@@ -1,5 +1,3 @@
-open Util
-
 type tag = int
 type var = string * tag
 type exp =

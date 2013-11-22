@@ -25,7 +25,7 @@ struct
 
   let is_empty = Stack.is_empty
 
-  let rec add stack vs =
+  let add stack vs =
     List.iter (fun v -> Stack.push v stack) vs
 
   let pick stack =
@@ -44,7 +44,7 @@ struct
 
   let is_empty = Queue.is_empty
 
-  let rec add queue vs =
+  let add queue vs =
     List.iter (fun v -> Queue.add v queue) vs
 
   let pick queue =

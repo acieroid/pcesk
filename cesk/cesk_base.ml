@@ -1,4 +1,3 @@
-open Util
 open Types
 open Env
 open Cesk_types

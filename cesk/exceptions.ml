@@ -1,5 +1,4 @@
 open Types
-open Cesk_types
 
 exception NotYetImplemented
 exception Malformed of string * Ast.node

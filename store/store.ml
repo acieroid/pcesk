@@ -40,7 +40,6 @@ module Store : STORE =
     module StoreMap = Map.Make(Addr)
 
     type freshness =
-      | Empty
       | Fresh
       | NotFresh
 
@@ -56,9 +55,7 @@ module Store : STORE =
       let to_store =
         try
           let (v, f) = StoreMap.find addr store in
-          match f with
-          | Empty -> (value, Fresh)
-          | _ -> (Lattice.join v value, NotFresh)
+          (Lattice.join v value, NotFresh)
         with
           Not_found -> (value, Fresh)
       in
@@ -67,7 +64,6 @@ module Store : STORE =
     let update store addr value =
       let (v, f) = StoreMap.find addr store in
       let to_store = match f with
-        | Empty -> raise Not_found
         | Fresh -> (value, Fresh)
         | NotFresh -> (Lattice.join v value, NotFresh) in
       StoreMap.add addr to_store store

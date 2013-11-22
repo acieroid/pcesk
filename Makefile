@@ -7,7 +7,7 @@ PKGS       = ocamlgraph,oUnit,batteries
 EXTENSION  = byte
 RUN_TEST   = ./$(TEST).$(EXTENSION)
 DOCDIR     = pcesk.docdir
-CFLAGS     = -w A
+CFLAGS     = -w A -w -4 -w -27 -short-paths
 OCAMLBUILD = ocamlbuild $(OPTS) -tags $(TAGS) -pkgs $(PKGS) -cflags "$(CFLAGS)"
 
 .PHONY: all test test_bin clean
