@@ -1,20 +1,22 @@
-TARGET    = main
-TEST      = test
-OPTS      = -pp camlp4o -use-ocamlfind
-TAGS      = annot,debug
-LIBS      =
-PKGS      = ocamlgraph,oUnit,batteries
-EXTENSION = byte
-RUN_TEST  = ./$(TEST).$(EXTENSION)
-DOCDIR    = pcesk.docdir
+TARGET     = main
+TEST       = test
+OPTS       = -pp camlp4o -use-ocamlfind
+TAGS       = annot,debug
+LIBS       =
+PKGS       = ocamlgraph,oUnit,batteries
+EXTENSION  = byte
+RUN_TEST   = ./$(TEST).$(EXTENSION)
+DOCDIR     = pcesk.docdir
+CFLAGS     = -w A
+OCAMLBUILD = ocamlbuild $(OPTS) -tags $(TAGS) -pkgs $(PKGS) -cflags "$(CFLAGS)"
 
 .PHONY: all test test_bin clean
 
 all:
-	ocamlbuild $(OPTS) -tags $(TAGS) -pkgs $(PKGS) $(TARGET).$(EXTENSION)
+	$(OCAMLBUILD) $(TARGET).$(EXTENSION)
 
 test_bin:
-	ocamlbuild $(OPTS) -tags $(TAGS) -pkgs $(PKGS) $(TEST).$(EXTENSION)
+	$(OCAMLBUILD) $(TEST).$(EXTENSION)
 
 test: test_bin
 	$(RUN_TEST) -k 0 -gc
@@ -23,7 +25,7 @@ test: test_bin
 	$(RUN_TEST) -k 1 # Will very likely timeout
 
 doc:
-	ocamlbuild $(OPTS) -tags $(TAGS) -pkgs $(PKGS) $(DOCDIR)/index.html
+	$(OCAMLBUILD) $(DOCDIR)/index.html
 
 clean:
-	ocamlbuild -clean
+	$(OCAMLBUILD) -clean
