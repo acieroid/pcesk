@@ -11,6 +11,7 @@ exception NotAKont of value
 exception EvaluationStuck of Ast.node
 exception PrimWrongArgType of string * value
 exception PrimWrongNumberOfArgs of string * int
+exception NotAtomic of Ast.node
 
 let string_of_exception = function
   | NotYetImplemented ->
@@ -37,4 +38,6 @@ let string_of_exception = function
     "Not a continuation: " ^ (string_of_value v)
   | EvaluationStuck n ->
     "Evaluation is stuck at node " ^ (Ast.string_of_node n)
+  | NotAtomic n ->
+    "Expression is not atomic: " ^ (Ast.string_of_node n)
   | e -> raise e

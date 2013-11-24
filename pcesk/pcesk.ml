@@ -67,7 +67,23 @@ let step_spawn pstate tid context tag e =
          (ThreadMap.singleton tid' One) }]
 
 let step_join pstate tid context tag e =
-  raise Exceptions.NotYetImplemented
+  let values = eval_atomic e context.cenv pstate.pstore in
+  List.concat
+    (List.map (function
+         | AbsUnique (Tid t) ->
+           List.map (fun v ->
+               let context' =
+                 { context with
+                   cexp = Value v;
+                   ctime = tick (state_of_context context pstate.pstore) } in
+               { pstate with
+                 threads = ThreadMap.merge (merge_threads context pstate.tcount)
+                     pstate.threads
+                     (ThreadMap.singleton tid
+                        (ContextSet.add context'
+                           (ContextSet.singleton context))) })
+             (Lattice.conc (store_lookup pstate.pstore (TidAddr t)))
+         | _ -> []) (Lattice.conc values))
 
 let step_cas pstate tid context tag name e1 e2 =
   raise Exceptions.NotYetImplemented

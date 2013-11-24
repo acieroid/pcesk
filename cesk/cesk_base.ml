@@ -63,3 +63,14 @@ let alloc_kont state node = KontAddr (node, state.time)
 let tick state = match state.exp with
   | Node n -> Time.tick state.time n
   | _ -> state.time
+
+(** Atomic evaluator *)
+let eval_atomic node env store =
+  let ret v = Lattice.abst1 (AbsUnique v) in
+  match fst node with
+  | Ast.Identifier v -> store_lookup store (env_lookup env v)
+  | Ast.String s -> ret (String s)
+  | Ast.Integer n -> ret (Integer n)
+  | Ast.Boolean b -> ret (Boolean b)
+  | Ast.Lambda (vars, body) -> ret (Closure ((vars, body), env))
+  | _ -> raise (NotAtomic node)
