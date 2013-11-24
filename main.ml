@@ -3,17 +3,21 @@ open Params
 
 let now () = Unix.gettimeofday ()
 
-let print_infos time graph =
-  Printf.printf "%d/%d/%.3f\n"
-    (Viz.G.nb_vertex graph)
-    (Viz.G.nb_edges graph)
-    time
+let print_infos time vertex edges =
+  Printf.printf "%d/%d/%.3f\n" vertex edges time
 
 let eval node =
-  if !Params.parallel then
-    Pcesk.eval node
-  else
-    Cesk.eval node
+  if !Params.parallel then begin
+    let res, graph = Pcesk.eval node in
+    BatOption.may (Pviz.output_graph graph) !graph_file;
+    close_in !input;
+    (res, Pviz.G.nb_vertex graph, Pviz.G.nb_edges graph)
+  end else begin
+    let res, graph = Cesk.eval node in
+    BatOption.may (Viz.output_graph graph) !graph_file;
+    close_in !input;
+    (res, Viz.G.nb_vertex graph, Viz.G.nb_edges graph)
+  end
 
 let () =
   Arg.parse speclist
@@ -26,17 +30,12 @@ let () =
     end;
     let node = Parser.parse (Lexer.lex !input) in
     let start = now () in
-    let res, graph = eval node in
+    let res, vertex, edges = eval node in
     let stop = now () in
     if not !Params.quiet then
       List.iter (fun (value, env, store) ->
           print_string (string_of_value value); print_newline ())
         res;
-    begin match !graph_file with
-      | Some f -> Viz.output_graph f graph
-      | None -> ()
-    end;
-    close_in !input;
-    print_infos (stop -. start) graph
+    print_infos (stop -. start) vertex edges
   with
   | e -> print_string (Exceptions.string_of_exception e)

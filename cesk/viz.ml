@@ -59,7 +59,7 @@ end
 
 module Dot = Graph.Graphviz.Dot(DotArg)
 
-let output_graph file graph =
+let output_graph graph file =
   let out = open_out_bin file in
   Dot.output_graph out graph;
   close_out out

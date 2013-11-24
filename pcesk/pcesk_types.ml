@@ -53,16 +53,18 @@ let context_set_of_list l =
 
 (** String conversions *)
 
-let string_of_context c = match c.cexp with
-  | Node n -> "\027[31m" ^ (Ast.string_of_node n) ^ "\027[0m"
-  | Value v -> "\027[32m" ^ (string_of_value v) ^ "\027[0m"
+let string_of_context ?color:(color=true) context =
+  let c s = if color then s else "" in
+  match context.cexp with
+  | Node n -> (c "\027[31m") ^ (Ast.string_of_node n) ^ (c "\027[0m")
+  | Value v -> (c "\027[32m") ^ (string_of_value v) ^ (c "\027[0m")
 
-let string_of_pstate prefix pstate =
+let string_of_pstate ?color:(color=true) prefix pstate =
   prefix ^ "{" ^
     (String.concat ("\n" ^ prefix ^ " ")
        (List.map (fun (tid, cs) ->
             (ConcreteTID.string_of_tid tid) ^ ": " ^
-              "{" ^ (String.concat ", " (List.map string_of_context
+              "{" ^ (String.concat ", " (List.map (string_of_context ~color)
                                          (ContextSet.elements cs))) ^
               "}")
           (ThreadMap.bindings pstate.threads))) ^

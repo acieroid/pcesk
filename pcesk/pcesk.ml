@@ -1,7 +1,7 @@
 open Types
 open Cesk_types
 open Pcesk_types
-open Garbage_collection
+open Pviz
 
 (** Helper functions *)
 let merge_threads context tcount tid x y = match x, y with
@@ -114,19 +114,26 @@ let eval e =
         | _ -> acc)
       [] initial_thread_contexts
   and todo = Exploration.create initial_state in
-  let rec loop visited finished =
+  let rec loop visited finished graph =
     if Exploration.is_empty todo then
-      finished
+      finished, graph
     else
       let pstate = Exploration.pick todo in
       try
         let _ = PStateSet.find pstate visited in
-        loop visited finished
+        loop visited finished graph
       with
         Not_found ->
         begin match extract_finals pstate with
           | [] ->
             let pstates = step pstate in
+            let source = G.V.create pstate
+            and dests = List.map G.V.create pstates in
+            let edges = List.map (fun dest -> G.E.create source
+                                     "" dest) dests in
+            let graph' =
+              List.fold_left G.add_edge_e
+                (List.fold_left G.add_vertex graph dests) edges in
             if !Params.verbose >= 1 then begin
               print_string (string_of_pstate "==> " pstate);
               print_newline ();
@@ -137,9 +144,10 @@ let eval e =
               print_newline ();
             end;
             Exploration.add todo pstates;
-            loop (PStateSet.add pstate visited) finished
+            loop (PStateSet.add pstate visited) finished graph'
           | res ->
-            loop (PStateSet.add pstate visited) (res @ finished)
+            loop (PStateSet.add pstate visited) (res @ finished) graph
         end
   in
-  loop PStateSet.empty [], Viz.G.empty
+  let initial_graph = G.add_vertex G.empty (G.V.create initial_state) in
+  loop PStateSet.empty [] initial_graph
