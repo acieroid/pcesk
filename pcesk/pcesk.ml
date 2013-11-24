@@ -38,13 +38,14 @@ let step_spawn pstate tid context tag e =
                   cchange = Epsilon;
                   ctime = Time.tick context.ctime e} in
   [{ pstate with
-    threads = ThreadMap.merge (merge_threads context pstate.tcount)
-        pstate.threads
-        (ThreadMap.singleton tid'
-           (ContextSet.singleton context''));
-    tcount = ThreadMap.merge merge_tids
-        pstate.tcount
-        (ThreadMap.singleton tid' One) }]
+     threads = ThreadMap.merge (merge_threads context pstate.tcount)
+         pstate.threads
+         (ThreadMap.add tid (ContextSet.singleton context')
+            (ThreadMap.singleton tid'
+               (ContextSet.singleton context'')));
+     tcount = ThreadMap.merge merge_tids
+         pstate.tcount
+         (ThreadMap.singleton tid' One) }]
 
 let step_join pstate tid context tag e =
   raise Exceptions.NotYetImplemented
