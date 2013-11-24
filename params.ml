@@ -43,8 +43,15 @@ let speclist = [
    ": don't print the results nor the parameters used, only the time and graph size");
 ]
 
+let string_of_param name value =
+  name ^ " = " ^ value
+
+let string_of_bool_param name value =
+  string_of_param name (if value then "on" else "off")
 
 let string_of_configuration () =
-  "\tk = " ^ (string_of_int !k) ^ "\n" ^
-    "\tgc = " ^ (if !gc then "on" else "off") ^ "\n" ^
-    "\tparallelism = " ^ (if !parallel then "on" else "off")
+  "\t" ^ (String.concat "\n\t"
+            [string_of_param "k" (string_of_int !k);
+             string_of_bool_param "gc" !gc;
+             string_of_bool_param "parallelism" !parallel;
+            ])

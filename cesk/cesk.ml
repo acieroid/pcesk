@@ -292,7 +292,7 @@ let string_of_state state =
 
 let string_of_update state state' =
   let str pop = match state'.change with
-    | Epsilon -> "ε"
+    | Epsilon -> "e"
     | Pop -> pop
     | Push -> "+" ^ (string_of_konts (extract_konts state')) in
   (* Some special cases to have it working correctly.
@@ -300,7 +300,7 @@ let string_of_update state state' =
   match state.exp, state'.exp with
   | Node _, _ -> str ("-" ^ (string_of_konts (extract_konts state)))
   | Value _, Value _ -> str ("-" ^ (string_of_konts (extract_konts state')))
-  | Value _, Node _ -> str "ε"
+  | Value _, Node _ -> str "e"
 
 module StateSet = Set.Make(struct
     type t = state
