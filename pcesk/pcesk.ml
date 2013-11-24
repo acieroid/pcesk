@@ -69,7 +69,6 @@ let step pstate =
     | Node ((Ast.Spawn _, _) as n)
     | Node ((Ast.Join _, _) as n)
     | Node ((Ast.Cas _, _) as n) ->
-      let state = if !Params.gc then gc state else state in
       step_parallel pstate tid context n
     | _ ->
       let states' = Cesk.step state in
