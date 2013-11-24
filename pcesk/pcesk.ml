@@ -21,6 +21,10 @@ let merge_tids tid x y = match x, y with
   | None, None -> None
 
 let newtid _ threads =
+  (* TODO: ideally, the newtid function should be in the Tid module, but this
+     would create a circular dependency (Types depends on Tid, Pcesk_types
+     depends on Types, and if newtid was in Tid, Tid would depend on
+     Pcesk_types, closing the loop *)
   Tid.next (Tid.max (List.map fst (ThreadMap.bindings threads)))
 
 (** Stepping *)
