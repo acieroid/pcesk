@@ -1,5 +1,6 @@
 open Types
 open Cesk_types
+open Cesk_base
 open Pcesk_types
 open Pviz
 
@@ -55,33 +56,46 @@ let step_join pstate tid context tag e =
 let step_cas pstate tid context tag name e1 e2 =
   raise Exceptions.NotYetImplemented
 
-let step_parallel pstate tid context  = function
+let step_parallel pstate tid context = function
   | Ast.Spawn e, tag -> step_spawn pstate tid context tag e
   | Ast.Join e, tag -> step_join pstate tid context tag e
   | Ast.Cas ((name, _), e1, e2), tag ->
     step_cas pstate tid context tag name e1 e2
   | _ -> failwith "Should not happen"
 
+let step_halt pstate tid value =
+  [{ pstate with
+     pstore = store_extend1 pstate.pstore (TidAddr tid) value }]
+
+let step_cesk pstate tid context =
+  let state = state_of_context context pstate.pstore in
+  let states' = Cesk.step state in
+  List.map (fun state ->
+      { pstate with
+        threads = ThreadMap.merge (merge_threads context pstate.tcount)
+            pstate.threads
+            (ThreadMap.singleton tid
+               (ContextSet.singleton (context_of_state state)));
+        pstore = state.store})
+    states'
+
 let step pstate =
   let step_context tid context =
     (* Step each context, creating a (or multiple) new pstate for each stepped
        context *)
-    let state = state_of_context context pstate.pstore in
-    match state.exp with
-    | Node ((Ast.Spawn _, _) as n)
-    | Node ((Ast.Join _, _) as n)
-    | Node ((Ast.Cas _, _) as n) ->
-      step_parallel pstate tid context n
-    | _ ->
-      let states' = Cesk.step state in
-      List.map (fun state ->
-          { pstate with
-            threads = ThreadMap.merge (merge_threads context pstate.tcount)
-                pstate.threads
-                (ThreadMap.singleton tid
-                   (ContextSet.singleton (context_of_state state)));
-            pstore = state.store})
-        states' in
+      match context.cexp with
+      | Node ((Ast.Spawn _, _) as n)
+      | Node ((Ast.Join _, _) as n)
+      | Node ((Ast.Cas _, _) as n) ->
+        step_parallel pstate tid context n
+      | Node _ ->
+        step_cesk pstate tid context
+      | Value v ->
+        if context.caddr = pstate.a_halt then
+          step_halt pstate tid v
+        else
+          step_cesk pstate tid context
+  in
   let step_contexts (tid, cs) =
     List.concat (List.map (step_context tid) (ContextSet.elements cs)) in
   List.concat (List.map step_contexts (ThreadMap.bindings pstate.threads))
