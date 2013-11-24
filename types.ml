@@ -15,6 +15,7 @@ type prim_value =
   | Integer of int
   | Boolean of bool
   | Symbol of string
+  | Tid of Tid.t
   | Cons of prim_value * prim_value
   | Nil
   | Unspecified
@@ -66,6 +67,7 @@ let rec string_of_prim_value = function
   | Boolean true -> "#t"
   | Boolean false -> "#f"
   | Symbol sym -> "'" ^ sym
+  | Tid t -> "#<thread " ^ (Tid.string_of_tid t) ^ ">"
   | Cons (car, cdr) ->
     "(" ^ (string_of_prim_value car) ^ " . " ^
       (string_of_prim_value cdr) ^")"

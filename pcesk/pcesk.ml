@@ -33,8 +33,7 @@ let step_spawn pstate tid context tag e =
                       I guess *)
                    ctime = Time.initial} in
   let context' = {context with
-                  (* TODO: first-class tid *)
-                  cexp = Value (AbsUnique (Integer tid'));
+                  cexp = Value (AbsUnique (Tid tid'));
                   cchange = Epsilon;
                   ctime = Time.tick context.ctime e} in
   [{ pstate with
