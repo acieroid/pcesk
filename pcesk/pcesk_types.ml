@@ -1,10 +1,9 @@
 open Types
-open Tid
 open Cesk_types
 
 (** Types and modules *)
 
-module ThreadMap = Map.Make (ConcreteTID)
+module ThreadMap = Map.Make (Tid)
 
 type context = {
   cexp : exp;
@@ -20,7 +19,7 @@ module ContextSet = Set.Make (struct
 end)
 
 type thread_count = One | Infinity
-module ThreadCountMap = Map.Make(ConcreteTID)
+module ThreadCountMap = Map.Make(Tid)
 
 type threads = ContextSet.t ThreadMap.t
 type pstate = {
@@ -48,7 +47,7 @@ let string_of_pstate ?color:(color=true) prefix pstate =
   prefix ^ "{" ^
     (String.concat ("\n" ^ prefix ^ " ")
        (List.map (fun (tid, cs) ->
-            (ConcreteTID.string_of_tid tid) ^ ": " ^
+            (Tid.string_of_tid tid) ^ ": " ^
               "{" ^ (String.concat ", " (List.map (string_of_context ~color)
                                          (ContextSet.elements cs))) ^
               "}")

@@ -1,11 +1,13 @@
 open Env
 open Time
+open Tid
 
 (** Types *)
 
 (* To use concrete values, change this to ConcreteTime and change aval
    to ConcreteAval.aval (later in this file) *)
 module Time = AbstractTime
+module Tid = ConcreteTID
 
 type lam = (string * int) list * (Ast.node list)
 type prim_value =

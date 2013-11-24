@@ -2,7 +2,6 @@ open Types
 open Cesk_types
 open Pcesk_types
 open Pviz
-open Tid
 
 (** Helper functions *)
 let merge_threads context tcount tid x y = match x, y with
@@ -23,7 +22,7 @@ let merge_tids tid x y = match x, y with
 (** Stepping *)
 
 let step_spawn pstate tid context tag e =
-  let tid' = ConcreteTID.next tid (* TODO next isn't correct here *)
+  let tid' = Tid.next tid (* TODO next isn't correct here *)
   and context'' = {context with
                    cexp = Node e;
                    caddr = pstate.a_halt;
@@ -87,7 +86,7 @@ let step pstate =
 
 (** Injection *)
 let inject e =
-  let tid = ConcreteTID.initial in
+  let tid = Tid.initial in
   let state, a_halt = Cesk.inject e in
   {threads = ThreadMap.singleton tid
        (ContextSet.singleton (context_of_state state));
@@ -107,7 +106,7 @@ let eval e =
   let extract_finals pstate =
     let initial_thread_contexts =
       ContextSet.elements
-        (ThreadMap.find ConcreteTID.initial pstate.threads) in
+        (ThreadMap.find Tid.initial pstate.threads) in
     List.fold_left (fun acc c ->
         match c.cexp, c.caddr with
         | Value result, addr when addr = a_halt ->
