@@ -46,6 +46,7 @@ and addr =
   | VarAddr of string * time
   | PrimAddr of string * time
   | KontAddr of Ast.node * time
+  | TidAddr of Tid.t
 and env = addr Env.t
 type tag = int
 
@@ -94,7 +95,8 @@ module Addr = struct
   type t = addr
   let compare = Pervasives.compare
   let is_reclaimable = function
-    | PrimAddr _ -> false
+    | PrimAddr _
+    | TidAddr _ -> false
     | _ -> true
   let string_of_address = function
     | TagAddr (n, t) ->
@@ -105,6 +107,8 @@ module Addr = struct
       "PrimAddr(" ^ s ^ "," ^ (Time.string_of_time t) ^ ")"
     | KontAddr (n, t) ->
       "KontAddr(" ^ (Ast.string_of_node n) ^ "," ^ (Time.string_of_time t) ^ ")"
+    | TidAddr t ->
+      "TidAddr(" ^ (Tid.string_of_tid t) ^ ")"
 end
 
 module AddressSet = Set.Make(struct
