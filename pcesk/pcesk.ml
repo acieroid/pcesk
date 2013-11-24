@@ -19,10 +19,13 @@ let merge_tids tid x y = match x, y with
   | Some x, None | None, Some x -> Some x
   | None, None -> None
 
+let newtid _ threads =
+  Tid.next (Tid.max (List.map fst (ThreadMap.bindings threads)))
+
 (** Stepping *)
 
 let step_spawn pstate tid context tag e =
-  let tid' = Tid.next tid (* TODO next isn't correct here *)
+  let tid' = newtid context pstate.threads
   and context'' = {context with
                    cexp = Node e;
                    caddr = pstate.a_halt;
