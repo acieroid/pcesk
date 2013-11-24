@@ -2,6 +2,7 @@ open Types
 open Cesk_types
 open Pcesk_types
 open Pviz
+open Tid
 
 (** Helper functions *)
 let merge_threads context tcount tid x y = match x, y with
