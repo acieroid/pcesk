@@ -15,6 +15,18 @@ let merge_threads context tcount tid x y = match x, y with
   | Some x, None | None, Some x -> Some x
   | None, None -> None
 
+let remove_thread context tid x y =
+  let simplify v =
+    if ContextSet.is_empty v then None else Some v in
+  match x, y with
+  | Some x, Some y ->
+    simplify (ContextSet.union
+            (ContextSet.remove context x)
+            (ContextSet.remove context y))
+  | Some x, None | None, Some x ->
+    simplify (ContextSet.remove context x)
+  | None, None -> None
+
 let merge_tids tid x y = match x, y with
   | Some x, Some y -> Some Infinity
   | Some x, None | None, Some x -> Some x
@@ -67,9 +79,29 @@ let step_parallel pstate tid context = function
     step_cas pstate tid context tag name e1 e2
   | _ -> failwith "Should not happen"
 
-let step_halt pstate tid value =
+let step_halt pstate tid context value =
   [{ pstate with
-     pstore = store_extend1 pstate.pstore (TidAddr tid) value }]
+     pstore = store_extend1 pstate.pstore (TidAddr tid) value;
+     threads =
+       if !Params.remove_threads then
+         ThreadMap.merge (remove_thread context)
+           pstate.threads
+           ThreadMap.empty
+       else
+         pstate.threads;
+     tcount =
+       (* TODO: it is not precised in A Family of... if the count should be
+          decreased only when halted threads are removed, or in general. Here
+          we do it only when halted threads are removed *)
+       if !Params.remove_threads then
+         match ThreadMap.find tid pstate.tcount with
+         (* If it was the only thread, remove its count (since it halted) *)
+         | One -> ThreadMap.remove tid pstate.tcount
+         (* Already more than one thread, don't do anything *)
+         | Infinity -> pstate.tcount
+       else
+         pstate.tcount
+   }]
 
 let step_cesk pstate tid context =
   let state = state_of_context context pstate.pstore in
@@ -96,7 +128,7 @@ let step pstate =
         step_cesk pstate tid context
       | Value v ->
         if context.caddr = pstate.a_halt then
-          step_halt pstate tid v
+          step_halt pstate tid context v
         else
           step_cesk pstate tid context
   in

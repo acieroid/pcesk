@@ -7,6 +7,9 @@ let gc = ref false
 (* Parallelism turned on or not *)
 let parallel = ref false
 
+(* Remove threads of the state when they halt *)
+let remove_threads = ref false
+
 (* Verbosity level *)
 let verbose = ref 0
 
@@ -39,6 +42,12 @@ let speclist = [
    ": turn on abstract garbage collection (disabled by default)");
   ("-p", Arg.Set parallel,
    ": turn on parallelism with spawn and join (disabled by default)");
+  (* See A Family of Abstract Interpretation for Static Analysis of Concurrent
+     Higher Order Programs, p. 11: "It is worth asking whether it is sound in
+     just this case to remove the context from the threads. [...]". This
+     parameter allows to tweak this. *)
+  ("-r", Arg.Set remove_threads,
+   ": remove threads when they halt (disabled by default)");
   ("-quiet", Arg.Set quiet,
    ": don't print the results nor the parameters used, only the time and graph size");
 ]
@@ -54,4 +63,5 @@ let string_of_configuration () =
             [string_of_param "k" (string_of_int !k);
              string_of_bool_param "gc" !gc;
              string_of_bool_param "parallelism" !parallel;
+             string_of_bool_param "remove_threads" !remove_threads;
             ])
