@@ -1,4 +1,5 @@
 open Types
+open Exceptions
 open Cesk_types
 open Cesk_base
 open Pcesk_types
@@ -67,10 +68,18 @@ let step_spawn pstate tid context tag e =
          (ThreadMap.singleton tid' One) }]
 
 let step_join pstate tid context tag e =
-  let values = eval_atomic e context.cenv pstate.pstore in
+  let thread_addresses = eval_atomic e context.cenv pstate.pstore in
   List.concat
     (List.map (function
          | AbsUnique (Tid t) ->
+           let values =
+             try
+               Lattice.conc (store_lookup pstate.pstore (TidAddr t))
+             with
+               UnboundAddress _ ->
+               (* thread is still computing, we're blocked until it halts *)
+               []
+           in
            List.map (fun v ->
                let context' =
                  { context with
@@ -82,8 +91,8 @@ let step_join pstate tid context tag e =
                      (ThreadMap.singleton tid
                         (ContextSet.add context'
                            (ContextSet.singleton context))) })
-             (Lattice.conc (store_lookup pstate.pstore (TidAddr t)))
-         | _ -> []) (Lattice.conc values))
+             values
+         | _ -> []) (Lattice.conc thread_addresses))
 
 let step_cas pstate tid context tag name e1 e2 =
   raise Exceptions.NotYetImplemented
