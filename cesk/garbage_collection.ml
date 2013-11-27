@@ -74,6 +74,7 @@ and live_locations_store visited store addr =
     and vs = Lattice.conc (store_lookup store addr) in
     union (List.map (live_locations_value visited store) vs)
 
+(* Compute the set of addresses reachable from a state *)
 let reachable state =
   let rec reachable' grey black =
     if AddressSet.is_empty grey then
@@ -92,6 +93,7 @@ let reachable state =
   and black = AddressSet.singleton state.addr in
   reachable' grey black
 
+(* Sequential version of the garbage collector *)
 let gc state =
   let locations = reachable state in
   let store = Store.narrow state.store (AddressSet.elements locations) in

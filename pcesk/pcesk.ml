@@ -4,6 +4,7 @@ open Cesk_types
 open Cesk_base
 open Pcesk_types
 open Pviz
+open Parallel_garbage_collection
 
 (** Helper functions *)
 let merge_threads context tcount tid x y = match x, y with
@@ -141,6 +142,7 @@ let step_cesk pstate tid context =
     states'
 
 let step pstate =
+  let pstate = if !Params.gc then gc pstate else pstate in
   let step_context tid context =
     (* Step each context, creating a (or multiple) new pstate for each stepped
        context *)
