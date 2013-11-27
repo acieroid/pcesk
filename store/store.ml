@@ -28,6 +28,8 @@ module type STORE =
     val narrow : t -> Addr.t list -> t
     (* Convert a store to a string *)
     val string_of_store : t -> string
+    (* Size of the store *)
+    val size : t -> int
   end
 
 (* Implementation of store using OCaml's Map *)
@@ -80,6 +82,9 @@ module Store : STORE =
           (not (Addr.is_reclaimable a)) || List.mem a addrs)
         store
 
+    let size store =
+      List.length (StoreMap.bindings store)
+
     let string_of_store store =
       "store(" ^ (String.concat ","
                     (List.map (fun (a, (v, _)) ->
@@ -131,6 +136,9 @@ module Assoc_store : STORE =
           (not (Addr.is_reclaimable a)) ||
           (List.exists (fun a' -> Addr.compare a a' = 0) addrs))
         store
+
+    let size store =
+      List.length store
 
     let string_of_store store =
       "store(" ^ (String.concat ","
