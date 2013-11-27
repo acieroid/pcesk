@@ -146,9 +146,26 @@ and step_node state (e, tag) =
   | Ast.Funcall (((_, tag) as rator), rands) ->
     let kont = OperatorKont (tag, rands, state.env, state.addr) in
     [state_push state rator kont]
+  | Ast.Cas ((x, _), e_old, e_new) ->
+    let addr = env_lookup state.env x in
+    let value = store_lookup state.store addr in
+    let v_old = eval_atomic e_old state.env state.store
+    and v_new = eval_atomic e_new state.env state.store in
+    let state_eq = { (state_produce_value state (aval (Boolean true)))
+                     with store = store_update state.store addr v_new }
+    and state_neq = state_produce_value state (aval (Boolean false)) in
+    let proj = Lattice.meet value v_old in
+    if Lattice.is_bottom proj then
+      (* x can't be equal to v_old *)
+      [state_neq]
+    else if value = v_old then
+      (* x is equal to v_old *)
+      [state_eq]
+    else
+      (* x can be equal or not equal to v_old *)
+      [state_eq; state_neq]
   | Ast.Spawn _
-  | Ast.Join _
-  | Ast.Cas (_, _, _) -> failwith "Can't deal with parallelism in CESK machine"
+  | Ast.Join _ -> failwith "Can't deal with parallelism in CESK machine"
 
 and step_value state v kont =
   match kont with
@@ -247,7 +264,7 @@ and step_value state v kont =
         apply_function v [AbsUnique (Kont k)] state')
         ks)
   (** Halt *)
-  | HaltKont -> [{ state with change = Epsilon; time = tick state }]
+  | HaltKont -> [{ state with change = Epsilon; time = tick state}]
 
 let step state =
   let state = if !Params.gc then gc state else state in
