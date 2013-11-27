@@ -56,6 +56,10 @@ let test_primitives ctx =
   "(> 1 1)" => Boolean false;
   "(>= 1 1)" => Boolean true
 
+let test_cas ctx =
+  "(letrec ((x #t))
+    (cas x #t 1))" => Boolean true
+
 let suite =
   "Simple tests" >:::
     ["atom" >:: test_atoms;

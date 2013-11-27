@@ -75,7 +75,7 @@ let parse stream =
 
   and parse_cas tag = parser
     | [< 'IDENTIFIER v; (e1, tag') = parse' (tag+2);
-         (e2, tag'') = parse' tag' >] ->
+         (e2, tag'') = parse' tag'; 'RPAR >] ->
       ((Cas ((v, tag+2), e1, e2), tag+1), tag'')
 
   and parse_funcall_rest tag f = parser
