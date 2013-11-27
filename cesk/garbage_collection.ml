@@ -74,8 +74,8 @@ and live_locations_store visited store addr =
     and vs = Lattice.conc (store_lookup store addr) in
     union (List.map (live_locations_value visited store) vs)
 
-let gc state =
-  let rec reachable grey black =
+let reachable state =
+  let rec reachable' grey black =
     if AddressSet.is_empty grey then
       black
     else
@@ -85,11 +85,14 @@ let gc state =
           (union [grey;
                   live_locations_store AddressSet.empty state.store addr])
           black' in
-      reachable grey' black' in
+      reachable' grey' black' in
   let grey = union
       [live_locations AddressSet.empty state.store state.exp state.env;
        live_locations_store AddressSet.empty state.store state.addr]
   and black = AddressSet.singleton state.addr in
-  let locations = reachable grey black in
+  reachable' grey black
+
+let gc state =
+  let locations = reachable state in
   let store = Store.narrow state.store (AddressSet.elements locations) in
   { state with store = store }
