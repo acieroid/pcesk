@@ -58,7 +58,13 @@ let test_primitives ctx =
 
 let test_cas ctx =
   "(letrec ((x #t))
-    (cas x #t 1))" => Boolean true
+  (cas x #t 1))" => Boolean true;
+  "(letrec ((x #t))
+  (cas x #t 1)
+  x)" => Integer 1;
+  "(letrec ((x #f))
+  (cas x #t 1)
+  x)" => Boolean false
 
 let suite =
   "Simple tests" >:::
