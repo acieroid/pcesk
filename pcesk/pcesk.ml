@@ -95,14 +95,9 @@ let step_join pstate tid context tag e =
              values
          | _ -> []) (Lattice.conc thread_addresses))
 
-let step_cas pstate tid context tag name e1 e2 =
-  raise Exceptions.NotYetImplemented
-
 let step_parallel pstate tid context = function
   | Ast.Spawn e, tag -> step_spawn pstate tid context tag e
   | Ast.Join e, tag -> step_join pstate tid context tag e
-  | Ast.Cas ((name, _), e1, e2), tag ->
-    step_cas pstate tid context tag name e1 e2
   | _ -> failwith "Should not happen"
 
 let step_halt pstate tid context value =
@@ -148,8 +143,7 @@ let step pstate =
        context *)
       match context.cexp with
       | Node ((Ast.Spawn _, _) as n)
-      | Node ((Ast.Join _, _) as n)
-      | Node ((Ast.Cas _, _) as n) ->
+      | Node ((Ast.Join _, _) as n) ->
         step_parallel pstate tid context n
       | Node _ ->
         step_cesk pstate tid context
