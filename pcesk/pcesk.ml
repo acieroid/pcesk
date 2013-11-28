@@ -187,26 +187,28 @@ let eval e =
         | _ -> acc)
       [] initial_thread_contexts
   and todo = Exploration.create initial_state in
-  let rec loop visited finished graph =
-    if Exploration.is_empty todo then
-      finished, graph
-    else
-      let pstate = Exploration.pick todo in
-      try
-        let _ = PStateSet.find pstate visited in
-        loop visited finished graph
-      with
-        Not_found ->
-        begin match extract_finals pstate with
-          | [] ->
-            let pstates = step pstate in
-            let source = G.V.create pstate
-            and dests = List.map G.V.create pstates in
-            let edges = List.map (fun dest -> G.E.create source
-                                     "" dest) dests in
-            let graph' =
-              List.fold_left G.add_edge_e
-                (List.fold_left G.add_vertex graph dests) edges in
+  let initial_graph = G.add_vertex G.empty (G.V.create initial_state) in
+  let graph = ref initial_graph
+  and finished = ref []
+  and visited = ref PStateSet.empty in
+  while not (Exploration.is_empty todo) do
+    let pstate = Exploration.pick todo in
+    try
+      let _ = PStateSet.find pstate !visited in
+      ()
+    with
+      Not_found ->
+      begin match extract_finals pstate with
+        | [] ->
+          let pstates = step pstate in
+          let source = G.V.create pstate
+          and dests = List.map G.V.create pstates in
+          let edges = List.map (fun dest -> G.E.create source
+                                   "" dest) dests in
+          let graph' =
+            List.fold_left G.add_edge_e
+              (List.fold_left G.add_vertex !graph dests) edges in
+            print_string "\r"; (print_int (G.nb_vertex graph')); flush_all ();
             if !Params.verbose >= 1 then begin
               print_string (string_of_pstate "==> " pstate);
               print_newline ();
@@ -214,13 +216,14 @@ let eval e =
                   print_string (string_of_pstate "    " pstate');
                   print_newline ())
                 pstates;
-              print_newline ();
+              print_newline ()
             end;
             Exploration.add todo pstates;
-            loop (PStateSet.add pstate visited) finished graph'
-          | res ->
-            loop (PStateSet.add pstate visited) (res @ finished) graph
-        end
-  in
-  let initial_graph = G.add_vertex G.empty (G.V.create initial_state) in
-  loop PStateSet.empty [] initial_graph
+            visited := PStateSet.add pstate !visited;
+            graph := graph'
+        | res ->
+          visited := PStateSet.add pstate !visited;
+          finished := res @ !finished
+      end
+  done;
+  !finished, !graph
