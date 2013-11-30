@@ -37,6 +37,7 @@ let test_if ctx =
   "(if #f 1 2)" => Integer 2
 
 let test_set ctx =
+  "(letrec ((x 1)) (set! x #t))" => Unspecified;
   "(letrec ((x 1)) (set! x 2) x)" => Integer 2;
   "(letrec ((x 1)) (set! x (+ x x)) x)" => Integer 2
 
