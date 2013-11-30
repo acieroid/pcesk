@@ -337,35 +337,38 @@ let eval e =
       finished, graph
     else
       let state = Exploration.pick todo in
-      try
-        let _ = StateSet.find state visited in
+      let found =
+        try
+          let _ = StateSet.find state visited in
+          true
+        with
+          Not_found -> false
+      in
+      if found then
         loop visited finished graph
-      with
-        Not_found ->
-        begin match extract_final state with
-          | Some res ->
-            loop (StateSet.add state visited) (res::finished) graph
-          | None ->
-            let states = step state in
-            let source = G.V.create state
-            and dests = List.map G.V.create states in
-            let edges = List.map (fun dest -> G.E.create source
-                                     (string_of_update source dest)
-                                     dest) dests in
-            let graph' =
-              List.fold_left G.add_edge_e
-                (List.fold_left G.add_vertex graph dests) edges in
-            if !Params.verbose >= 1 then begin
-              print_string ("==> " ^ (string_of_state state) ^ "\n");
-              List.iter (fun state' ->
-                  print_string ("    " ^
-                                  (string_of_update state state') ^ " -> " ^
-                                  (string_of_state state') ^ "\n")) states;
-              print_newline ();
-            end;
-            Exploration.add todo states;
-            loop (StateSet.add state visited) finished graph'
-        end
+      else match extract_final state with
+        | Some res ->
+          loop (StateSet.add state visited) (res::finished) graph
+        | None ->
+          let states = step state in
+          let source = G.V.create state
+          and dests = List.map G.V.create states in
+          let edges = List.map (fun dest -> G.E.create source
+                                   (string_of_update source dest)
+                                   dest) dests in
+          let graph' =
+            List.fold_left G.add_edge_e
+              (List.fold_left G.add_vertex graph dests) edges in
+          if !Params.verbose >= 1 then begin
+            print_string ("==> " ^ (string_of_state state) ^ "\n");
+            List.iter (fun state' ->
+                print_string ("    " ^
+                                (string_of_update state state') ^ " -> " ^
+                                (string_of_state state') ^ "\n")) states;
+            print_newline ();
+          end;
+          Exploration.add todo states;
+          loop (StateSet.add state visited) finished graph'
   in
   let initial_graph = G.add_vertex G.empty (G.V.create initial_state) in
   loop StateSet.empty [] initial_graph
