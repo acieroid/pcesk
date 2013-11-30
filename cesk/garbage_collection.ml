@@ -61,8 +61,10 @@ and live_locations_kont visited store = function
          [live_locations_node visited store env cons;
           live_locations_node visited store env alt;
           live_locations_store visited store addr])
-  | SetKont (_, _, env, addr) ->
-    AddressSet.add addr (live_locations_store visited store addr)
+  | SetKont (_, var, env, addr) ->
+    AddressSet.add addr
+      (AddressSet.add (env_lookup env var)
+         (live_locations_store visited store addr))
   | CallccKont (_, env, addr) ->
     AddressSet.add addr (live_locations_store visited store addr)
 
