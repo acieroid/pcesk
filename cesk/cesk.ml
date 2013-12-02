@@ -324,6 +324,10 @@ module StateSet = Set.Make(struct
     let compare = Pervasives.compare
   end)
 
+let state_viz state = match state.exp with
+  | Node n -> (Ast.string_of_node n, 0xFFDDDD)
+  | Value v -> (string_of_value v, 0xDDFFDD)
+
 let eval e =
   let (initial_state, a_halt) = inject e in
   let extract_final state =
@@ -351,11 +355,11 @@ let eval e =
           loop (StateSet.add state visited) (res::finished) graph
         | None ->
           let states = step state in
-          let source = G.V.create state
-          and dests = List.map G.V.create states in
-          let edges = List.map (fun dest -> G.E.create source
-                                   (string_of_update source dest)
-                                   dest) dests in
+          let source = G.V.create (state_viz state)
+          and dests = List.map G.V.create (List.map state_viz states) in
+          let edges = List.map (fun state' -> G.E.create (state_viz state)
+                                   (string_of_update state state')
+                                   (state_viz state')) states in
           let graph' =
             List.fold_left G.add_edge_e
               (List.fold_left G.add_vertex graph dests) edges in
@@ -370,5 +374,6 @@ let eval e =
           Exploration.add todo states;
           loop (StateSet.add state visited) finished graph'
   in
-  let initial_graph = G.add_vertex G.empty (G.V.create initial_state) in
+  let initial_graph = G.add_vertex G.empty
+      (G.V.create (state_viz initial_state)) in
   loop StateSet.empty [] initial_graph

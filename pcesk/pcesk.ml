@@ -3,7 +3,7 @@ open Exceptions
 open Cesk_types
 open Cesk_base
 open Pcesk_types
-open Pviz
+open Viz
 open Parallel_garbage_collection
 
 (** Helper functions *)
@@ -173,6 +173,9 @@ module PStateSet = Set.Make(struct
     let compare = Pervasives.compare
   end)
 
+let pstate_viz pstate =
+  (string_of_pstate ~color:false "" pstate, 0xFFFFFF)
+
 let eval e =
   let initial_state = inject e in
   let a_halt = initial_state.a_halt in
@@ -204,8 +207,8 @@ let eval e =
       else match extract_finals pstate with
         | [] ->
           let pstates = step pstate in
-          let source = G.V.create pstate
-          and dests = List.map G.V.create pstates in
+          let source = G.V.create (pstate_viz pstate)
+          and dests = List.map G.V.create (List.map pstate_viz pstates) in
           let edges = List.map (fun dest -> G.E.create source
                                    "" dest) dests in
           let graph' =
@@ -225,5 +228,6 @@ let eval e =
         | res ->
           loop (PStateSet.add pstate visited) (res @ finished) graph
   in
-  let initial_graph = G.add_vertex G.empty (G.V.create initial_state) in
+  let initial_graph = G.add_vertex G.empty
+      (G.V.create (pstate_viz initial_state)) in
   loop PStateSet.empty [] initial_graph

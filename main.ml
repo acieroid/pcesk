@@ -7,17 +7,13 @@ let print_infos time vertex edges =
   Printf.printf "%d/%d/%.3f\n" vertex edges time
 
 let eval node =
-  if !Params.parallel then begin
-    let res, graph = Pcesk.eval node in
-    BatOption.may (Pviz.output_graph graph) !graph_file;
-    close_in !input;
-    (res, Pviz.G.nb_vertex graph, Pviz.G.nb_edges graph)
-  end else begin
-    let res, graph = Cesk.eval node in
-    BatOption.may (Viz.output_graph graph) !graph_file;
-    close_in !input;
-    (res, Viz.G.nb_vertex graph, Viz.G.nb_edges graph)
-  end
+  let res, graph = if !Params.parallel then
+      Pcesk.eval node
+    else
+      Cesk.eval node in
+  BatOption.may (Viz.output_graph graph) !graph_file;
+  close_in !input;
+  (res, Viz.G.nb_vertex graph, Viz.G.nb_edges graph)
 
 let () =
   Arg.parse speclist
