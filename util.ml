@@ -15,3 +15,6 @@ let string_of_string_set s =
 let debug s =
   if !Params.verbose >= Params.debug_level then
     begin print_string (String.concat "" s); print_newline (); end
+
+let flatmap f l =
+  List.flatten (List.map f l)

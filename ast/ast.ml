@@ -62,3 +62,29 @@ and string_of_bindings bindings =
   String.concat " "
     (List.map (fun ((var, _), value) ->
          "(" ^ var ^ " " ^ (string_of_node value) ^ ")") bindings)
+
+let rec extract_tags = function
+  | (Identifier _, t)
+  | (String _, t)
+  | (Integer _, t)
+  | (Boolean _, t) -> [t]
+  | (Funcall (f, args), t) ->
+    t :: ((extract_tags f) @ (Util.flatmap extract_tags args))
+  | (Lambda (vars, body), t) ->
+    t :: ((List.map (fun (_, t) -> t) vars) @
+            (Util.flatmap extract_tags body))
+  | (Begin body, t) ->
+    t :: (Util.flatmap extract_tags body)
+  | (LetRec (bindings, body), t) ->
+    t :: (Util.flatmap (fun ((_, t), n) -> t :: extract_tags n) bindings) @
+      (Util.flatmap extract_tags body)
+  | (If (cond, cons, alt), t) ->
+    t :: (Util.flatmap extract_tags [cond; cons; alt])
+  | (Set ((_, t'), exp), t) ->
+    t :: t' :: (extract_tags exp)
+  | (Callcc exp, t)
+  | (Spawn exp, t)
+  | (Join exp, t) ->
+    t :: (extract_tags exp)
+  | (Cas ((_, t'), eold, enew), t) ->
+    t :: t' :: ((extract_tags eold) @ (extract_tags enew))
