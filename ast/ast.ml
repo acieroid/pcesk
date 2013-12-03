@@ -17,51 +17,56 @@ type exp =
   | Cas of var * node * node (* both node arguments should be atomic *)
 and node = exp * int
 
-let rec string_of_exp = function
+let rec string_of_exp ?tags:(tags=false) = function
   | Identifier s -> s
   | String s -> "\"" ^ s ^ "\""
   | Integer n -> string_of_int n
   | Boolean true -> "#t"
   | Boolean false -> "#f"
   | Funcall (f, args) ->
-    "(" ^ (string_of_node f) ^ " " ^ (string_of_nodes " " args) ^ ")"
+    "(" ^ (string_of_node ~tags f) ^ " " ^ (string_of_nodes ~tags " " args) ^ ")"
   | Lambda (args, body) ->
-    "(lambda (" ^ (string_of_vars " " args) ^ ") " ^
-      (string_of_nodes " " body) ^ ")"
+    "(lambda (" ^ (string_of_vars ~tags " " args) ^ ") " ^
+      (string_of_nodes ~tags " " body) ^ ")"
   | Begin [] -> "(begin)"
   | Begin body ->
-    "(begin " ^ (string_of_nodes " " body) ^ ")"
+    "(begin " ^ (string_of_nodes ~tags " " body) ^ ")"
   | LetRec (bindings, body) ->
-    "(letrec (" ^ (string_of_bindings bindings) ^ ") " ^
-      (string_of_nodes " " body) ^ ")"
+    "(letrec (" ^ (string_of_bindings ~tags bindings) ^ ") " ^
+      (string_of_nodes ~tags " " body) ^ ")"
   | If (cond, cons, alt) ->
-    "(if " ^ (string_of_node cond) ^ " " ^
-      (string_of_node cons) ^ " " ^
-      (string_of_node alt) ^ ")"
+    "(if " ^ (string_of_node ~tags cond) ^ " " ^
+      (string_of_node ~tags cons) ^ " " ^
+      (string_of_node ~tags alt) ^ ")"
   | Set ((v, _), e) ->
-    "(set! " ^ v ^ " " ^ (string_of_node e) ^ ")"
+    "(set! " ^ v ^ " " ^ (string_of_node ~tags e) ^ ")"
   | Callcc e ->
-    "(callcc " ^ (string_of_node e) ^ ")"
+    "(callcc " ^ (string_of_node ~tags e) ^ ")"
   | Spawn e ->
-    "(spawn " ^ (string_of_node e) ^ ")"
+    "(spawn " ^ (string_of_node ~tags e) ^ ")"
   | Join e ->
-    "(join " ^ (string_of_node e) ^ ")"
+    "(join " ^ (string_of_node ~tags e) ^ ")"
   | Cas ((v, _), e1, e2) ->
-    "(cas " ^ v ^ " " ^ (string_of_node e1) ^ " " ^ (string_of_node e2) ^ ")"
+    "(cas " ^ v ^ " " ^ (string_of_node ~tags e1) ^ " " ^
+      (string_of_node ~tags e2) ^ ")"
 
-and string_of_node (exp, tag) =
-  (string_of_exp exp) (* ^ "@" ^ (string_of_int tag) *)
+and string_of_node ?tags:(tags=false) (exp, tag) =
+  string_of_exp ~tags exp ^ (if tags then "@" ^ (string_of_int tag) else "")
 
-and string_of_nodes sep nodes =
-  String.concat sep (List.map string_of_node nodes)
+and string_of_nodes ?tags:(tags=false) sep nodes =
+  String.concat sep (List.map (string_of_node ~tags) nodes)
 
-and string_of_vars sep vars =
-  String.concat sep (List.map fst vars)
+and string_of_vars ?tags:(tags=false) sep vars =
+  String.concat sep (List.map (fun (v, t) ->
+      if tags then v ^ "@" ^ (string_of_int t) else v)
+      vars)
 
-and string_of_bindings bindings =
+and string_of_bindings ?tags:(tags=false) bindings =
   String.concat " "
-    (List.map (fun ((var, _), value) ->
-         "(" ^ var ^ " " ^ (string_of_node value) ^ ")") bindings)
+    (List.map (fun ((var, t), value) ->
+         "(" ^ var ^
+           (if tags then "@" ^ (string_of_int t) else "") ^
+           " " ^ (string_of_node ~tags value) ^ ")") bindings)
 
 let rec extract_tags = function
   | (Identifier _, t)

@@ -25,9 +25,14 @@ let graph_file = ref None
 (* Print only useful information *)
 let quiet = ref false
 
+(* Possible targets *)
+type target = PrintAST | Run
+
+let target = ref Run
+
 let usage = "usage: " ^ (Sys.argv.(0)) ^
               " [-v level] [-i input] [-g graph_output] [-k polyvariance]" ^
-              " [-gc] [-p] [-quiet]"
+              " [-gc] [-p] [-quiet] [-target target]"
 
 let speclist = [
   ("-v", Arg.Set_int verbose,
@@ -50,6 +55,12 @@ let speclist = [
    ": remove threads when they halt (disabled by default)");
   ("-quiet", Arg.Set quiet,
    ": don't print the results nor the parameters used, only the time and graph size");
+  ("-target", Arg.Symbol (["run"; "ast"],
+                          (function
+                            | "run" -> target := Run
+                            | "ast" -> target := PrintAST
+                            | t -> failwith ("Invalid target: " ^ t))),
+   ": action to do with the input ('run' or 'ast', 'run' by default)");
 ]
 
 let string_of_param name value =

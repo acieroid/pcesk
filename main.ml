@@ -19,6 +19,19 @@ let eval node =
     (res, Viz.G.nb_vertex graph, Viz.G.nb_edges graph)
   end
 
+let run node =
+  let start = now () in
+  let res, vertex, edges = eval node in
+  let stop = now () in
+  if not !Params.quiet then
+    List.iter (fun (value, env, store) ->
+        print_string (string_of_value value); print_newline ())
+      res;
+  print_infos (stop -. start) vertex edges
+
+let print_ast node =
+  print_string (Ast.string_of_node ~tags:true node)
+
 let () =
   Arg.parse speclist
     (fun x -> raise (Arg.Bad ("Bad argument : " ^ x)))
@@ -28,14 +41,10 @@ let () =
       print_string ("Running with: \n" ^ (string_of_configuration ()));
       print_newline ()
     end;
+    let action = match !Params.target with
+      | Params.Run -> run
+      | Params.PrintAST -> print_ast in
     let node = Parser.parse (Lexer.lex !input) in
-    let start = now () in
-    let res, vertex, edges = eval node in
-    let stop = now () in
-    if not !Params.quiet then
-      List.iter (fun (value, env, store) ->
-          print_string (string_of_value value); print_newline ())
-        res;
-    print_infos (stop -. start) vertex edges
+    action node
   with
   | e -> print_string (Exceptions.string_of_exception e)
