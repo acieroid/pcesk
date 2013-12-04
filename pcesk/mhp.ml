@@ -24,4 +24,4 @@ let mhp graph tag1 tag2 =
   (* Go over all the graph to find one state where the two expressions may
     happen in parallel.
     TODO: the computation could be stopped as soon as one such state is found *)
-  G.fold_vertex (fun pstate found -> found && mhp_pstate pstate) graph false
+  G.fold_vertex (fun pstate found -> found || mhp_pstate pstate) graph false
