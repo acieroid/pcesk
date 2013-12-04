@@ -45,7 +45,7 @@ let mhp node = match !Params.tag1, !Params.tag2 with
         print_string ("The expressions " ^
                         (Ast.string_of_node ~tags:true exp1) ^ " and " ^
                         (Ast.string_of_node ~tags:true exp2) ^ " may " ^
-                        (if may then "" else " not ") ^ "happen in parallel\n")
+                        (if may then "" else "not ") ^ "happen in parallel\n")
       | _ -> raise (BadArguments
                       "at least one of the tags is incorrect (use -target ast to find them)")
     else
