@@ -25,14 +25,18 @@ let graph_file = ref None
 (* Print only useful information *)
 let quiet = ref false
 
+(* Tags of the nodes for MHP analysis *)
+let tag1 = ref None
+let tag2 = ref None
+
 (* Possible targets *)
-type target = PrintAST | Run
+type target = PrintAST | Run | MHP
 
 let target = ref Run
 
 let usage = "usage: " ^ (Sys.argv.(0)) ^
               " [-v level] [-i input] [-g graph_output] [-k polyvariance]" ^
-              " [-gc] [-p] [-quiet] [-target target]"
+              " [-gc] [-p] [-quiet] [-t1 tag] [-t2 tag] [-target target]"
 
 let speclist = [
   ("-v", Arg.Set_int verbose,
@@ -55,12 +59,17 @@ let speclist = [
    ": remove threads when they halt (disabled by default)");
   ("-quiet", Arg.Set quiet,
    ": don't print the results nor the parameters used, only the time and graph size");
-  ("-target", Arg.Symbol (["run"; "ast"],
+  ("-t1", Arg.Int (fun t -> tag1 := Some t),
+   ": tag corresponding to the first expression used for MHP analysis");
+  ("-t2", Arg.Int (fun t -> tag2 := Some t),
+   ": tag corresponding to the second expression used for MHP analysis");
+  ("-target", Arg.Symbol (["run"; "ast"; "mhp"],
                           (function
                             | "run" -> target := Run
                             | "ast" -> target := PrintAST
+                            | "mhp" -> target := MHP
                             | t -> failwith ("Invalid target: " ^ t))),
-   ": action to do with the input ('run' or 'ast', 'run' by default)");
+   ": action to do with the input (run by default)");
 ]
 
 let string_of_param name value =

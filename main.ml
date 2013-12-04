@@ -1,5 +1,6 @@
 open Types
 open Params
+open Exceptions
 
 let now () = Unix.gettimeofday ()
 
@@ -33,6 +34,26 @@ let print_ast node =
   (* TODO: using some kind of pretty printing would be better *)
   print_string (Ast.string_of_node ~tags:true node)
 
+let mhp node = match !Params.tag1, !Params.tag2 with
+  | Some t1, Some t2 ->
+    if !Params.parallel then
+      let e1, e2 = Ast.find_node t1 node, Ast.find_node t2 node in
+      match e1, e2 with
+      | Some exp1, Some exp2 ->
+        let _, graph = Pcesk.eval node in
+        let may = Mhp.mhp graph t1 t2 in
+        print_string ("The expressions " ^
+                        (Ast.string_of_node ~tags:true exp1) ^ " and " ^
+                        (Ast.string_of_node ~tags:true exp2) ^ " may " ^
+                        (if may then "" else " not ") ^ "happen in parallel\n")
+      | _ -> raise (BadArguments
+                      "at least one of the tags is incorrect (use -target ast to find them)")
+    else
+      raise (BadArguments
+               "cannot do MHP analysis without parallelism turned on (use -p)")
+  | _ -> raise (BadArguments
+                  "two tags should be specified (use -target ast to find them)")
+
 let () =
   Arg.parse speclist
     (fun x -> raise (Arg.Bad ("Bad argument : " ^ x)))
@@ -44,7 +65,8 @@ let () =
     end;
     let action = match !Params.target with
       | Params.Run -> run
-      | Params.PrintAST -> print_ast in
+      | Params.PrintAST -> print_ast
+      | Params.MHP -> mhp in
     let node = Parser.parse (Lexer.lex !input) in
     action node
   with

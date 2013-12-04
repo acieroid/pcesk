@@ -68,6 +68,7 @@ and string_of_bindings ?tags:(tags=false) bindings =
            (if tags then "@" ^ (string_of_int t) else "") ^
            " " ^ (string_of_node ~tags value) ^ ")") bindings)
 
+(* Extract all the tags that are contained in a node *)
 let rec extract_tags = function
   | (Identifier _, t)
   | (String _, t)
@@ -93,3 +94,40 @@ let rec extract_tags = function
     t :: (extract_tags exp)
   | (Cas ((_, t'), eold, enew), t) ->
     t :: t' :: ((extract_tags eold) @ (extract_tags enew))
+
+(* Try to find a node corresponding to a tag in a given node *)
+let rec find_node tag node =
+  (* mplus operation on the option monad. Unfortunately, it forces the
+     evaluation of both arguments (it shouldn't be a problem, but if it
+     is, adding some laziness (lazy and Lazy.force) will probably do
+     the trick) *)
+  let (++) x y = match x with
+    | None -> y
+    | Some _ -> x in
+  (* Find a node among a list of nodes *)
+  let find_node' nodes =
+    List.fold_left (++) None (List.map (find_node tag) nodes) in
+  match node with
+  | (_, tag') when tag' = tag -> Some node
+  | (Identifier _, _)
+  | (String _, _)
+  | (Integer _, _)
+  | (Boolean _, _) -> None
+  | (Funcall (f, args), _) ->
+    find_node tag f ++ find_node' args
+  | (Lambda (_, body), _)
+  | (Begin body, _) ->
+    find_node' body
+  | (LetRec (bindings, body), _) ->
+    List.fold_left (++) None
+      (List.map (fun (_, n) -> find_node tag n) bindings) ++
+      find_node' body
+  | (If (cond, cons, alt), _) ->
+    find_node tag cond ++ find_node tag cons ++ find_node tag alt
+  | (Set (_, e), _)
+  | (Callcc e, _)
+  | (Spawn e, _)
+  | (Join e, _) ->
+    find_node tag e
+  | (Cas (_, e1, e2), _) ->
+    find_node tag e1 ++ find_node tag e2
