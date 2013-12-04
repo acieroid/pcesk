@@ -47,7 +47,7 @@ let parse stream =
 
   and parse_bindings tag = parser
     | [< 'RPAR >] -> ([], tag)
-    | [< 'LPAR; 'IDENTIFIER var; (value, tag') = parse' (tag+2); 'RPAR;
+    | [< 'LPAR; 'IDENTIFIER var; (value, tag') = parse' (tag+1); 'RPAR;
          (rest, tag'') = parse_bindings tag' >] ->
       (((var, tag+1), value) :: rest, tag'')
 

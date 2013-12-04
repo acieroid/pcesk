@@ -30,6 +30,7 @@ let run node =
   print_infos (stop -. start) vertex edges
 
 let print_ast node =
+  (* TODO: using some kind of pretty printing would be better *)
   print_string (Ast.string_of_node ~tags:true node)
 
 let () =
