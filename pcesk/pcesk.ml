@@ -11,7 +11,10 @@ let merge_threads context tcount tid x y = match x, y with
   | Some x, Some y ->
     Some (ContextSet.union
             (match ThreadCountMap.find tid tcount with
-             | One -> ContextSet.remove context x
+             | One -> if !Params.threads_strong_updates then
+                 ContextSet.remove context x
+               else
+                 x
              | Infinity -> x)
             y)
   | Some x, None | None, Some x -> Some x
