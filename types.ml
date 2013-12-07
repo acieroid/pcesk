@@ -1,11 +1,6 @@
 open Env
-open Time
 
 (** Types *)
-
-(* To use concrete values, change this to ConcreteTime and change aval
-   to ConcreteAval.aval (later in this file) *)
-module Time = AbstractTime
 
 type lam = (string * int) list * (Ast.node list)
 type prim_value =
@@ -38,7 +33,9 @@ and kont =
   | CallccKont of int * env * addr
   | HaltKont
 and prim = string * (value list -> value option)
-and time = Time.t
+and time =
+  | IntTime of int
+  | KCallSitesTime of Ast.node list
 and addr =
   | TagAddr of int * time
   | VarAddr of string * time
@@ -64,11 +61,16 @@ let string_of_kont = function
   | CallccKont (t, _, _) -> "Callcc-" ^ (string_of_int t)
   | HaltKont -> "Halt"
 
+let string_of_time = function
+  | IntTime n -> string_of_int n
+  | KCallSitesTime l -> "[" ^ (String.concat ","
+                                 (List.map Ast.string_of_node l)) ^ "]"
+
 let string_of_tid = function
   | InitialTid -> "#<main thread>"
   | IntTid n -> "#<thread " ^ (string_of_int n) ^ ">"
   | TagTid (n, t) -> "#<thread " ^ (string_of_int n) ^
-                       (Time.string_of_time t) ^ ">"
+                       (string_of_time t) ^ ">"
 
 let rec string_of_prim_value = function
   | String s -> "\"" ^ s ^ "\""
@@ -108,13 +110,13 @@ module Addr = struct
     | _ -> true
   let string_of_address = function
     | TagAddr (n, t) ->
-      "TagAddr(" ^ (string_of_int n) ^ "," ^ (Time.string_of_time t) ^ ")"
+      "TagAddr(" ^ (string_of_int n) ^ "," ^ (string_of_time t) ^ ")"
     | VarAddr (s, t) ->
-      "VarAddr(" ^ s ^ "," ^ (Time.string_of_time t) ^ ")"
+      "VarAddr(" ^ s ^ "," ^ (string_of_time t) ^ ")"
     | PrimAddr (s, t) ->
-      "PrimAddr(" ^ s ^ "," ^ (Time.string_of_time t) ^ ")"
+      "PrimAddr(" ^ s ^ "," ^ (string_of_time t) ^ ")"
     | KontAddr (n, t) ->
-      "KontAddr(" ^ (Ast.string_of_node n) ^ "," ^ (Time.string_of_time t) ^ ")"
+      "KontAddr(" ^ (Ast.string_of_node n) ^ "," ^ (string_of_time t) ^ ")"
     | TidAddr t ->
       "TidAddr(" ^ (string_of_tid t) ^ ")"
 end
@@ -129,27 +131,6 @@ let string_of_address_set set =
                                (AddressSet.elements set))) ^ "}"
 
 (** Some operations on primitive values and (abstract) values *)
-module type AVAL =
-sig
-  val aval : prim_value -> value
-end
-
-module ConcreteAval = struct
-  let aval v = AbsUnique v
-end
-
-module AbstractAval = struct
-  let aval = function
-  (* some values are directly abstracted, to avoid having infinite width
-     in the value lattice *)
-  | String _ -> AbsString
-  | Integer _ -> AbsInteger
-  | Symbol _ -> AbsSymbol
-  | Cons _ -> AbsList
-  | v -> AbsUnique v
-end
-
-let aval = AbstractAval.aval
 
 let value_equals x y = compare x y = 0
 

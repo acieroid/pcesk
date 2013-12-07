@@ -51,11 +51,11 @@ let step_spawn pstate tid context tag e =
                       (since the corresponding address will already be used by
                       other threads in the store). It should depend on the tid
                       I guess *)
-                   ctime = Time.initial} in
+                   ctime = Cesk.Time.initial} in
   let context' = {context with
                   cexp = Value (AbsUnique (Tid tid'));
                   cchange = Epsilon;
-                  ctime = Time.tick context.ctime e} in
+                  ctime = Cesk.Time.tick context.ctime e} in
   [{ pstate with
      threads = ThreadMap.merge (merge_threads context pstate.tcount)
          pstate.threads
@@ -84,7 +84,7 @@ let step_join pstate tid context tag e =
                let context' =
                  { context with
                    cexp = Value v;
-                   ctime = tick (state_of_context context pstate.pstore) } in
+                   ctime = Cesk.tick (state_of_context context pstate.pstore) } in
                { pstate with
                  threads = ThreadMap.merge (merge_threads context pstate.tcount)
                      pstate.threads

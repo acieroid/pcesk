@@ -5,7 +5,14 @@ open Primitives
 open Viz
 open Garbage_collection
 
+module Aval = Aval.AbstractAval
+module Time = Time.AbstractTime
+
 (** Helper functions *)
+
+let tick state = match state.exp with
+  | Node n -> Time.tick state.time n
+  | _ -> state.time
 
 let state_push_old state node store addr =
   { state with
@@ -40,7 +47,7 @@ let step_lambda state tag args body =
 let step_begin state tag = function
   | [] ->
     [{ state with
-       exp = Value (aval Unspecified);
+       exp = Value (Aval.aval Unspecified);
        change = Epsilon;
        time = tick state }]
   | (_, tag) as node :: rest ->
@@ -126,11 +133,11 @@ and step_node state (e, tag) =
         (store_lookup state.store (env_lookup state.env x)) in
     List.map (state_produce_value state) values
   | Ast.String s ->
-    [state_produce_value state (aval (String s))]
+    [state_produce_value state (Aval.aval (String s))]
   | Ast.Integer n ->
-    [state_produce_value state (aval (Integer n))]
+    [state_produce_value state (Aval.aval (Integer n))]
   | Ast.Boolean b ->
-    [state_produce_value state (aval (Boolean b))]
+    [state_produce_value state (Aval.aval (Boolean b))]
   | Ast.Lambda (vars, body) ->
     step_lambda state tag vars body
   | Ast.Begin body ->
@@ -151,9 +158,9 @@ and step_node state (e, tag) =
     let value = store_lookup state.store addr in
     let v_old = eval_atomic e_old state.env state.store
     and v_new = eval_atomic e_new state.env state.store in
-    let state_eq = { (state_produce_value state (aval (Boolean true)))
+    let state_eq = { (state_produce_value state (Aval.aval (Boolean true)))
                      with store = store_update state.store addr v_new }
-    and state_neq = state_produce_value state (aval (Boolean false)) in
+    and state_neq = state_produce_value state (Aval.aval (Boolean false)) in
     let proj = Lattice.meet value v_old in
     if Lattice.is_bottom proj then
       (* x can't be equal to v_old *)
@@ -248,7 +255,7 @@ and step_value state v kont =
     let a = env_lookup env id in
     let store = store_update state.store a (Lattice.abst1 v) in
     [{ state with
-       exp = Value (aval Unspecified);
+       exp = Value (Aval.aval Unspecified);
        store = store;
        addr = c;
        change = Epsilon;
@@ -278,7 +285,7 @@ let step state =
 let empty_address = TagAddr (0, Time.initial)
 
 let empty_state = {
-  exp = Value (aval (Integer 0));
+  exp = Value (Aval.aval (Integer 0));
   env = empty_env;
   store = empty_store;
   addr = empty_address;

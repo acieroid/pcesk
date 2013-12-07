@@ -1,29 +1,29 @@
+open Types
+
 module type TIME = sig
-  type t
-  val compare : t -> t -> int
-  val string_of_time : t -> string
-  val initial : t
-  val tick : t -> Ast.node -> t
+  val compare : time -> time -> int
+  val initial : time
+  val tick : time -> Ast.node -> time
 end
 
 module ConcreteTime : TIME = struct
-  type t = int
   let compare = Pervasives.compare
-  let string_of_time = string_of_int
-  let initial = 0
-  let tick t _ = t+1
+  let initial = IntTime 0
+  let tick t _ = match t with
+    | IntTime n -> IntTime (n+1)
+    | _ -> failwith "invalid time"
 end
 
 module AbstractTime : TIME = struct
-  type t = Ast.node list
   let compare = Pervasives.compare
-  let string_of_time t =
-    "[" ^ (String.concat ","
-             (List.map Ast.string_of_node t)) ^ "]"
-  let initial = []
+  let initial = KCallSitesTime []
   let tick t = function
     (* update the time only at a call site *)
     | ((Ast.Funcall _), _) as node ->
-      BatList.take !Params.k (node :: t)
+      begin match t with
+      | KCallSitesTime l ->
+        KCallSitesTime (BatList.take !Params.k (node :: l))
+      | _ -> failwith "invalid time"
+      end
     | _ -> t
 end

@@ -49,7 +49,6 @@ let install_primitives (state : state) : state =
     let a = alloc_prim state name in
     {state with
      env = env_extend state.env name a;
-     store = store_extend1 state.store a (AbsUnique (Primitive name));
-     time = tick state}
+     store = store_extend1 state.store a (AbsUnique (Primitive name))}
   in
   List.fold_left inst state primitives

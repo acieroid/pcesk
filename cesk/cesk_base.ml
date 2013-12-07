@@ -58,12 +58,6 @@ let alloc_prim state name = PrimAddr (name, state.time)
 
 let alloc_kont state node = KontAddr (node, state.time)
 
-(** Time *)
-
-let tick state = match state.exp with
-  | Node n -> Time.tick state.time n
-  | _ -> state.time
-
 (** Atomic evaluator *)
 let eval_atomic node env store =
   let ret v = Lattice.abst1 (AbsUnique v) in
