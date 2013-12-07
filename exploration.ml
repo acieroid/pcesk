@@ -3,6 +3,8 @@
 module type EXPLORATION =
 sig
   type 'a t
+  (* Name of this exploration method *)
+  val name : string
   (* Create a new container containing the initial exploration state *)
   val create : 'a -> 'a t
   (* Check if the container is empty *)
@@ -17,6 +19,8 @@ end
 module Dfs : EXPLORATION =
 struct
   type 'a t = 'a Stack.t
+
+  let name = "dfs"
 
   let create x =
     let stack = Stack.create () in
@@ -36,6 +40,8 @@ end
 module Bfs : EXPLORATION =
 struct
   type 'a t = 'a Queue.t
+
+  let name = "bfs"
 
   let create x =
     let queue = Queue.create () in

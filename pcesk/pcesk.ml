@@ -175,6 +175,7 @@ module PStateSet = Set.Make(struct
   end)
 
 let eval e =
+  let module Exploration = (val !Params.exploration) in
   let initial_state = inject e in
   let a_halt = initial_state.a_halt in
   let extract_finals pstate =

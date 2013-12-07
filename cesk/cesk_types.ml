@@ -4,7 +4,6 @@ open Set_lattice
 
 module Lattice = Set_lattice(struct let size = 10 end)
 module Store = Store(Addr)(Lattice)
-module Exploration = Exploration.Bfs
 
 type exp =
   | Node of Ast.node (* eval state *)

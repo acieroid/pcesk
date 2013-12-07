@@ -325,6 +325,7 @@ module StateSet = Set.Make(struct
   end)
 
 let eval e =
+  let module Exploration = (val !Params.exploration) in
   let (initial_state, a_halt) = inject e in
   let extract_final state =
     match state.exp, state.addr with

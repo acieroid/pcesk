@@ -1,3 +1,5 @@
+open Exploration
+
 (* k of the k-CFA *)
 let k = ref 0
 
@@ -40,6 +42,9 @@ type target = PrintAST | Run | MHP
 
 let target = ref Run
 
+(* Exploration method *)
+let exploration = ref (module Bfs : EXPLORATION)
+
 let usage = "usage: " ^ (Sys.argv.(0)) ^
               " [-v level] [-i input] [-g graph_output] [-k polyvariance]\n" ^
               "        [-t1 tag] [-t2 tag] [-target target]" ^
@@ -81,6 +86,12 @@ let speclist = [
                             | "mhp" -> target := MHP
                             | t -> failwith ("Invalid target: " ^ t))),
    ": action to do with the input (run by default)");
+  ("-e", Arg.Symbol (["bfs"; "dfs"],
+                     (function
+                       | "bfs" -> exploration := (module Bfs : EXPLORATION)
+                       | "dfs" -> exploration := (module Dfs : EXPLORATION)
+                       | e -> failwith ("Invalid exploration: " ^ e))),
+   ": graph traversal method used ('bfs' or 'dfs')")
 ]
 
 let string_of_param name value =
@@ -90,11 +101,13 @@ let string_of_bool_param name value =
   string_of_param name (if value then "on" else "off")
 
 let string_of_configuration () =
+  let module Exploration = (val !exploration) in
   "\t" ^ (String.concat "\n\t"
-            [string_of_param "k" (string_of_int !k);
+            [string_of_param "exploration" Exploration.name;
              string_of_bool_param "gc" !gc;
-             string_of_bool_param "store-strong-updates" !store_strong_updates;
+             string_of_param "k" (string_of_int !k);
              string_of_bool_param "parallelism" !parallel;
              string_of_bool_param "remove-threads" !remove_threads;
+             string_of_bool_param "store-strong-updates" !store_strong_updates;
              string_of_bool_param "threads-strong-updates" !threads_strong_updates;
             ])
