@@ -3,7 +3,10 @@ open Cesk_types
 
 (** Types and modules *)
 
-module ThreadMap = Map.Make (Tid)
+module ThreadMap = Map.Make (struct
+  type t = tid
+  let compare = Pervasives.compare
+end)
 
 type context = {
   cexp : exp;
@@ -19,11 +22,12 @@ module ContextSet = Set.Make (struct
 end)
 
 type thread_count = One | Infinity
-module ThreadCountMap = Map.Make(Tid)
+module ThreadCountMap = ThreadMap
 
 type threads = ContextSet.t ThreadMap.t
 type pstate = {
   threads : threads;
+  nthreads : int; (* number of created threads (does not decreate) *)
   pstore : store;
   tcount : thread_count ThreadCountMap.t;
   a_halt : addr
@@ -47,7 +51,7 @@ let string_of_pstate ?color:(color=true) prefix pstate =
   prefix ^ "{" ^
     (String.concat ("\n" ^ prefix ^ " ")
        (List.map (fun (tid, cs) ->
-            (Tid.string_of_tid tid) ^ ": " ^
+            (string_of_tid tid) ^ ": " ^
               "{" ^ (String.concat ", " (List.map (string_of_context ~color)
                                          (ContextSet.elements cs))) ^
               "}")

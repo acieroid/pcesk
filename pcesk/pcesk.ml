@@ -6,6 +6,8 @@ open Pcesk_types
 open Pviz
 open Parallel_garbage_collection
 
+module Tid = Tid.ConcreteTID
+
 (** Helper functions *)
 let merge_threads context tcount tid x y = match x, y with
   | Some x, Some y ->
@@ -37,17 +39,10 @@ let merge_tids tid x y = match x, y with
   | Some x, None | None, Some x -> Some x
   | None, None -> None
 
-let newtid _ threads =
-  (* TODO: ideally, the newtid function should be in the Tid module, but this
-     would create a circular dependency (Types depends on Tid, Pcesk_types
-     depends on Types, and if newtid was in Tid, Tid would depend on
-     Pcesk_types, closing the loop *)
-  Tid.next (Tid.max (List.map fst (ThreadMap.bindings threads)))
-
 (** Stepping *)
 
 let step_spawn pstate tid context tag e =
-  let tid' = newtid context pstate.threads
+  let tid' = Tid.newtid pstate.nthreads context pstate.threads
   and context'' = {context with
                    cexp = Node e;
                    caddr = pstate.a_halt;
@@ -69,7 +64,8 @@ let step_spawn pstate tid context tag e =
                (ContextSet.singleton context'')));
      tcount = ThreadMap.merge merge_tids
          pstate.tcount
-         (ThreadMap.singleton tid' One) }]
+         (ThreadMap.singleton tid' One);
+     nthreads = pstate.nthreads + 1}]
 
 let step_join pstate tid context tag e =
   let thread_addresses = eval_atomic e context.cenv pstate.pstore in
@@ -162,13 +158,15 @@ let step pstate =
 
 (** Injection *)
 let inject e =
-  let tid = Tid.initial in
+  let tid = InitialTid in
   let state, a_halt = Cesk.inject e in
   {threads = ThreadMap.singleton tid
        (ContextSet.singleton (context_of_state state));
    pstore = state.store;
    tcount = ThreadCountMap.singleton tid One;
-   a_halt = a_halt}
+   a_halt = a_halt;
+   nthreads = 1;
+  }
 
 (** Evaluation *)
 module PStateSet = Set.Make(struct
@@ -182,7 +180,7 @@ let eval e =
   let extract_finals pstate =
     let initial_thread_contexts =
       ContextSet.elements
-        (ThreadMap.find Tid.initial pstate.threads) in
+        (ThreadMap.find InitialTid pstate.threads) in
     List.fold_left (fun acc c ->
         match c.cexp, c.caddr with
         | Value result, addr when addr = a_halt ->

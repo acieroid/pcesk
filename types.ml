@@ -1,13 +1,11 @@
 open Env
 open Time
-open Tid
 
 (** Types *)
 
 (* To use concrete values, change this to ConcreteTime and change aval
    to ConcreteAval.aval (later in this file) *)
 module Time = AbstractTime
-module Tid = ConcreteTID
 
 type lam = (string * int) list * (Ast.node list)
 type prim_value =
@@ -15,7 +13,7 @@ type prim_value =
   | Integer of int
   | Boolean of bool
   | Symbol of string
-  | Tid of Tid.t
+  | Tid of tid
   | Cons of prim_value * prim_value
   | Nil
   | Unspecified
@@ -46,7 +44,11 @@ and addr =
   | VarAddr of string * time
   | PrimAddr of string * time
   | KontAddr of Ast.node * time
-  | TidAddr of Tid.t
+  | TidAddr of tid
+and tid =
+  | InitialTid
+  | TagTid of int * time
+  | IntTid of int
 and env = addr Env.t
 type tag = int
 
@@ -62,13 +64,19 @@ let string_of_kont = function
   | CallccKont (t, _, _) -> "Callcc-" ^ (string_of_int t)
   | HaltKont -> "Halt"
 
+let string_of_tid = function
+  | InitialTid -> "#<main thread>"
+  | IntTid n -> "#<thread " ^ (string_of_int n) ^ ">"
+  | TagTid (n, t) -> "#<thread " ^ (string_of_int n) ^
+                       (Time.string_of_time t) ^ ">"
+
 let rec string_of_prim_value = function
   | String s -> "\"" ^ s ^ "\""
   | Integer n -> string_of_int n
   | Boolean true -> "#t"
   | Boolean false -> "#f"
   | Symbol sym -> "'" ^ sym
-  | Tid t -> "#<thread " ^ (Tid.string_of_tid t) ^ ">"
+  | Tid t -> "#<thread " ^ (string_of_tid t) ^ ">"
   | Cons (car, cdr) ->
     "(" ^ (string_of_prim_value car) ^ " . " ^
       (string_of_prim_value cdr) ^")"
@@ -108,7 +116,7 @@ module Addr = struct
     | KontAddr (n, t) ->
       "KontAddr(" ^ (Ast.string_of_node n) ^ "," ^ (Time.string_of_time t) ^ ")"
     | TidAddr t ->
-      "TidAddr(" ^ (Tid.string_of_tid t) ^ ")"
+      "TidAddr(" ^ (string_of_tid t) ^ ")"
 end
 
 module AddressSet = Set.Make(struct
