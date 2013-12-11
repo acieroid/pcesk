@@ -25,6 +25,7 @@ rule lexer = parse
 | '"' (string_element* as s) '"'  { STRING s }
 | "#t"                            { BOOLEAN true}
 | "#f"                            { BOOLEAN false }
+| "nil"                           { NIL }
 | digit+ as n                     { INTEGER (int_of_string n) }
 | '-' (digit+ as n)               { INTEGER (- (int_of_string n)) }
 | identifier as s                 { IDENTIFIER s }

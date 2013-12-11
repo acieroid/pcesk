@@ -21,6 +21,27 @@ let int_comp f = function
   | [] | [_] -> Some (AbsUnique (Boolean true))
   | hd :: tl -> int_op f hd tl
 
+let cons = function
+  (* TODO: abstract lists in some useful way *)
+  | car :: cdr :: [] -> Some (AbsUnique (Cons (car, cdr)))
+  | _ -> None
+
+let car = function
+  | l :: [] ->
+    begin match l with
+      | AbsUnique (Cons (car, _)) -> Some car
+      | _ -> None
+    end
+  | _ -> None
+
+let cdr = function
+  | l :: [] ->
+    begin match l with
+      | AbsUnique (Cons (_, cdr)) -> Some cdr
+      | _ -> None
+    end
+  | _ -> None
+
 let primitives : prim list =
   [("+", int_op value_add (AbsUnique (Integer 0)));
    ("-", function
@@ -36,6 +57,9 @@ let primitives : prim list =
    ("not", function
      | [hd] -> value_not hd
      | _ -> None);
+   ("cons", cons);
+   ("car", car);
+   ("cdr", cdr);
   ]
 
 let apply_primitive (name : string) (args : value list) : value option =

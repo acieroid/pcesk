@@ -5,6 +5,7 @@ type exp =
   | String of string
   | Integer of int
   | Boolean of bool
+  | Nil
   | Funcall of node * node list
   | Lambda of var list * node list
   | Begin of node list
@@ -23,6 +24,7 @@ let rec string_of_exp ?tags:(tags=false) = function
   | Integer n -> string_of_int n
   | Boolean true -> "#t"
   | Boolean false -> "#f"
+  | Nil -> "nil"
   | Funcall (f, args) ->
     "(" ^ (string_of_node ~tags f) ^ " " ^ (string_of_nodes ~tags " " args) ^ ")"
   | Lambda (args, body) ->
@@ -74,6 +76,7 @@ let rec extract_tags = function
   | (String _, t)
   | (Integer _, t)
   | (Boolean _, t) -> [t]
+  | (Nil, t) -> [t]
   | (Funcall (f, args), t) ->
     t :: ((extract_tags f) @ (Util.flatmap extract_tags args))
   | (Lambda (vars, body), t) ->
@@ -112,7 +115,8 @@ let rec find_node tag node =
   | (Identifier _, _)
   | (String _, _)
   | (Integer _, _)
-  | (Boolean _, _) -> None
+  | (Boolean _, _)
+  | (Nil, _) -> None
   | (Funcall (f, args), _) ->
     find_node tag f ++ find_node' args
   | (Lambda (_, body), _)

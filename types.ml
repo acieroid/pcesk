@@ -9,7 +9,7 @@ type prim_value =
   | Boolean of bool
   | Symbol of string
   | Tid of tid
-  | Cons of prim_value * prim_value
+  | Cons of value * value
   | Nil
   | Unspecified
   | Closure of lam * env
@@ -79,8 +79,8 @@ let rec string_of_prim_value = function
   | Symbol sym -> "'" ^ sym
   | Tid t -> "#<thread " ^ (string_of_tid t) ^ ">"
   | Cons (car, cdr) ->
-    "(" ^ (string_of_prim_value car) ^ " . " ^
-      (string_of_prim_value cdr) ^")"
+    "(" ^ (string_of_value car) ^ " . " ^
+      (string_of_value cdr) ^")"
   | Nil -> "()"
   | Unspecified -> "#<unspecified>"
   | Closure ((args, body), _) ->
@@ -90,7 +90,7 @@ let rec string_of_prim_value = function
   | Primitive name -> "#<primitive " ^ name ^ ">"
   | Kont k -> "#<continuation " ^ (string_of_kont k) ^ ">"
 
-let string_of_value = function
+and string_of_value = function
   | AbsUnique v -> string_of_prim_value v
   | AbsString -> "Str"
   | AbsInteger -> "Int"

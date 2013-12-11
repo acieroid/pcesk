@@ -138,6 +138,8 @@ and step_node state (e, tag) =
     [state_produce_value state (Aval.aval (Integer n))]
   | Ast.Boolean b ->
     [state_produce_value state (Aval.aval (Boolean b))]
+  | Ast.Nil ->
+    [state_produce_value state (Aval.aval Nil)]
   | Ast.Lambda (vars, body) ->
     step_lambda state tag vars body
   | Ast.Begin body ->

@@ -7,3 +7,4 @@ type scheme_token =
   | STRING of string
   | INTEGER of int
   | IDENTIFIER of string
+  | NIL
