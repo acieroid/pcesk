@@ -27,6 +27,9 @@ let join_strong = ref false
 (* Verbosity level *)
 let verbose = ref 0
 
+(* Print progress (number of states computed) *)
+let progress = ref false
+
 (* Verbosity level at which debug messages will be printed *)
 let debug_level = 2
 
@@ -59,6 +62,8 @@ let usage = "usage: " ^ (Sys.argv.(0)) ^
 let speclist = [
   ("-v", Arg.Set_int verbose,
    ": verbose level (0 by default)");
+  ("-progress", Arg.Set progress,
+   ": print progress (number of states computed)");
   ("-i", Arg.String (fun s -> input := open_in s),
    ": input file (stdin by default)");
   ("-g", Arg.String (fun s -> graph_file := Some s),

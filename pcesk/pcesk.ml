@@ -192,7 +192,7 @@ let eval e =
         | _ -> acc)
       [] initial_thread_contexts
   and todo = Exploration.create initial_state in
-  let rec loop visited finished graph =
+  let rec loop visited finished graph i =
     if Exploration.is_empty todo then
       finished, graph
     else
@@ -205,7 +205,7 @@ let eval e =
           Not_found -> false
       in
       if found then
-        loop visited finished graph
+        loop visited finished graph (i+1)
       else match extract_finals pstate with
         | [] ->
           let pstates = List.map (fun pstate ->
@@ -218,6 +218,10 @@ let eval e =
           let graph' =
             List.fold_left G.add_edge_e
               (List.fold_left G.add_vertex graph dests) edges in
+          if !Params.progress && i mod 1000 = 0 then begin
+            print_string ("\r" ^ string_of_int (G.nb_vertex graph));
+            flush_all ()
+          end;
           if !Params.verbose >= 1 then begin
             print_string (string_of_pstate "==> " pstate);
             print_newline ();
@@ -228,9 +232,9 @@ let eval e =
             print_newline ();
           end;
           Exploration.add todo pstates;
-          loop (PStateSet.add pstate visited) finished graph'
+          loop (PStateSet.add pstate visited) finished graph' (i+1)
         | res ->
-          loop (PStateSet.add pstate visited) (res @ finished) graph
+          loop (PStateSet.add pstate visited) (res @ finished) graph (i+1)
   in
   let initial_graph = G.add_vertex G.empty (G.V.create initial_state) in
-  loop PStateSet.empty [] initial_graph
+  loop PStateSet.empty [] initial_graph 0
