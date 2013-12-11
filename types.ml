@@ -67,10 +67,9 @@ let string_of_time = function
                                  (List.map Ast.string_of_node l)) ^ "]"
 
 let string_of_tid = function
-  | InitialTid -> "#<main thread>"
-  | IntTid n -> "#<thread " ^ (string_of_int n) ^ ">"
-  | TagTid (n, t) -> "#<thread " ^ (string_of_int n) ^
-                       (string_of_time t) ^ ">"
+  | InitialTid -> "main"
+  | IntTid n -> (string_of_int n)
+  | TagTid (n, t) -> (string_of_int n) ^ (string_of_time t)
 
 let rec string_of_prim_value = function
   | String s -> "\"" ^ s ^ "\""
