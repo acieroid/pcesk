@@ -191,9 +191,14 @@ let eval e =
           (result, c.cenv, pstate.pstore) :: acc
         | _ -> acc)
       [] initial_thread_contexts
-  and todo = Exploration.create initial_state in
+  and todo = Exploration.create initial_state
+  (* Stop the execution if there are some input on stdin (allows to inspect
+     the current state space) *)
+  and interrupted () = match Unix.select [Unix.stdin] [] [] 0. with
+    | (_ :: _, _, _) -> true
+    | _ -> false in
   let rec loop visited finished graph i =
-    if Exploration.is_empty todo then
+    if interrupted () || Exploration.is_empty todo then
       finished, graph
     else
       let pstate = Exploration.pick todo in
