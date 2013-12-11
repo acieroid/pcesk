@@ -24,7 +24,9 @@ let test_lists ctx =
                                    AbsUnique (Cons (AbsInteger, AbsUnique Nil)));
   "(car (cons 1 2))" => Integer 1;
   "(cdr (cons 1 2))" => Integer 2;
-  "(cdr (cons 1 nil))" => Nil
+  "(cdr (cons 1 nil))" => Nil;
+  "(empty? nil)" => Boolean true;
+  "(empty? (cons 1 2))" => Boolean false
 
 let test_lambda1 ctx =
   "((lambda (x) x) 42)" => Integer 42

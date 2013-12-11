@@ -23,6 +23,7 @@ let int_comp f = function
 
 let cons = function
   (* TODO: abstract lists in some useful way *)
+  (* TODO: use aval *)
   | car :: cdr :: [] -> Some (AbsUnique (Cons (car, cdr)))
   | _ -> None
 
@@ -38,6 +39,16 @@ let cdr = function
   | l :: [] ->
     begin match l with
       | AbsUnique (Cons (_, cdr)) -> Some cdr
+      | _ -> None
+    end
+  | _ -> None
+
+let emptyp = function
+  | l :: [] ->
+    begin match l with
+      (* TODO: use aval *)
+      | AbsUnique Nil -> Some (AbsUnique (Boolean true))
+      | AbsUnique (Cons _) -> Some (AbsUnique (Boolean false))
       | _ -> None
     end
   | _ -> None
@@ -60,6 +71,7 @@ let primitives : prim list =
    ("cons", cons);
    ("car", car);
    ("cdr", cdr);
+   ("empty?", emptyp);
   ]
 
 let apply_primitive (name : string) (args : value list) : value option =
