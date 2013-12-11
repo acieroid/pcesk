@@ -21,6 +21,9 @@ let parallel = ref false
 (* Remove threads of the state when they halt *)
 let remove_threads = ref false
 
+(* Do a strong update when evaluating a join *)
+let join_strong = ref false
+
 (* Verbosity level *)
 let verbose = ref 0
 
@@ -76,6 +79,8 @@ let speclist = [
      parameter allows to tweak this. *)
   ("-r", Arg.Set remove_threads,
    ": remove threads when they halt (disabled by default)");
+  ("-j", Arg.Set join_strong,
+   ": do strong updates when evaluating a join (disabled by default)");
   ("-no-threads-strong-updates", Arg.Unit (fun () -> threads_strong_updates := false),
    ": turn off strong updates for the threads");
   ("-quiet", Arg.Set quiet,

@@ -90,7 +90,10 @@ let step_join pstate tid context tag e =
                      pstate.threads
                      (ThreadMap.singleton tid
                         (ContextSet.add context'
-                           (ContextSet.singleton context))) })
+                           (if !Params.join_strong then
+                              ContextSet.empty
+                            else
+                              ContextSet.singleton context))) })
              values
          | _ -> []) (Lattice.conc thread_addresses))
 
