@@ -6,6 +6,9 @@ let k = ref 0
 (* GC turned on or not *)
 let gc = ref false
 
+(* Also run GC after having done a step *)
+let gc_after = ref false
+
 (* Strong updates in the store *)
 let store_strong_updates = ref true
 
@@ -61,6 +64,8 @@ let speclist = [
    ": polyvariance (k-CFA) (k=0 by default)");
   ("-gc", Arg.Set gc,
    ": turn on abstract garbage collection (disabled by default)");
+  ("-gc-after", Arg.Set gc_after,
+   ": run garbage collection after stepping (disabled by default)");
   ("-no-store-strong-updates", Arg.Unit (fun () -> store_strong_updates := false),
    ": turn off strong updates in the store");
   ("-p", Arg.Set parallel,
@@ -105,6 +110,7 @@ let string_of_configuration () =
   "\t" ^ (String.concat "\n\t"
             [string_of_param "exploration" Exploration.name;
              string_of_bool_param "gc" !gc;
+             string_of_bool_param "gc-after" !gc_after;
              string_of_param "k" (string_of_int !k);
              string_of_bool_param "parallelism" !parallel;
              string_of_bool_param "remove-threads" !remove_threads;

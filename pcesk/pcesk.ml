@@ -205,7 +205,9 @@ let eval e =
         loop visited finished graph
       else match extract_finals pstate with
         | [] ->
-          let pstates = step pstate in
+          let pstates = List.map (fun pstate ->
+              if !Params.gc_after then gc pstate else pstate)
+              (step pstate) in
           let source = G.V.create pstate
           and dests = List.map G.V.create pstates in
           let edges = List.map (fun dest -> G.E.create source
