@@ -18,13 +18,13 @@ let int_op f init ns =
       | None -> None) (Some init) ns
 
 let int_comp f = function
-  | [] | [_] -> Some (AbsUnique (Boolean true))
+  | [] | [_] -> Some (Aval.aval (Boolean true))
   | hd :: tl -> int_op f hd tl
 
 let cons = function
   (* TODO: abstract lists in some useful way *)
   (* TODO: use aval *)
-  | car :: cdr :: [] -> Some (AbsUnique (Cons (car, cdr)))
+  | car :: cdr :: [] -> Some (Aval.aval (Cons (car, cdr)))
   | _ -> None
 
 let car = function
@@ -47,8 +47,8 @@ let emptyp = function
   | l :: [] ->
     begin match l with
       (* TODO: use aval *)
-      | AbsUnique Nil -> Some (AbsUnique (Boolean true))
-      | AbsUnique (Cons _) -> Some (AbsUnique (Boolean false))
+      | AbsUnique Nil -> Some (Aval.aval (Boolean true))
+      | AbsUnique (Cons _) -> Some (Aval.aval (Boolean false))
       | _ -> None
     end
   | _ -> None

@@ -24,6 +24,9 @@ let remove_threads = ref false
 (* Do a strong update when evaluating a join *)
 let join_strong = ref false
 
+(* Maximum length for abstracted lists *)
+let list_length = ref 5
+
 (* Verbosity level *)
 let verbose = ref 0
 
@@ -86,6 +89,8 @@ let speclist = [
    ": remove threads when they halt (disabled by default)");
   ("-j", Arg.Set join_strong,
    ": do strong updates when evaluating a join (disabled by default)");
+  ("-l", Arg.Set_int list_length,
+   ": maximum length of abstracted lists (5 by default)");
   ("-no-threads-strong-updates", Arg.Unit (fun () -> threads_strong_updates := false),
    ": turn off strong updates for the threads");
   ("-quiet", Arg.Set quiet,

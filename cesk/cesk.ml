@@ -5,9 +5,6 @@ open Primitives
 open Viz
 open Garbage_collection
 
-module Aval = Aval.AbstractAval
-module Time = Time.AbstractTime
-
 (** Helper functions *)
 
 let tick state = match state.exp with
