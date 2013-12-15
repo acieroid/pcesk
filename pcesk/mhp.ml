@@ -19,8 +19,12 @@ let mhp graph tag1 tag2 =
   (* Check if the two expressions can happen in parallel in the given pstate *)
   let mhp_pstate pstate =
     let threads = pstate.threads in
-    ThreadMap.exists (fun _ -> contains_expression tag1) threads &&
-    ThreadMap.exists (fun _ -> contains_expression tag2) threads in
+    if tag1 = tag2 then
+      let ts = ThreadMap.filter (fun _ -> contains_expression tag1) threads in
+      List.length (ThreadMap.bindings ts) > 1
+    else
+      ThreadMap.exists (fun _ -> contains_expression tag1) threads &&
+      ThreadMap.exists (fun _ -> contains_expression tag2) threads in
   (* Go over all the graph to find one state where the two expressions may
     happen in parallel.
     TODO: the computation could be stopped as soon as one such state is found *)
