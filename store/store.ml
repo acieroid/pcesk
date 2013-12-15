@@ -91,9 +91,12 @@ module Store : STORE =
 
     let string_of_store store =
       "store(" ^ (String.concat ","
-                    (List.map (fun (a, (v, _)) ->
-                         (Addr.string_of_address a) ^ ":" ^
-                           (Lattice.string_of_lattice_value v))
+                    (BatList.filter_map (fun (a, (v, _)) ->
+                         if Addr.is_reclaimable a then
+                           Some ((Addr.string_of_address a) ^ ":" ^
+                                   (Lattice.string_of_lattice_value v))
+                         else
+                           None)
                         (StoreMap.bindings store))) ^ ")"
 
   end
