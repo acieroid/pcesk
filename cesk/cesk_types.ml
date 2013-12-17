@@ -38,7 +38,7 @@ let compare_states s1 s2 =
 
 (** Print differences between states *)
 let print_difference s1 s2 =
-  if s1 = s2 then
+  if s1 = s2 || compare_states s1 s2 = 0 then
     print_string "states are equal\n"
   else begin
     print_string "states are different:\n";

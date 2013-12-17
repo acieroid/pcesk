@@ -46,7 +46,7 @@ let context_set_of_list l =
   context_set_of_list' l ContextSet.empty
 
 (** State comparison *)
-let compare_states s1 s2 =
+let compare_pstates s1 s2 =
   Util.order_concat [ThreadMap.compare ContextSet.compare s1.threads s2.threads;
                      Pervasives.compare s1.nthreads s2.nthreads;
                      Store.compare s1.pstore s2.pstore;
@@ -92,7 +92,7 @@ let context_of_state state =
 
 (** Print differences between states *)
 let print_difference s1 s2 =
-  if s1 = s2 || compare_states s1 s2 = 0 then
+  if s1 = s2 || compare_pstates s1 s2 = 0 then
     print_string "pstates are equal"
   else begin
     print_string "pstates are different:\n";

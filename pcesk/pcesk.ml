@@ -179,14 +179,17 @@ module PStateSet = Set.Make(struct
         store subsumes the second, then they are considered as equal (since all
         the behaviours found by exploring from the second state will be already
         found by exploring the first one). *)
-      let x_without_store = { x with pstore = Store.empty }
-      and y_without_store = { y with pstore = Store.empty } in
-      if !Params.subsumption &&
-         x_without_store = y_without_store &&
-         Store.subsumes x.pstore y.pstore then
-        0
+      if !Params.subsumption then
+        let x_without_store = { x with pstore = Store.empty }
+        and y_without_store = { y with pstore = Store.empty } in
+        let cmp = compare_pstates x_without_store y_without_store
+        in
+        match cmp, Store.subsumes x.pstore y.pstore with
+        | 0, true -> 0
+        | 0, false -> Store.compare x.pstore y.pstore
+        | n, _ -> n
       else
-        Pervasives.compare x y
+        compare_pstates x y
   end)
 
 let eval e =
