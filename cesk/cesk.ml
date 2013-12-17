@@ -357,7 +357,9 @@ let eval e =
         | Some res ->
           loop (StateSet.add state visited) (res::finished) graph
         | None ->
-          let states = step state in
+          let states = List.map (fun state ->
+              if !Params.gc_after then gc state else state)
+              (step state) in
           let source = G.V.create state
           and dests = List.map G.V.create states in
           let edges = List.map (fun dest -> G.E.create source
