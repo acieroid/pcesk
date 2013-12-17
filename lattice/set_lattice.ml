@@ -11,8 +11,7 @@ sig
   val size : int
 end
 
-(** TODO: use set instead of list (but it requires a compare function
-    for values) *)
+(** TODO: use set instead of list *)
 module Set_lattice : functor (Size : SIZE) -> LATTICE =
   functor (Size : SIZE) ->
   struct
