@@ -55,6 +55,29 @@ let mhp node = match !Params.tag1, !Params.tag2 with
   | _ -> raise (BadArguments
                   "two tags should be specified (use -target ast to find them)")
 
+let compare_states node = match !Params.tag1, !Params.tag2 with
+  | Some t1, Some t2 ->
+    begin if !Params.parallel then
+      let _, graph = Pcesk.eval node in
+      let s1, s2 = Pviz.find_node graph t1, Pviz.find_node graph t2 in
+      match s1, s2 with
+      | Some state1, Some state2 -> Pcesk_types.compare_states state1 state2
+      | _ -> raise (BadArguments
+                     ("at least one of the state ids is incorrect " ^
+                        "(use -v 2 and look in the produced graph to find them"))
+    else
+      let _, graph = Cesk.eval node in
+      let s1, s2 = Viz.find_node graph t1, Viz.find_node graph t2 in
+      match s1, s2 with
+      | Some state1, Some state2 -> Cesk_types.compare_states state1 state2
+      | _ -> raise (BadArguments
+                     ("at least one of the state ids is incorrect " ^
+                        "(use -v 2 and look in the produced graph to find them"))
+    end
+  | _ -> raise (BadArguments
+                  ("two node ids should be specified (using -t1 and -t2; " ^
+                     "use -v 2 and look into the generated graph to find them)"))
+
 let () =
   Arg.parse speclist
     (fun x -> raise (Arg.Bad ("Bad argument : " ^ x)))
@@ -67,7 +90,8 @@ let () =
     let action = match !Params.target with
       | Params.Run -> run
       | Params.PrintAST -> print_ast
-      | Params.MHP -> mhp in
+      | Params.MHP -> mhp
+      | Params.CompareStates -> compare_states in
     let node = Parser.parse (Lexer.lex !input) in
     action node
   with

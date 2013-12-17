@@ -23,6 +23,6 @@ module AbstractAval = struct
   | String _ -> AbsString
   | Integer _ -> AbsInteger
   | Symbol _ -> AbsSymbol
-  | Cons (car, cdr) as cons -> abstract_cons car cdr !Params.list_length
+  | Cons (car, cdr) -> abstract_cons car cdr !Params.list_length
   | v -> AbsUnique v
 end

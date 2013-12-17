@@ -23,3 +23,7 @@ type state = {
   change : kont_op;
   time : time;
 }
+
+(* Compare states (for debugging) *)
+let compare_states s1 s2 =
+  failwith "TODO"

@@ -75,3 +75,7 @@ let context_of_state state =
     caddr = state.addr;
     cchange = state.change;
     ctime = state.time }
+
+(** State comparison (for debugging) *)
+let compare_states s1 s2 =
+  failwith "TODO"

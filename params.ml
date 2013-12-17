@@ -54,7 +54,7 @@ let tag1 = ref None
 let tag2 = ref None
 
 (* Possible targets *)
-type target = PrintAST | Run | MHP
+type target = PrintAST | Run | MHP | CompareStates
 
 let target = ref Run
 
@@ -110,6 +110,7 @@ let speclist = [
                             | "run" -> target := Run
                             | "ast" -> target := PrintAST
                             | "mhp" -> target := MHP
+                            | "cmp" -> target := CompareStates
                             | t -> failwith ("Invalid target: " ^ t))),
    ": action to do with the input (run by default)");
   ("-e", Arg.Symbol (["bfs"; "dfs"],
