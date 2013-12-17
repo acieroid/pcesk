@@ -40,6 +40,11 @@ struct
   let get_subgraph _ = None
   let vertex_attributes (pstate : V.t) =
     [`Shape `Box; `Label (BatString.escaped
+                            begin if !Params.verbose >= 2 then
+                              (string_of_int (node_id pstate)) ^ " "
+                            else
+                              ""
+                            end ^
                             (string_of_pstate ~color:false "" pstate))]
   let vertex_name (pstate : V.t) =
     let state_id = (string_of_int (node_id pstate)) in
