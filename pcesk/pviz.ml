@@ -18,7 +18,7 @@ let node_id node =
 
 module GraphNode = struct
   type t = pstate
-  let compare = Pervasives.compare
+  let compare = compare_pstates
   let hash = Hashtbl.hash
   let equal = (=)
 end
