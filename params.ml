@@ -24,6 +24,10 @@ let remove_threads = ref false
 (* Do a strong update when evaluating a join *)
 let join_strong = ref false
 
+(* If a state is subsumed by another already visited state, it is considered as
+   already visited *)
+let subsumption = ref false
+
 (* Maximum length for abstracted lists *)
 let list_length = ref 5
 
@@ -89,6 +93,8 @@ let speclist = [
    ": remove threads when they halt (disabled by default)");
   ("-j", Arg.Set join_strong,
    ": do strong updates when evaluating a join (disabled by default)");
+  ("-s", Arg.Set subsumption,
+   ": don't explore state if another state that subsumes them has been explored");
   ("-l", Arg.Set_int list_length,
    ": maximum length of abstracted lists (5 by default)");
   ("-no-threads-strong-updates", Arg.Unit (fun () -> threads_strong_updates := false),

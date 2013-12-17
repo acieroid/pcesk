@@ -174,7 +174,19 @@ let inject e =
 (** Evaluation *)
 module PStateSet = Set.Make(struct
     type t = pstate
-    let compare = Pervasives.compare
+    let compare x y =
+      (* If two states are only different in their store, and the first state's
+        store subsumes the second, then they are considered as equal (since all
+        the behaviours found by exploring from the second state will be already
+        found by exploring the first one). *)
+      let x_without_store = { x with pstore = Store.empty }
+      and y_without_store = { y with pstore = Store.empty } in
+      if !Params.subsumption &&
+         x_without_store = y_without_store &&
+         Store.subsumes x.pstore y.pstore then
+        0
+      else
+        Pervasives.compare x y
   end)
 
 let eval e =
