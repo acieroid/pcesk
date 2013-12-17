@@ -135,6 +135,8 @@ let string_of_configuration () =
              string_of_param "k" (string_of_int !k);
              string_of_bool_param "parallelism" !parallel;
              string_of_bool_param "remove-threads" !remove_threads;
+             string_of_bool_param "join-strong-updates" !join_strong;
+             string_of_bool_param "subsumption" !subsumption;
              string_of_bool_param "store-strong-updates" !store_strong_updates;
              string_of_bool_param "threads-strong-updates" !threads_strong_updates;
             ])
