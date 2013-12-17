@@ -1,3 +1,4 @@
+open Env
 open Types
 open Cesk_types
 
@@ -18,7 +19,12 @@ type context = {
 
 module ContextSet = Set.Make (struct
     type t = context
-    let compare = Pervasives.compare
+    let compare c1 c2 =
+      Util.order_concat [Pervasives.compare c1.cexp c2.cexp;
+                         Env.compare c1.cenv c2.cenv;
+                         Addr.compare c1.caddr c2.caddr;
+                         Pervasives.compare c1.cchange c2.cchange;
+                         Time.compare c1.ctime c2.ctime]
 end)
 
 type thread_count = One | Infinity
@@ -38,6 +44,14 @@ let context_set_of_list l =
     | [] -> acc
     | hd :: tl -> context_set_of_list' tl (ContextSet.add hd acc) in
   context_set_of_list' l ContextSet.empty
+
+(** State comparison *)
+let compare_states s1 s2 =
+  Util.order_concat [ThreadMap.compare ContextSet.compare s1.threads s2.threads;
+                     Pervasives.compare s1.nthreads s2.nthreads;
+                     Store.compare s1.pstore s2.pstore;
+                     ThreadMap.compare Pervasives.compare s1.tcount s2.tcount;
+                     Pervasives.compare s1.a_halt s2.a_halt]
 
 (** String conversions *)
 
@@ -76,9 +90,9 @@ let context_of_state state =
     cchange = state.change;
     ctime = state.time }
 
-(** State comparison (for debugging) *)
-let compare_states s1 s2 =
-  if s1 = s2 then
+(** Print differences between states *)
+let print_difference s1 s2 =
+  if s1 = s2 || compare_states s1 s2 = 0 then
     print_string "pstates are equal"
   else begin
     print_string "pstates are different:\n";
@@ -86,8 +100,11 @@ let compare_states s1 s2 =
       print_string "  threads are different\n";
     if not (s1.nthreads = s2.nthreads) then
       print_string "  nthreads are different\n";
-    if not (s1.pstore = s2.pstore) then
+    if not (Store.compare s1.pstore s2.pstore = 0) then begin
       print_string "  pstores are different\n";
+      if Store.subsumes s1.pstore s2.pstore then
+        print_string "    s1.pstore subsumes s2.pstore\n";
+    end;
     if not (s1.tcount = s2.tcount) then
       print_string "  tcounts are different\n";
     if not (s1.a_halt = s2.a_halt) then

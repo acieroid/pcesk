@@ -61,7 +61,7 @@ let compare_states node = match !Params.tag1, !Params.tag2 with
       let _, graph = Pcesk.eval node in
       let s1, s2 = Pviz.find_node graph t1, Pviz.find_node graph t2 in
       match s1, s2 with
-      | Some state1, Some state2 -> Pcesk_types.compare_states state1 state2
+      | Some state1, Some state2 -> Pcesk_types.print_difference state1 state2
       | _ -> raise (BadArguments
                      ("at least one of the state ids is incorrect " ^
                         "(use -v 2 and look in the produced graph to find them"))
@@ -69,7 +69,7 @@ let compare_states node = match !Params.tag1, !Params.tag2 with
       let _, graph = Cesk.eval node in
       let s1, s2 = Viz.find_node graph t1, Viz.find_node graph t2 in
       match s1, s2 with
-      | Some state1, Some state2 -> Cesk_types.compare_states state1 state2
+      | Some state1, Some state2 -> Cesk_types.print_difference state1 state2
       | _ -> raise (BadArguments
                      ("at least one of the state ids is incorrect " ^
                         "(use -v 2 and look in the produced graph to find them"))

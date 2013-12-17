@@ -18,3 +18,10 @@ let debug s =
 
 let flatmap f l =
   List.flatten (List.map f l)
+
+(* composition law in the ordering monoid (whose possible values are
+  "negative integer", "zero", "positive integer") *)
+let order_comp x y =
+  if x = 0 then y else x
+
+let order_concat l = List.fold_left order_comp 0 l

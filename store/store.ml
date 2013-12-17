@@ -33,6 +33,10 @@ module type STORE =
        Also keep the non-reclaimable addresses *)
     val narrow : t -> Addr.t list -> t
 
+    (* Compare two stores (Pervasives.compare might produce wrong results for
+       store wit the same content, but a different internal structure) *)
+    val compare : t -> t -> int
+
     (* Check if the first store subsumes the second one (ie. anything contained
        in the second store is also contained in the first one) *)
     val subsumes : t -> t -> bool
@@ -102,6 +106,9 @@ module Store : STORE =
              false
            end))
         store
+
+    let compare s1 s2 =
+      StoreMap.compare Pervasives.compare s1 s2
 
     let subsumes s1 s2 =
       (* TODO: a way to improve performances of this function would be to

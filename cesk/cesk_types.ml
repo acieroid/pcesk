@@ -1,6 +1,9 @@
+open Env
 open Types
 open Store
 open Set_lattice
+
+(** Types and modules *)
 
 module Lattice = Set_lattice(struct let size = 10 end)
 module Store = Store(Addr)(Lattice)
@@ -24,8 +27,17 @@ type state = {
   time : time;
 }
 
-(* Compare states (for debugging) *)
+(** State comparison *)
 let compare_states s1 s2 =
+  Util.order_concat [Pervasives.compare s1.exp s2.exp;
+                     Env.compare s1.env s2.env;
+                     Store.compare s1.store s2.store;
+                     Addr.compare s1.addr s2.addr;
+                     Pervasives.compare s1.change s2.change;
+                     Time.compare s1.time s2.time]
+
+(** Print differences between states *)
+let print_difference s1 s2 =
   if s1 = s2 then
     print_string "states are equal\n"
   else begin
