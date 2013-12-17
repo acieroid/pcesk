@@ -78,4 +78,18 @@ let context_of_state state =
 
 (** State comparison (for debugging) *)
 let compare_states s1 s2 =
-  failwith "TODO"
+  if s1 = s2 then
+    print_string "pstates are equal"
+  else begin
+    print_string "pstates are different:\n";
+    if not (s1.threads = s2.threads) then
+      print_string "  threads are different\n";
+    if not (s1.nthreads = s2.nthreads) then
+      print_string "  nthreads are different\n";
+    if not (s1.pstore = s2.pstore) then
+      print_string "  pstores are different\n";
+    if not (s1.tcount = s2.tcount) then
+      print_string "  tcounts are different\n";
+    if not (s1.a_halt = s2.a_halt) then
+      print_string "  a_halts are different\n"
+  end

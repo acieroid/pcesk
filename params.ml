@@ -105,7 +105,7 @@ let speclist = [
    ": tag corresponding to the first expression used for MHP analysis");
   ("-t2", Arg.Int (fun t -> tag2 := Some t),
    ": tag corresponding to the second expression used for MHP analysis");
-  ("-target", Arg.Symbol (["run"; "ast"; "mhp"],
+  ("-target", Arg.Symbol (["run"; "ast"; "mhp"; "cmp"],
                           (function
                             | "run" -> target := Run
                             | "ast" -> target := PrintAST

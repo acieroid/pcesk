@@ -2,7 +2,6 @@ open Types
 open Cesk_types
 open Graph
 
-
 (* Hack to avoid merged states in dot output *)
 let id = ref 0
 let new_id () =
