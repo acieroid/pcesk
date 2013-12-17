@@ -3,6 +3,7 @@ open Params
 let suites = [
   Test_ast.suite;
   Test_lattice.suite;
+  Test_store.suite;
   Test_simple.suite;
   Test_advanced.suite;
 ]
