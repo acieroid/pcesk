@@ -1,0 +1,8 @@
+(letrec ((counter 0)
+         (inc (lambda ()
+                (set! counter (+ counter 1))))
+         (t1 (spawn (inc)))
+         (t2 (spawn (inc))))
+  (join t1)
+  (join t2)
+  counter)
