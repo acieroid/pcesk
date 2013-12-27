@@ -165,6 +165,9 @@ and step_node state (e, tag) =
       (* x can't be equal to v_old *)
       [state_neq]
     else if value = v_old then
+      (* TODO: this branch should be taken *only* when value is is a
+         single value (eg. if value = AbsInt and v_old = AbsInt, they
+         might still be different *)
       (* x is equal to v_old *)
       [state_eq]
     else
