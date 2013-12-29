@@ -330,7 +330,19 @@ let string_of_update state state' =
 
 module StateSet = Set.Make(struct
     type t = state
-    let compare = Pervasives.compare
+    let compare x y =
+      (* See explanation in pcesk.ml *)
+      if !Params.subsumption then
+        let x_without_store = { x with store = Store.empty }
+        and y_without_store = { y with store = Store.empty } in
+        let cmp = compare_states x_without_store y_without_store
+        in
+        match cmp, Store.subsumes x.store y.store with
+        | 0, true -> 0
+        | 0, false -> Store.compare x.store y.store
+        | n, _ -> n
+      else
+        compare_states x y
   end)
 
 let eval e =
