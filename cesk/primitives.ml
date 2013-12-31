@@ -60,6 +60,13 @@ let primitives : prim list =
        | [x] -> value_neg x
        | hd :: tl -> int_op value_sub hd tl);
    ("*", int_op value_mul (AbsUnique (Integer 1)));
+   ("/", function
+       | [] -> None
+       | [x] -> value_div (AbsUnique (Integer 1)) x
+       | hd :: tl -> int_op value_div hd tl);
+   ("modulo", function
+       | x :: y :: [] -> value_mod x y
+       | _ -> None);
    ("=", int_comp value_int_eq);
    (">", int_comp value_gt);
    (">=", int_comp value_gte);

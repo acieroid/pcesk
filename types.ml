@@ -192,6 +192,7 @@ let value_add = value_op_int (+)
 let value_sub = value_op_int (-)
 let value_mul = value_op_int ( * )
 let value_div = value_op_int (/)
+let value_mod = value_op_int (mod)
 
 let value_neg x = match x with
   | AbsUnique (Integer a) -> Some (AbsUnique (Integer (-a)))
