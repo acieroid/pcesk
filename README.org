@@ -1,9 +1,9 @@
 * PCESK
 This is an implementation of an abstract CESK machine which supports
-parallel constructs (spawn/join), based on Matt Might's description of
-CESK machines (mainly from the papers [[http://matt.might.net/papers/vanhorn2010abstract.pdf][Abstracting Abstract Machines]]
-and [[http://matt.might.net/papers/might2011pceks.pdf][A Family of Abstract Interpretations for Static Analysis of
-Concurrent Higher-Order Programming]])
+concurrent constructs (spawn/join), based on Matthew Might's
+description of CESK machines (mainly from the papers [[http://matt.might.net/papers/vanhorn2010abstract.pdf][Abstracting
+Abstract Machines]] and [[http://matt.might.net/papers/might2011pceks.pdf][A Family of Abstract Interpretations for Static
+Analysis of Concurrent Higher-Order Programming]])
 ** Dependencies and compilation
 The following OCaml packages are required:
   - ocamlgraph
@@ -16,7 +16,7 @@ opam install ocamlgraph oUnit batteries
 #+END_SRC
 
 To compile this project, you'll also need ocamlbuild (generally
-provided with ocaml). It has been tested with OCaml 4.01, but should
+provided with OCaml). It has been tested with OCaml 4.01, but should
 probably work with older versions too. To compile, simply launch
 =make=. To launch the test suite, execute =make test=.
 ** Usage
@@ -49,7 +49,9 @@ together to obtain a unique result.
 The last line printed contains the number of nodes in the state
 graph, the number of edges, and the time it took to compute it.
 
-For example:
+For example, the following examples calls a recursive function that
+decrements a counter until it reaches 0, and then return the string
+"done":
 #+BEGIN_SRC shell
 $ ./main.byte -i input/count.scm -gc
 Running with:
@@ -81,10 +83,11 @@ Str
     programs, k > 1 is not really useful.
   - =-gc=: activates abstract garbage collection. It will result in a
     much higher precision on complex programs.
-  - =no-store-strong-updates=: disable strong updates in the
+  - =-no-store-strong-updates=: disable strong updates in the
     store. It should result in a loss of precision.
 *** PCESK Precision Parameters
-First, parallelism should be turned on before using those options =-p=
+First, parallelism should be turned on with =-p= before using those
+options.
   - =-r=: each times a thread halts, remove it from the thread
     map. It should result in a better precision.
   - =-no-threads-strong-updates=: disable strong updates in the
