@@ -33,7 +33,7 @@ module ThreadCountMap = ThreadMap
 type threads = ContextSet.t ThreadMap.t
 type pstate = {
   threads : threads;
-  nthreads : int; (* number of created threads (does not decreate) *)
+  nthreads : int; (* number of created threads (does not decrease) *)
   pstore : store;
   tcount : thread_count ThreadCountMap.t;
   a_halt : addr
