@@ -94,13 +94,13 @@ let speclist = [
   ("-j", Arg.Set join_strong,
    ": do strong updates when evaluating a join (disabled by default)");
   ("-s", Arg.Set subsumption,
-   ": don't explore state if another state that subsumes them has been explored");
+   ": don't explore state if another state that subsumes them has been explored (disabled by default)");
   ("-l", Arg.Set_int list_length,
    ": maximum length of abstracted lists (5 by default)");
   ("-no-threads-strong-updates", Arg.Unit (fun () -> threads_strong_updates := false),
    ": turn off strong updates for the threads");
   ("-quiet", Arg.Set quiet,
-   ": don't print the results nor the parameters used, only the time and graph size");
+   ": don't print the results nor the parameters used, only the time and graph size (disabled by default)");
   ("-t1", Arg.Int (fun t -> tag1 := Some t),
    ": tag corresponding to the first expression used for MHP analysis");
   ("-t2", Arg.Int (fun t -> tag2 := Some t),
@@ -118,7 +118,7 @@ let speclist = [
                        | "bfs" -> exploration := (module Bfs : EXPLORATION)
                        | "dfs" -> exploration := (module Dfs : EXPLORATION)
                        | e -> failwith ("Invalid exploration: " ^ e))),
-   ": graph traversal method used ('bfs' or 'dfs')")
+   ": graph traversal method used ('bfs' or 'dfs', bfs by default)")
 ]
 
 let string_of_param name value =

@@ -25,6 +25,9 @@ module type ENV =
     (* Compare two environments *)
     val compare : 'a t -> 'a t -> int
 
+    (* Check if the first environment subsumes the second one *)
+    val subsumes : 'a t -> 'a t -> bool
+
     (* Return a string representation of the environment *)
     val string_of_env : ?print:('a -> string) -> 'a t -> string
   end
@@ -53,6 +56,17 @@ module Env : ENV =
 
     let compare e1 e2 =
       EnvMap.compare Pervasives.compare e1 e2
+
+    let subsumes e1 e2 =
+      (* TODO: see store's subsumes *)
+      let merge_val _ v1 v2 =
+        match v1, v2 with
+        | Some x, Some y when x = y -> None
+        | Some _, Some _ -> v2
+        | None, Some _ -> v2
+        | Some _, None -> None
+        | None, None -> None in
+      EnvMap.is_empty (EnvMap.merge merge_val e1 e2)
 
     let string_of_env ?print env = match print with
       | Some f ->
