@@ -21,7 +21,13 @@ let mhp graph tag1 tag2 =
     let threads = pstate.threads in
     if tag1 = tag2 then
       let ts = ThreadMap.filter (fun _ -> contains_expression tag1) threads in
-      List.length (ThreadMap.bindings ts) > 1
+      if List.length (ThreadMap.bindings ts) == 1 then
+        (* Only one thread id has this tag, but maybe there are more than
+           one context under this thread id *)
+        let _, contexts = ThreadMap.choose ts in
+        ContextSet.cardinal contexts > 1
+      else
+        List.length (ThreadMap.bindings ts) > 1
     else
       ThreadMap.exists (fun _ -> contains_expression tag1) threads &&
       ThreadMap.exists (fun _ -> contains_expression tag2) threads in
