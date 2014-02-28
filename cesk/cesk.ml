@@ -51,14 +51,20 @@ let step_begin state tag = function
     let kont = BeginKont (tag, rest, state.env, state.addr) in
     [state_push state node kont]
 
-let step_letrec state tag bindings body = match bindings with
-  | [] -> step_begin state tag body
-  | ((name, tag), node) :: rest ->
+let rec letrec_bind state bindings = match bindings with
+  | [] -> state
+  | ((name, tag), _) :: rest ->
     let a = alloc state tag in
     let env = env_extend state.env name a in
     let store = store_extend state.store a Lattice.bottom in
-    let kont = LetRecKont (tag, a, rest, body, env, state.addr) in
-     [state_push { state with env; store } node kont]
+    letrec_bind { state with env; store } rest
+
+let step_letrec state tag bindings body = match bindings with
+  | [] -> step_begin state tag body
+  | ((name, tag), node) :: rest ->
+    let a = env_lookup state.env name in
+    let kont = LetRecKont (tag, a, rest, body, state.env, state.addr) in
+     [state_push state node kont]
 
 let step_if state tag cond cons alt =
   let kont = IfKont (tag, cons, alt, state.env, state.addr) in
@@ -142,7 +148,7 @@ and step_node state (e, tag) =
   | Ast.Begin body ->
     step_begin state tag body
   | Ast.LetRec (bindings, body) ->
-    step_letrec state tag bindings body
+    step_letrec (letrec_bind state bindings) tag bindings body
   | Ast.If (cond, cons, alt) ->
     step_if state tag cond cons alt
   | Ast.Set ((var, tag), value) ->
