@@ -1,8 +1,8 @@
 (letrec ((lock #f)
          (acquire (lambda ()
-                         (if (cas lock #f #t)
-                             nil
-                             (acquire))))
+                    (if (cas lock #f #t)
+                        nil
+                        (acquire))))
          (release (lambda ()
                     (set! lock #f)))
          (counter 0)
