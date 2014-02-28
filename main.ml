@@ -55,6 +55,36 @@ let mhp node = match !Params.tag1, !Params.tag2 with
   | _ -> raise (BadArguments
                   "two tags should be specified (use -target ast to find them)")
 
+let race node =
+  if !Params.parallel then
+    let _, graph = Pcesk.eval node in
+    let races = Race.race graph in
+    match races with
+    | [] -> print_string "No race condition detected\n"
+    | [(t1,t2)] ->
+      begin match Ast.find_node t1 node, Ast.find_node t2 node with
+      | Some e1, Some e2 ->
+        print_string ("One race condition detected between the following expressions:\n" ^
+                      (Ast.string_of_node ~tags:true e1) ^ ", " ^
+                      (Ast.string_of_node ~tags:true e2) ^ "\n")
+      | _ ->
+        print_string "Race condition detected between unknown nodes! (should not happen)"
+      end
+    | l ->
+      print_string "Race detections detected between the following pairs of expressions:\n";
+      List.iter (fun (t1, t2) ->
+          match Ast.find_node t1 node, Ast.find_node t2 node with
+          | Some e1, Some e2 ->
+            print_string ((Ast.string_of_node ~tags:true e1) ^ ", " ^
+                          (Ast.string_of_node ~tags:true e2) ^ "\n")
+          | _ ->
+            print_string "Race condition detected between unknown nodes! (should not happen)")
+        l
+  else
+    raise (BadArguments
+           "cannot do race condition analysis without parallelism turned on (use -p)")
+  
+
 let compare_states node = match !Params.tag1, !Params.tag2 with
   | Some t1, Some t2 ->
     begin if !Params.parallel then
@@ -91,6 +121,7 @@ let () =
       | Params.Run -> run
       | Params.PrintAST -> print_ast
       | Params.MHP -> mhp
+      | Params.RaceDetection -> race
       | Params.CompareStates -> compare_states in
     let node = Parser.parse (Lexer.lex !input) in
     action node

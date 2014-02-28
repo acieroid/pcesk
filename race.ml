@@ -58,18 +58,17 @@ let race graph =
         | _ -> None)
       contexts
   in
-  (* Check if a given pstate may have a race condition *)
   let race_pstate pstate =
+  (* Check if a given pstate may have a race condition. Return a list of
+     the possible race condition as a list of pairs of tags *)
     let threads = pstate.threads in
     (* For every thread that will evaluate a set!, extract the address
        of the variable and see if there is another thread that reads or
        writes to this address *)
     let tids = List.map fst (ThreadMap.bindings threads) in
     let writes = List.concat (List.map (find_writes pstate) tids) in
-    let races = List.concat (List.map (fun w ->
+    List.concat (List.map (fun w ->
         List.concat (List.map (find_races pstate w) tids))
-        writes) in
-    (* TODO: extract the races to report them *)
-    List.length races > 0
+        writes)
   in
-  G.fold_vertex (fun pstate found -> found || race_pstate pstate) graph false
+  G.fold_vertex (fun pstate found -> (race_pstate pstate) @ found) graph []
