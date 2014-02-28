@@ -3,6 +3,16 @@ open Env
 open Pcesk_types
 open Pviz
 
+module TagPairSet = Set.Make (struct
+    type t = Ast.tag * Ast.tag
+    let compare (t1, t2) (t1', t2') =
+      if (t1 = t1' && t2 = t2') || (t1 = t2' && t2 = t1') then
+        0
+      else
+        Util.order_concat [Pervasives.compare t1 t1';
+                           Pervasives.compare t2 t2']
+  end)
+
 (* A program may contain a race condition if there exists a state where
    two different contexts contains either a read and a write to a
    variable which points to the same address in both threads, or a write
@@ -71,4 +81,9 @@ let race graph =
         List.concat (List.map (find_races pstate w) tids))
         writes)
   in
-  G.fold_vertex (fun pstate found -> (race_pstate pstate) @ found) graph []
+  TagPairSet.elements (G.fold_vertex 
+                     (fun pstate found ->
+                        List.fold_left
+                          (fun r s -> TagPairSet.add s r)
+                          found (race_pstate pstate))
+                     graph TagPairSet.empty)
