@@ -71,7 +71,8 @@ let race node =
         print_string "Race condition detected between unknown nodes! (should not happen)"
       end
     | l ->
-      print_string "Race detections detected between the following pairs of expressions:\n";
+      print_string (string_of_int (List.length l) ^
+                    " race conditions detected between the following pairs of expressions:\n");
       List.iter (fun (t1, t2) ->
           match Ast.find_node t1 node, Ast.find_node t2 node with
           | Some e1, Some e2 ->
@@ -106,7 +107,7 @@ let compare_states node = match !Params.tag1, !Params.tag2 with
     end
   | _ -> raise (BadArguments
                   ("two node ids should be specified (using -t1 and -t2; " ^
-                     "use -v 2 and look into the generated graph to find them)"))
+                     "use -v 2 and look into the produced graph to find them)"))
 
 let () =
   Arg.parse speclist
