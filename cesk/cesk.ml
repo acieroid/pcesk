@@ -198,15 +198,17 @@ and step_value state v kont =
     let kont = OperandsKont (tag, rator, rands, v :: values, env, c) in
     [state_push { state with env } rand kont]
   (** begin *)
-  | BeginKont (_, [], _, c) ->
+  | BeginKont (_, [], env, c) ->
     [{ state with
        exp = Value v;
+       env = env;
        addr = c;
        change = Epsilon;
        time = tick state }]
   | BeginKont (_, [node], env, c) ->
     [{ state with
        exp = Node node;
+       env = env;
        addr = c;
        change = Epsilon;
        time = tick state }]
