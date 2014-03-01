@@ -24,43 +24,30 @@ probably work with older versions too. To compile, simply launch
 usage: ./main.byte [-v level] [-i input] [-g graph_output] [-k polyvariance]
         [-t1 tag] [-t2 tag] [-target target] [other flags (see below)]
   -v : verbose level (0 by default)
+  -progress : print progress (number of states computed)
   -i : input file (stdin by default)
   -g : output file for the generated graph (nothing by default)
   -k : polyvariance (k-CFA) (k=0 by default)
   -gc : turn on abstract garbage collection (disabled by default)
+  -gc-after : run garbage collection after stepping (disabled by default)
   -no-store-strong-updates : turn off strong updates in the store
   -p : turn on parallelism with spawn and join (disabled by default)
   -r : remove threads when they halt (disabled by default)
+  -j : do strong updates when evaluating a join (disabled by default)
+  -s : don't explore state if another state that subsumes them has been explored (disabled by default)
+  -l : maximum length of abstracted lists (5 by default)
   -no-threads-strong-updates : turn off strong updates for the threads
-  -quiet : don't print the results nor the parameters used, only the time and graph size
+  -quiet : don't print the results nor the parameters used, only the time and graph size (disabled by default)
   -t1 : tag corresponding to the first expression used for MHP analysis
   -t2 : tag corresponding to the second expression used for MHP analysis
-  -target {run|ast|mhp}: action to do with the input (run by default)
+  -target {run|ast|mhp|cmp|race}: action to do with the input (run by default)
+  -e {bfs|dfs}: graph traversal method used ('bfs' or 'dfs', bfs by default)
   -help  Display this list of options
   --help  Display this list of options
 #+END_SRC
 
-Those parameters are explained in more details below.
-
-The results computed will be printed, one per line (multiple results
-can computed). Generally, those different results will be merged
-together to obtain a unique result.
-
-The last line printed contains the number of nodes in the state
-graph, the number of edges, and the time it took to compute it.
-
-For example, the following examples calls a recursive function that
-decrements a counter until it reaches 0, and then return the string
-"done":
-#+BEGIN_SRC shell
-$ ./main.byte -i input/count.scm -gc
-Running with:
-        k = 0
-        gc = on
-Str
-Str
-49/49/0.008
-#+END_SRC
+Those parameters are explained in more details below, and examples
+are given after.
 
 *** General Parameters
   - =-v=: when the verbose mode is activated (> 0), the execution will
@@ -83,6 +70,12 @@ Str
     programs, k > 1 is not really useful.
   - =-gc=: activates abstract garbage collection. It will result in a
     much higher precision on complex programs.
+  - =-gc-after=: similar to =-gc=, but the garbage collection will be
+    done /after/ the transition function, and not before. The
+    resulting state space should be smaller, especially for the PCESK
+    machine.
+  - =-s=: activate reduction of the state space by subsumption. This
+    experimentally gives really good results for the PCESK machine.
   - =-no-store-strong-updates=: disable strong updates in the
     store. It should result in a loss of precision.
 *** PCESK Precision Parameters
@@ -109,10 +102,107 @@ parameters. For doing so, it computes the state graph and traverses it
 in order to find a state where the two nodes can be evaluated. It then
 prints whether they can be evaluated in parallel or not.
 
-** Stuff to do
-  - Abstract the thread ids
-  - Improve modularity
-    - fix the circular dependency between thread ids, cesk and pcesk
-  - Weird behaviours
-    - Disabling strong updates for the store *increases* the precision
-    - Enabling garbage collection with parallelism *decreases* the precision
+The =race= tries to detect race conditions in a program, in a similar
+way as how MHP is done, except that the user doesn't have to specify
+two expressions to check (the whole program is checked).
+
+*** Examples
+**** CESK Machine
+You can run a sequential CESK machine on programs that do not make
+use of the parallel operators. Some examples are given in the
+=input/seq/= directory.
+
+With the =run= target, the program will be evaluated and the possible
+results will be printed. On each line the result will correspond to a
+possible final state of the execution.
+
+The last line of the output contains the number of states in the
+graph, the number of edges and the time it took to compute this graph.
+
+For example:
+
+#+BEGIN_SRC shell
+$ ./main.byte -i input/seq/mut-rec.scm
+Running with:
+        exploration = bfs
+        gc = off
+        gc-after = off
+        k = 0
+        parallelism = off
+        remove-threads = off
+        join-strong-updates = off
+        subsumption = off
+        store-strong-updates = on
+        threads-strong-updates = on
+#f
+#t
+#f
+#t
+#f
+#t
+145/145/0.189
+#+END_SRC
+**** PCESK Machine
+The PCESK machine can be used to run simple programs that make use of
+the parallel operators. Parallelism is turned on by the =-p=
+parameter. By default, nothing is done to reduce the state space and
+the computation might take a long time. A sane default to improve this
+is to use the parameters =-j -s -r=. The garbage collector (=-gc= or
+=-gc-after=) tends to increase the size of the state space compared to
+just using a reduction by subsumption (=-s=).
+
+For example:
+
+#+BEGIN_SRC shell
+./main.byte -i input/pcounter.scm -p -j -s -r
+Running with:
+        exploration = bfs
+        gc = off
+        gc-after = off
+        k = 0
+        parallelism = on
+        remove-threads = on
+        join-strong-updates = on
+        subsumption = on
+        store-strong-updates = on
+        threads-strong-updates = on
+Int
+981/2298/9.63
+#+END_SRC
+**** MHP Analysis
+We can check whether two expressions may happen in parallel. First,
+the two expressions have to be identified by their tag, by analyzing
+the output of the =ast= target. Then, those two expressions
+identifiers (/tags/) are given as value for =t1= and =t2= and the
+target =mhp= is run.
+
+For example:
+
+#+BEGIN_SRC shell
+$ ./main.byte -i input/pcounter.scm -p -j -s -r -target ast -quiet
+(letrec ((counter@2 0@3) (f@4 (lambda () (letrec ((old@7 counter@8)
+(new@9 (+@11 old@12 1@13)@10)) (if (cas counter old@17 new@18)@15
+"done"@19 (f@21 )@20)@14)@6)@5) (t1@22 (spawn (f@25 )@24)@23) (t2@26
+(spawn (f@29 )@28)@27)) (join t1@31)@30 (join t2@33)@32 counter@34)@1
+
+$ ./main.byte -i input/pcounter.scm -p -j -s -r -target mhp -quiet -t1  15 -t2 15
+The expressions (cas counter old@17 new@18)@15 and (cas counter old@17 new@18)@15 may happen in parallel
+#+END_SRC
+
+(The two =cas= expressions may safely happen in parallel because of
+their atomicity)
+**** Detecting Race Conditions
+A program can be checked against race conditions with the =race=
+target, which will print every conflicting pair of expressions.
+
+For example:
+
+#+BEGIN_SRC shell
+$ ./main.byte -i input/pcounter.scm -p -j -s -r -target race -quiet             
+No race condition detected
+
+$ ./main.byte -i input/pcounter-race.scm -p -j -s -r -target race -quiet
+2 race conditions detected between the following pairs of expressions:
+(set! counter (+@9 counter@10 1@11)@8)@6, (set! counter (+@9 counter@10 1@11)@8)@6
+(set! counter (+@9 counter@10 1@11)@8)@6, counter@10
+#+END_SRC
