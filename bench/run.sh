@@ -1,7 +1,7 @@
 TIMEOUT=30
 FAIL=124
 CMD="timeout $TIMEOUT ./main.byte -quiet"
-FILES=$(find input/bench-seq -type f -name \*.scm)
+FILES=$(find input/seq -type f -name \*.scm)
 
 function run {
   FILE="$1"
