@@ -137,7 +137,10 @@ module Store : STORE =
       "store(" ^ (String.concat ","
                     (BatList.filter_map (fun (a, (v, _)) ->
                          if Addr.is_reclaimable a then
-                           Some ((Addr.string_of_address a) ^ ":" ^
+                           match Lattice.conc v with
+                           | [Types.AbsUnique (Types.Kont _)] -> None
+                           | _ ->
+                             Some ((Addr.string_of_address a) ^ ":" ^
                                    (Lattice.string_of_lattice_value v))
                          else
                            None)
