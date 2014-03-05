@@ -138,26 +138,27 @@ let step_cesk pstate tid context =
         pstore = state.store})
     states'
 
+let step_context pstate tid context =
+  (* Step a context, creating a (or multiple) new pstate for each stepped
+     context *)
+  match context.cexp with
+  | Node ((Ast.Spawn _, _) as n)
+  | Node ((Ast.Join _, _) as n) ->
+    step_parallel pstate tid context n
+  | Node _ ->
+    step_cesk pstate tid context
+  | Value v ->
+    if context.caddr = pstate.a_halt then
+      step_halt pstate tid context v
+    else
+      step_cesk pstate tid context
+
+let step_contexts pstate (tid, cs) =
+  List.concat (List.map (step_context pstate tid) (ContextSet.elements cs))
+
 let step pstate =
   let pstate = if !Params.gc then gc pstate else pstate in
-  let step_context tid context =
-    (* Step each context, creating a (or multiple) new pstate for each stepped
-       context *)
-      match context.cexp with
-      | Node ((Ast.Spawn _, _) as n)
-      | Node ((Ast.Join _, _) as n) ->
-        step_parallel pstate tid context n
-      | Node _ ->
-        step_cesk pstate tid context
-      | Value v ->
-        if context.caddr = pstate.a_halt then
-          step_halt pstate tid context v
-        else
-          step_cesk pstate tid context
-  in
-  let step_contexts (tid, cs) =
-    List.concat (List.map (step_context tid) (ContextSet.elements cs)) in
-  List.concat (List.map step_contexts (ThreadMap.bindings pstate.threads))
+  List.concat (List.map (step_contexts pstate) (ThreadMap.bindings pstate.threads))
 
 (** Injection *)
 let inject e =
