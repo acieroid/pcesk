@@ -36,6 +36,23 @@ let compare_states s1 s2 =
                      Pervasives.compare s1.change s2.change;
                      Time.compare s1.time s2.time]
 
+module StateOrdered = struct
+    type t = state
+    let compare x y =
+      (* See explanation in pcesk_types.ml *)
+      if !Params.subsumption then
+        let x_without_store = { x with store = Store.empty }
+        and y_without_store = { y with store = Store.empty } in
+        let cmp = compare_states x_without_store y_without_store
+        in
+        match cmp, Store.subsumes x.store y.store with
+        | 0, true -> 0
+        | 0, false -> Store.compare x.store y.store
+        | n, _ -> n
+      else
+        compare_states x y
+end
+
 (** Print differences between states *)
 let print_difference s1 s2 =
   if s1 = s2 || compare_states s1 s2 = 0 then

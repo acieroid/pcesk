@@ -8,14 +8,16 @@ let new_id () =
   id := !id + 1;
   !id
 
-let nodes = Hashtbl.create 100
+module StateMap = Map.Make(StateOrdered)
+
+let nodes = ref StateMap.empty
 
 let node_id node =
-  if Hashtbl.mem nodes node then
-    Hashtbl.find nodes node
+  if StateMap.mem node !nodes then
+    StateMap.find node !nodes
   else
     let id = new_id () in
-    Hashtbl.add nodes node id;
+    nodes := StateMap.add node id !nodes;
     id
 
 module GraphNode = struct
