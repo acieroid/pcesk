@@ -218,13 +218,7 @@ let eval e =
       finished, graph
     else
       let pstate = Exploration.pick todo in
-      let found =
-        try
-          let _ = PStateSet.find pstate visited in
-          true
-        with
-          Not_found -> false
-      in
+      let found = PStateSet.mem pstate visited in
       if found then
         loop visited finished graph (i+1)
       else match extract_finals pstate with
@@ -236,10 +230,6 @@ let eval e =
           and dests = List.map G.V.create pstates in
           let edges = List.map (fun dest -> G.E.create source
                                    "" dest) dests in
-          (* TODO: when Params.subsumption is true, some states that are not
-             equal should be merged (if s1 subsumes s2 and s1 is already in the
-             graph, s2 should not be added to the graph, and an edge should be
-             added between source and s2) *)
           let graph' =
             List.fold_left G.add_edge_e
               (List.fold_left G.add_vertex graph dests) edges in

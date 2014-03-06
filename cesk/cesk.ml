@@ -367,13 +367,7 @@ let eval e =
       finished, graph
     else
       let state = Exploration.pick todo in
-      let found =
-        try
-          let _ = StateSet.find state visited in
-          true
-        with
-          Not_found -> false
-      in
+      let found = StateSet.mem state visited in
       if found then
         loop visited finished graph
       else match extract_final state with
