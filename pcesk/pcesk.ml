@@ -173,25 +173,7 @@ let inject e =
   }
 
 (** Evaluation *)
-module PStateSet = Set.Make(struct
-    type t = pstate
-    let compare x y =
-      (* If two states are only different in their store, and the first state's
-        store subsumes the second, then they are considered as equal (since all
-        the behaviours found by exploring from the second state will be already
-        found by exploring the first one). *)
-      if !Params.subsumption then
-        let x_without_store = { x with pstore = Store.empty }
-        and y_without_store = { y with pstore = Store.empty } in
-        let cmp = compare_pstates x_without_store y_without_store
-        in
-        match cmp, Store.subsumes x.pstore y.pstore with
-        | 0, true -> 0
-        | 0, false -> Store.compare x.pstore y.pstore
-        | n, _ -> n
-      else
-        compare_pstates x y
-  end)
+module PStateSet = Set.Make(PStateOrdered)
 
 let eval e =
   let module Exploration = (val !Params.exploration) in
@@ -234,7 +216,7 @@ let eval e =
             List.fold_left G.add_edge_e
               (List.fold_left G.add_vertex graph dests) edges in
           if !Params.progress && i mod 1000 = 0 then begin
-            print_string ("\r" ^ string_of_int (G.nb_vertex graph));
+            print_string ("\r" ^ string_of_int (G.nb_vertex graph'));
             flush_all ()
           end;
           if !Params.verbose >= 1 then begin

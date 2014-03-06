@@ -53,6 +53,26 @@ let compare_pstates s1 s2 =
                      ThreadMap.compare Pervasives.compare s1.tcount s2.tcount;
                      Pervasives.compare s1.a_halt s2.a_halt]
 
+module PStateOrdered = struct
+    type t = pstate
+    let compare x y =
+      (* If two states are only different in their store, and the first state's
+        store subsumes the second, then they are considered as equal (since all
+        the behaviours found by exploring from the second state will be already
+        found by exploring the first one). *)
+      if !Params.subsumption then
+        let x_without_store = { x with pstore = Store.empty }
+        and y_without_store = { y with pstore = Store.empty } in
+        let cmp = compare_pstates x_without_store y_without_store
+        in
+        match cmp, Store.subsumes x.pstore y.pstore with
+        | 0, true -> 0
+        | 0, false -> Store.compare x.pstore y.pstore
+        | n, _ -> n
+      else
+        compare_pstates x y
+end
+
 (** String conversions *)
 
 let string_of_context ?color:(color=true) context =

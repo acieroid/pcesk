@@ -6,14 +6,16 @@ let new_id () =
   id := !id + 1;
   !id
 
-let nodes = Hashtbl.create 100
+module PStateMap = Map.Make(PStateOrdered)
+
+let nodes = ref PStateMap.empty
 
 let node_id node =
-  if Hashtbl.mem nodes node then
-    Hashtbl.find nodes node
+  if PStateMap.mem node !nodes then
+    PStateMap.find node !nodes
   else
     let id = new_id () in
-    Hashtbl.add nodes node id;
+    nodes := PStateMap.add node id !nodes;
     id
 
 module GraphNode = struct
