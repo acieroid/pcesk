@@ -78,25 +78,32 @@ let step_callcc state tag exp =
   let kont = CallccKont (tag, state.env, state.addr) in
   [state_push state exp kont]
 
-let step_cas state x e_old e_new =
+let cas_case state x e_old =
   let addr = env_lookup state.env x in
   let value = store_lookup state.store addr in
-  let v_old = eval_atomic e_old state.env state.store
+  let v_old = eval_atomic e_old state.env state.store in
+  let proj = Lattice.meet value v_old in
+  if Lattice.is_bottom proj then
+    (* x can't be equal to v_old *)
+    `NotEqual
+  else match Lattice.conc value, Lattice.conc v_old with
+    | [v1], [v2] when v1 = v2 ->
+      (* x is equal to v_old *)
+      `Equal
+    | _ ->
+      (* x can be equal or not equal to v_old *)
+      `Unknown
+
+let step_cas state x e_old e_new =
+  let addr = env_lookup state.env x
   and v_new = eval_atomic e_new state.env state.store in
   let state_eq = { (state_produce_value state (Aval.aval (Boolean true)))
                    with store = store_update state.store addr v_new }
   and state_neq = state_produce_value state (Aval.aval (Boolean false)) in
-  let proj = Lattice.meet value v_old in
-  if Lattice.is_bottom proj then
-    (* x can't be equal to v_old *)
-    [state_neq]
-  else match Lattice.conc value, Lattice.conc v_old with
-    | [v1], [v2] when v1 = v2 ->
-      (* x is equal to v_old *)
-      [state_eq]
-    | _ ->
-      (* x can be equal or not equal to v_old *)
-      [state_eq; state_neq]
+  match cas_case state x e_old with
+  | `Equal -> [state_eq]
+  | `NotEqual -> [state_neq]
+  | `Unknown -> [state_eq; state_neq]
 
 (** State manipulation *)
 
