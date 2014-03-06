@@ -78,10 +78,10 @@ let step_callcc state tag exp =
   let kont = CallccKont (tag, state.env, state.addr) in
   [state_push state exp kont]
 
-let cas_case state x e_old =
-  let addr = env_lookup state.env x in
-  let value = store_lookup state.store addr in
-  let v_old = eval_atomic e_old state.env state.store in
+let cas_case x e_old env store =
+  let addr = env_lookup env x in
+  let value = store_lookup store addr in
+  let v_old = eval_atomic e_old env store in
   let proj = Lattice.meet value v_old in
   if Lattice.is_bottom proj then
     (* x can't be equal to v_old *)
@@ -100,7 +100,7 @@ let step_cas state x e_old e_new =
   let state_eq = { (state_produce_value state (Aval.aval (Boolean true)))
                    with store = store_update state.store addr v_new }
   and state_neq = state_produce_value state (Aval.aval (Boolean false)) in
-  match cas_case state x e_old with
+  match cas_case x e_old state.env state.store with
   | `Equal -> [state_eq]
   | `NotEqual -> [state_neq]
   | `Unknown -> [state_eq; state_neq]

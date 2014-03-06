@@ -23,14 +23,32 @@ module TagPairSet = Set.Make (struct
 *)
 
 let race graph =
+  let cas_can_write = function
+    | `Equal | `Unknown -> true
+    | _ -> false in
+  let written_to pstate ctx =
+    match ctx.cexp with
+    | Node (Ast.Set ((v, _), _), tag) ->
+      Some (v, tag)
+    | Node (Ast.Cas ((v, _), e_old, _), tag)
+      when cas_can_write (Cesk.cas_case v e_old ctx.cenv pstate.pstore) -> 
+      Some (v, tag)
+    | _ -> None
+  and read_from pstate ctx =
+    match ctx.cexp with
+    | Node (Ast.Identifier v, tag') ->
+      Some (v, tag')
+    | _ -> None in
   let find_writes pstate tid =
     (* Find all the set! currently being evaluated in pstate's threads
        with the given tid, and return them as a list of tid and addresses *)
     let contexts = ContextSet.elements (ThreadMap.find tid pstate.threads) in
     BatList.filter_map (fun ctx ->
-        match ctx.cexp with
-        | Node (Ast.Set ((v, _), _), tag) -> Some (tid, Env.lookup ctx.cenv v, tag)
-        | _ -> None)
+        match written_to pstate ctx with
+        | Some (v, tag) ->
+          Some (tid, Env.lookup ctx.cenv v, tag)
+        | None ->
+          None)
       contexts
   and find_races pstate (t, a, tag) tid =
     (* Given that a thread with id t writes in address a in this pstate, 
@@ -38,9 +56,9 @@ let race graph =
        tid, and returns a list of pairs of conflicting expressions *)
     let contexts = ContextSet.elements (ThreadMap.find tid pstate.threads) in
     BatList.filter_map (fun ctx ->
-        match ctx.cexp with
-        | Node (Ast.Set ((v, _), _), tag')
-        | Node (Ast.Identifier v, tag') ->
+        match written_to pstate ctx, read_from pstate ctx with
+        | (Some (v, tag'), None)
+        | (None, Some (v, tag')) ->
           let addr = Env.lookup ctx.cenv v in
           if addr = a then
             (* Potential race, we just have to make sure it is not a
@@ -65,7 +83,10 @@ let race graph =
               Some (tag, tag')
           else
             None
-        | _ -> None)
+        | (None, None) ->
+          None
+        | _ ->
+          failwith "Not implemented (simultaneous read and write from the same instruction)")
       contexts
   in
   let race_pstate pstate =
