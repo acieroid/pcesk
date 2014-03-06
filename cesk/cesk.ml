@@ -78,6 +78,26 @@ let step_callcc state tag exp =
   let kont = CallccKont (tag, state.env, state.addr) in
   [state_push state exp kont]
 
+let step_cas state x e_old e_new =
+  let addr = env_lookup state.env x in
+  let value = store_lookup state.store addr in
+  let v_old = eval_atomic e_old state.env state.store
+  and v_new = eval_atomic e_new state.env state.store in
+  let state_eq = { (state_produce_value state (Aval.aval (Boolean true)))
+                   with store = store_update state.store addr v_new }
+  and state_neq = state_produce_value state (Aval.aval (Boolean false)) in
+  let proj = Lattice.meet value v_old in
+  if Lattice.is_bottom proj then
+    (* x can't be equal to v_old *)
+    [state_neq]
+  else match Lattice.conc value, Lattice.conc v_old with
+    | [v1], [v2] when v1 = v2 ->
+      (* x is equal to v_old *)
+      [state_eq]
+    | _ ->
+      (* x can be equal or not equal to v_old *)
+      [state_eq; state_neq]
+
 (** State manipulation *)
 
 let rec apply_function rator rands state = match rator with
@@ -159,26 +179,7 @@ and step_node state (e, tag) =
     let kont = OperatorKont (tag, rands, state.env, state.addr) in
     [state_push state rator kont]
   | Ast.Cas ((x, _), e_old, e_new) ->
-    let addr = env_lookup state.env x in
-    let value = store_lookup state.store addr in
-    let v_old = eval_atomic e_old state.env state.store
-    and v_new = eval_atomic e_new state.env state.store in
-    let state_eq = { (state_produce_value state (Aval.aval (Boolean true)))
-                     with store = store_update state.store addr v_new }
-    and state_neq = state_produce_value state (Aval.aval (Boolean false)) in
-    let proj = Lattice.meet value v_old in
-    if Lattice.is_bottom proj then
-      (* x can't be equal to v_old *)
-      [state_neq]
-    else if value = v_old then
-      (* TODO: this branch should be taken *only* when value is is a
-         single value (eg. if value = AbsInt and v_old = AbsInt, they
-         might still be different *)
-      (* x is equal to v_old *)
-      [state_eq]
-    else
-      (* x can be equal or not equal to v_old *)
-      [state_eq; state_neq]
+    step_cas state x e_old e_new 
   | Ast.Spawn _
   | Ast.Join _ -> failwith "Can't deal with parallelism in CESK machine"
 
