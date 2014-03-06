@@ -69,11 +69,12 @@ let race graph =
                  count to see if there is only one access to this 
                  address in the threads with identifier tid *)
               let size = List.length (List.filter (fun ctx ->
-                  match ctx.cexp with
-                  | Node (Ast.Set ((v, _), _), _)
-                  | Node (Ast.Identifier v, _)
+                  match written_to pstate ctx, read_from pstate ctx with
+                  | (Some (v, _), None)
+                  | (None, Some (v, _))
                     when Env.lookup ctx.cenv v = addr -> true
-                  | _ -> false)
+                  | (None, None) -> false
+                  | _ -> failwith "Not implemented (simultaneous read and write from the same expression)")
                   contexts) in
               if size == 1 then
                 None (* Only one access, no race *)
@@ -86,7 +87,7 @@ let race graph =
         | (None, None) ->
           None
         | _ ->
-          failwith "Not implemented (simultaneous read and write from the same instruction)")
+          failwith "Not implemented (simultaneous read and write from the same expression)")
       contexts
   in
   let race_pstate pstate =
