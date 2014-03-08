@@ -44,8 +44,20 @@ let rec calc_cv_aux cv extendable =
                     (* if the transition is not independent from a transition
                        in one of the other CVs (except in the `last` component),
                        we cannot extend this CV anymore *)
-                    let dep = TODO in
-                    if dep then
+                    let indep =
+                      CVMap.for_all
+                        (fun tid' (g, last) ->
+                           G.fold_edges_e
+                             (fun (ps, (_, ctx), ps') indep ->
+                                indep &&
+                                (PStateMap.mem ps' last ||
+                                 (compare_pstates pstate ps != 0 ||
+                                  are_independent pstate tid context tid' ctx)))
+                             g
+                             true)
+                        cv
+                    in
+                    if not indep then
                       (false, cv, TidSet.remove tid extendable)
                     else
                       (* we also cannot extend every CV which has a last
