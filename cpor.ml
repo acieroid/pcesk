@@ -3,10 +3,11 @@ open Pcesk_types
 open Pviz
 open Types
 
+let step_context' pstate t c =
+  List.fold_left (fun s x -> PStateSet.add x s) PStateSet.empty
+    (step_context pstate t c)
+
 let are_independent pstate t1 c1 t2 c2 =
-  let step_context' pstate t c =
-    List.fold_left (fun s x -> PStateSet.add x s) PStateSet.empty
-      (step_context pstate t c) in
   let step_context_aux t c pstate set =
     PStateSet.union (step_context' pstate t c) set in
   PStateSet.compare
@@ -15,9 +16,6 @@ let are_independent pstate t1 c1 t2 c2 =
     (PStateSet.fold (step_context_aux t1 c1)
        (step_context' pstate t2 c2) PStateSet.empty)
   = 0
-
-let step_tid pstate tid =
-  step_context pstate tid TODO
 
 module CVMap = ThreadMap
 
@@ -35,39 +33,43 @@ let rec calc_cv_aux cv extendable =
     let tid = TidSet.min_elt extendable in
     let _, cv, extendable =
       (* For every state in last(CV[tid]) *)
-      List.fold_left
-        (fun (cont, cv, extendable) s ->
-           if not cont then
-             (cont, cv, extendable)
+      PStateMap.fold
+        (fun pstate context (cont, cv, extendable) ->
+           if cont then
+             (* for every last (pstate, context) computed by the transition *)
+             let s' = step_context' pstate tid context in
+             PStateSet.fold
+               (fun pstate' (cont, cv, extendable) ->
+                  if cont then
+                    (* if the transition is not independent from a transition
+                       in one of the other CVs (except in the `last` component),
+                       we cannot extend this CV anymore *)
+                    let dep = TODO in
+                    if dep then
+                      (false, cv, TidSet.remove tid extendable)
+                    else
+                      (* we also cannot extend every CV which has a last
+                         transition dependent from this transition *)
+                      let extendable = TODO in
+                      (* if the new state is already present, this CV is
+                         infinite and we can stop computing it *)
+                      let extendable = TODO in
+                      (* Finally, we add the next transition and state to the CV *)
+                      let cv = TODO in
+                      (cont, cv, extendable)
+                  else
+                    (cont, cv, extendable))
+                 s'
+                 (true, cv, extendable)
            else
-             (* step the state *)
-             let s' = step_tid s tid in
-             let (g, last) = CVMap.find tid cv in
-             (* check if any state is dependent of any other state in
-                another CV (except in the `last` states of a CV *)
-             let indep =
-               List.for_all
-                 (fun pstate ->
-                    G.fold_vertex
-                      (fun pstate' indep ->
-                         indep && (not (PStateSet.mem pstate' last) &&
-                                   not (are_independent pstate pstate')))
-                      g true) in
-             if not indep then
-               (* if this is the case, remove tid from extendable and
-                  stop here for this CV *)
-               (false, cv, TidSet.remove tid extendable)
-             else
-               (* else, check the dependency between every element of
-                  s' and the last states of every other CVs *)
-               TODO)
-        (true, cv, extendable)
-        (snd (CVMap.find tid cv)) in
+             (cont, cv, extendable))
+        (CVMap.find tid cv)
+        (true, cv, extendable) in
     calc_cv_aux cv extendable
 
 let calc_cv pstate =
   let initial =
-    (G.add_vertex G.empty (G.V.create pstate), PStateSet.singleton pstate) in
+    (G.add_vertex G.empty (G.V.create pstate), PStateMap.empty) in
   let cv =
     ThreadMap.fold
       (fun tid contexts -> CVMap.add tid initial)
