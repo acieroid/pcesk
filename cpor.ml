@@ -31,10 +31,10 @@ let rec calc_cv_aux cv extendable =
   else
     (* Pick any tid in extendable *)
     let tid = TidSet.min_elt extendable in
-    let _, cv, extendable =
+    let cont, cv, extendable =
       (* For every state in last(CV[tid]) *)
       PStateMap.fold
-        (fun pstate context (cont, cv, extendable) ->
+        (fun pstate (_tid, context) (cont, cv, extendable) ->
            if cont then
              (* for every last (pstate, context) computed by the transition *)
              let s' = step_context' pstate tid context in
@@ -88,8 +88,6 @@ let rec calc_cv_aux cv extendable =
                           TidSet.remove tid extendable
                         else
                           extendable in
-                      (* Finally, we add the next transition and state to the CV *)
-                      let cv = TODO  in
                       (cont, cv, extendable)
                   else
                     (cont, cv, extendable))
@@ -97,8 +95,27 @@ let rec calc_cv_aux cv extendable =
                  (true, cv, extendable)
            else
              (cont, cv, extendable))
-        (CVMap.find tid cv)
+        (snd (CVMap.find tid cv))
         (true, cv, extendable) in
+    (* Finally, we add the next transition and state to the CV *)
+    let cv =
+      if cont then
+        CVMap.add tid
+          (let (g, last) = CVMap.find tid cv in
+           let (new_g, new_last) =
+             PStateMap.fold
+               (fun pstate (tid, ctx) (l, g) ->
+                  let pstates = step_context pstate tid ctx in
+                  List.fold_left
+                    (fun pstate' ->
+                       (PStateMap.add l pstate' tid ctx,
+                        G.add_edge_e (G.E.create pstate (tid, ctx) pstate')
+                          (G.add_vertex pstate' g))))
+               last in
+           (new_g, new_last))
+          cv
+      else
+        cv
     calc_cv_aux cv extendable
 
 let calc_cv pstate =
