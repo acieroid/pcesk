@@ -51,8 +51,8 @@ let rec calc_cv_aux cv extendable =
                              (fun (ps, (_, ctx), ps') indep ->
                                 indep &&
                                 (PStateMap.mem ps' last ||
-                                 (compare_pstates pstate ps != 0 ||
-                                  are_independent pstate tid context tid' ctx)))
+                                 (compare_pstates pstate' ps != 0 ||
+                                  are_independent pstate' tid context tid' ctx)))
                              g
                              true)
                         cv
@@ -62,12 +62,34 @@ let rec calc_cv_aux cv extendable =
                     else
                       (* we also cannot extend every CV which has a last
                          transition dependent from this transition *)
-                      let extendable = TODO in
+                      let extendable =
+                        CVMap.fold
+                          (fun tid' (g, last) extendable ->
+                             if tid = tid' then
+                               extendable
+                             else
+                               let indep =
+                                 PStateMap.for_all
+                                   (fun ps (tid, ctx) ->
+                                      compare_pstates pstate' ps = 0 &&
+                                      are_independent pstate' tid context tid' ctx)
+                                   last in
+                               if indep then
+                                 extendable
+                               else
+                                 TidSet.remove tid (TidSet.remove tid' extendable))
+                          cv
+                          extendable in
                       (* if the new state is already present, this CV is
                          infinite and we can stop computing it *)
-                      let extendable = TODO in
+                      let extendable = 
+                        let (g, last) = CVMap.find tid cv in
+                        if G.mem_vertex g pstate' then
+                          TidSet.remove tid extendable
+                        else
+                          extendable in
                       (* Finally, we add the next transition and state to the CV *)
-                      let cv = TODO in
+                      let cv = TODO  in
                       (cont, cv, extendable)
                   else
                     (cont, cv, extendable))
