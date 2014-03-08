@@ -17,15 +17,17 @@ type context = {
   ctime : time;
 }
 
+let compare_contexts c1 c2 =
+  Util.order_concat [Pervasives.compare c1.cexp c2.cexp;
+                     Env.compare c1.cenv c2.cenv;
+                     Addr.compare c1.caddr c2.caddr;
+                     Pervasives.compare c1.cchange c2.cchange;
+                     Time.compare c1.ctime c2.ctime]
+
 module ContextSet = Set.Make (struct
     type t = context
-    let compare c1 c2 =
-      Util.order_concat [Pervasives.compare c1.cexp c2.cexp;
-                         Env.compare c1.cenv c2.cenv;
-                         Addr.compare c1.caddr c2.caddr;
-                         Pervasives.compare c1.cchange c2.cchange;
-                         Time.compare c1.ctime c2.ctime]
-end)
+    let compare = compare_contexts
+ end)
 
 type thread_count = One | Infinity
 module ThreadCountMap = ThreadMap

@@ -1,5 +1,8 @@
-open Pcesk_types
+open Util
 open Graph
+open Cesk_types
+open Pcesk_types
+open Types
 
 let id = ref 0
 let new_id () =
@@ -26,10 +29,16 @@ module GraphNode = struct
 end
 
 module GraphEdge = struct
-  type t = string
-  let compare = Pervasives.compare
+  type t = tid * context
+  let compare (t1, c1) (t2, c2) =
+    order_concat [Pervasives.compare t1 t2;
+                  compare_contexts c1 c2]
   let equal = (=)
-  let default = ""
+  let default = (IntTid (-1), { cexp = Value (AbsUnique Nil);
+                                cenv = Env.Env.empty;
+                                caddr = TagAddr (-1, IntTime (-1));
+                                cchange = Epsilon;
+                                ctime = IntTime (-1) })
 end
 
 module G = Persistent.Digraph.ConcreteBidirectionalLabeled(GraphNode)(GraphEdge)
@@ -44,7 +53,7 @@ let find_node graph id =
 module DotArg =
 struct
   include G
-  let edge_attributes ((_, e, _) : E.t) = [`Label (BatString.escaped e)]
+  let edge_attributes ((_, (tid, ctx), _) : E.t) = [`Label (string_of_tid tid)]
   let default_edge_attributes _ = []
   let get_subgraph _ = None
   let vertex_attributes (pstate : V.t) =

@@ -154,7 +154,11 @@ let step_context pstate tid context =
       step_cesk pstate tid context
 
 let step_contexts pstate (tid, cs) =
-  List.concat (List.map (step_context pstate tid) (ContextSet.elements cs))
+  List.concat (List.map
+                 (fun context ->
+                    List.map (fun ps -> ((tid, context), ps))
+                      (step_context pstate tid context))
+                 (ContextSet.elements cs))
 
 let step pstate =
   let pstate = if !Params.gc then gc pstate else pstate in
@@ -205,13 +209,16 @@ let eval e =
         loop visited finished graph (i+1)
       else match extract_finals pstate with
         | [] ->
-          let pstates = List.map (fun pstate ->
-              if !Params.gc_after then gc pstate else pstate)
+          let pstates = List.map (fun (transition, pstate) ->
+              if !Params.gc_after then
+                (transition, gc pstate)
+              else
+                (transition, pstate))
               (step pstate) in
           let source = G.V.create pstate
-          and dests = List.map G.V.create pstates in
-          let edges = List.map (fun dest -> G.E.create source
-                                   "" dest) dests in
+          and dests = List.map (fun (_, pstate) -> G.V.create pstate) pstates in
+          let edges = List.map (fun (transition, dest) -> G.E.create source
+                                   transition dest) pstates in
           let graph' =
             List.fold_left G.add_edge_e
               (List.fold_left G.add_vertex graph dests) edges in
@@ -222,13 +229,13 @@ let eval e =
           if !Params.verbose >= 1 then begin
             print_string (string_of_pstate "==> " pstate);
             print_newline ();
-            List.iter (fun pstate' ->
+            List.iter (fun (_, pstate') ->
                 print_string (string_of_pstate "    " pstate');
                 print_newline ())
               pstates;
             print_newline ();
           end;
-          Exploration.add todo pstates;
+          Exploration.add todo (List.map snd pstates);
           loop (PStateSet.add pstate visited) finished graph' (i+1)
         | res ->
           loop (PStateSet.add pstate visited) (res @ finished) graph (i+1)
