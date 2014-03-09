@@ -50,6 +50,8 @@ let find_node graph id =
     | None -> None)
     graph None
 
+module GOper = Oper.P(G)
+
 module DotArg =
 struct
   include G
