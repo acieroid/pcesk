@@ -166,7 +166,7 @@ let eval e =
         loop visited finished graph (i+1)
       else match extract_finals pstate with
       | [] ->
-        if List.length (PStateMap.bindings pstate.threads) == 1 then
+        if List.length (ThreadMap.bindings pstate.threads) == 1 then
           (* Only one thread, same as without CPOR *)
           let pstates = List.map (fun (transition, pstate) ->
               if !Params.gc_after then
