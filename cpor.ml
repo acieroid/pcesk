@@ -124,11 +124,23 @@ let rec calc_cv_aux cv extendable =
     calc_cv_aux cv extendable
 
 let calc_cv pstate =
-  let initial =
-    (G.add_vertex G.empty (G.V.create pstate), PStateMap.empty) in
+  let initial tid contexts =
+    let pstates =
+      List.concat
+        (List.map (fun context ->
+            List.map (fun pstate' -> (pstate', context))
+              (step_context pstate tid context))
+            (ContextSet.elements contexts)) in
+    List.fold_left
+      (fun (graph, last) (pstate', context) ->
+         (G.add_edge_e (G.add_vertex graph pstate)
+            (G.E.create pstate (tid, context) pstate'),
+          PStateMap.add pstate' (tid, context) last))
+      (G.empty, PStateMap.empty)
+      pstates in
   let cv =
     ThreadMap.fold
-      (fun tid contexts -> CVMap.add tid initial)
+      (fun tid contexts -> CVMap.add tid (initial tid contexts))
       pstate.threads
       CVMap.empty in
   let extendable =
@@ -162,11 +174,12 @@ let eval e =
     else
       let pstate = Exploration.pick todo in
       let found = PStateSet.mem pstate visited in
-      if found then
+      if found then begin
         loop visited finished graph (i+1)
+      end
       else match extract_finals pstate with
       | [] ->
-        if List.length (ThreadMap.bindings pstate.threads) == 1 then
+        if List.length (ThreadMap.bindings pstate.threads) == 1 then begin
           (* Only one thread, same as without CPOR *)
           let pstates = List.map (fun (transition, pstate) ->
               if !Params.gc_after then
@@ -196,7 +209,7 @@ let eval e =
           end;
           Exploration.add todo (List.map snd pstates);
           loop (PStateSet.add pstate visited) finished graph' (i+1)
-        else
+        end else begin
           (* More than one thread, do the CPOR *)
           let cv = calc_cv pstate in
           let (graph', visited') = CVMap.fold
@@ -210,6 +223,7 @@ let eval e =
               cv
               (graph, visited) in
           loop visited' finished graph' (i+1)
+        end
       | res ->
         loop (PStateSet.add pstate visited) (res @ finished) graph (i+1)
   in
