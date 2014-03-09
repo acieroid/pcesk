@@ -1,3 +1,5 @@
+open Cesk_types
+open Parallel_garbage_collection
 open Pcesk
 open Pcesk_types
 open Pviz
@@ -104,18 +106,21 @@ let rec calc_cv_aux cv extendable =
           (let (g, last) = CVMap.find tid cv in
            let (new_g, new_last) =
              PStateMap.fold
-               (fun pstate (tid, ctx) (l, g) ->
+               (fun pstate (tid, ctx) (gr, l) ->
                   let pstates = step_context pstate tid ctx in
                   List.fold_left
-                    (fun pstate' ->
-                       (PStateMap.add l pstate' tid ctx,
-                        G.add_edge_e (G.E.create pstate (tid, ctx) pstate')
-                          (G.add_vertex pstate' g))))
-               last in
+                    (fun (graph, last) pstate' ->
+                       (G.add_edge_e (G.add_vertex graph pstate')
+                          (G.E.create pstate (tid, ctx) pstate'),
+                        PStateMap.add pstate' (tid, ctx) last))
+                    (g, last)
+                    pstates)
+               last
+               (g, last) in
            (new_g, new_last))
           cv
       else
-        cv
+        cv in
     calc_cv_aux cv extendable
 
 let calc_cv pstate =
@@ -131,4 +136,82 @@ let calc_cv pstate =
       (fun s (k, _) -> TidSet.add k s)
       TidSet.empty
       (ThreadMap.bindings pstate.threads) in
-  TODO
+  calc_cv_aux cv extendable
+
+let eval e =
+  let module Exploration = (val !Params.exploration) in
+  let initial_state = inject e in
+  let a_halt = initial_state.a_halt in
+  let extract_finals pstate =
+    let initial_thread_contexts =
+      ContextSet.elements
+        (ThreadMap.find InitialTid pstate.threads) in
+    List.fold_left (fun acc c ->
+        match c.cexp, c.caddr with
+        | Value result, addr when addr = a_halt ->
+          (result, c.cenv, pstate.pstore) :: acc
+        | _ -> acc)
+      [] initial_thread_contexts
+  and todo = Exploration.create initial_state
+  and interrupted () = match Unix.select [Unix.stdin] [] [] 0. with
+  | (_ :: _, _, _) -> true
+  | _ -> false in
+  let rec loop visited finished graph i =
+    if interrupted () || Exploration.is_empty todo then
+      finished, graph
+    else
+      let pstate = Exploration.pick todo in
+      let found = PStateSet.mem pstate visited in
+      if found then
+        loop visited finished graph (i+1)
+      else match extract_finals pstate with
+      | [] ->
+        if List.length (PStateMap.bindings pstate.threads) == 1 then
+          (* Only one thread, same as without CPOR *)
+          let pstates = List.map (fun (transition, pstate) ->
+              if !Params.gc_after then
+                (transition, gc pstate)
+              else
+                (transition, pstate))
+              (step pstate) in
+          let source = G.V.create pstate
+          and dests = List.map (fun (_, pstate) -> G.V.create pstate) pstates in
+          let edges = List.map (fun (transition, dest) -> G.E.create source
+                                   transition dest) pstates in
+          let graph' =
+            List.fold_left G.add_edge_e
+              (List.fold_left G.add_vertex graph dests) edges in
+          if !Params.progress && i mod 1000 = 0 then begin
+            print_string ("\r" ^ string_of_int (G.nb_vertex graph'));
+            flush_all ()
+          end;
+          if !Params.verbose >= 1 then begin
+            print_string (string_of_pstate "==> " pstate);
+            print_newline ();
+            List.iter (fun (_, pstate') ->
+                print_string (string_of_pstate "    " pstate');
+                print_newline ())
+              pstates;
+            print_newline ();
+          end;
+          Exploration.add todo (List.map snd pstates);
+          loop (PStateSet.add pstate visited) finished graph' (i+1)
+        else
+          (* More than one thread, do the CPOR *)
+          let cv = calc_cv pstate in
+          let (graph', visited') = CVMap.fold
+              (fun tid (g, last) (graph, visited) ->
+                 (PStateMap.iter
+                    (fun pstate (tid, ctx) ->
+                       Exploration.add todo (step_context pstate tid ctx))
+                    last);
+                 (GOper.union graph g,
+                  G.fold_vertex PStateSet.add g visited))
+              cv
+              (graph, visited) in
+          loop visited' finished graph' (i+1)
+      | res ->
+        loop (PStateSet.add pstate visited) (res @ finished) graph (i+1)
+  in
+  let initial_graph = G.add_vertex G.empty (G.V.create initial_state) in
+  loop PStateSet.empty [] initial_graph 0

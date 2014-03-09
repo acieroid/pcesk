@@ -18,6 +18,9 @@ let threads_strong_updates = ref true
 (* Parallelism turned on or not *)
 let parallel = ref false
 
+(* Cartesian partial order reduction turned on or not *)
+let cpor = ref false
+
 (* Remove threads of the state when they halt *)
 let remove_threads = ref false
 
@@ -86,6 +89,8 @@ let speclist = [
    ": turn off strong updates in the store");
   ("-p", Arg.Set parallel,
    ": turn on parallelism with spawn and join (disabled by default)");
+  ("-cpor", Arg.Set cpor,
+   ": turn on cartesian partial order reduction (disabled by default)");
   (* See A Family of Abstract Interpretation for Static Analysis of Concurrent
      Higher Order Programs, p. 11: "It is worth asking whether it is sound in
      just this case to remove the context from the threads. [...]". This

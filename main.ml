@@ -9,7 +9,11 @@ let print_infos time vertex edges =
 
 let eval node =
   if !Params.parallel then begin
-    let res, graph = Pcesk.eval node in
+    let res, graph =
+      if !Params.cpor then
+        Cpor.eval node
+      else
+        Pcesk.eval node in
     BatOption.may (Pviz.output_graph graph) !graph_file;
     close_in !input;
     (res, Pviz.G.nb_vertex graph, Pviz.G.nb_edges graph)
