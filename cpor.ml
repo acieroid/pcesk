@@ -26,6 +26,8 @@ module TidSet = Set.Make(struct
     let compare = Pervasives.compare
   end)
 
+(* TODO: incorporate gc *)
+
 let rec calc_cv_aux cv extendable =
   if TidSet.is_empty extendable then
     (* No more CV can be extended, we computed all the maximal CVs *)
@@ -136,7 +138,7 @@ let calc_cv pstate =
          (G.add_edge_e (G.add_vertex graph pstate)
             (G.E.create pstate (tid, context) pstate'),
           PStateMap.add pstate' (tid, context) last))
-      (G.empty, PStateMap.empty)
+      (G.add_vertex G.empty pstate, PStateMap.empty)
       pstates in
   let cv =
     ThreadMap.fold
@@ -166,8 +168,8 @@ let eval e =
       [] initial_thread_contexts
   and todo = Exploration.create initial_state
   and interrupted () = match Unix.select [Unix.stdin] [] [] 0. with
-  | (_ :: _, _, _) -> true
-  | _ -> false in
+    | (_ :: _, _, _) -> true
+    | _ -> false in
   let rec loop visited finished graph i =
     if interrupted () || Exploration.is_empty todo then
       finished, graph
@@ -178,54 +180,64 @@ let eval e =
         loop visited finished graph (i+1)
       end
       else match extract_finals pstate with
-      | [] ->
-        if List.length (ThreadMap.bindings pstate.threads) == 1 then begin
-          (* Only one thread, same as without CPOR *)
-          let pstates = List.map (fun (transition, pstate) ->
-              if !Params.gc_after then
-                (transition, gc pstate)
-              else
-                (transition, pstate))
-              (step pstate) in
-          let source = G.V.create pstate
-          and dests = List.map (fun (_, pstate) -> G.V.create pstate) pstates in
-          let edges = List.map (fun (transition, dest) -> G.E.create source
-                                   transition dest) pstates in
-          let graph' =
-            List.fold_left G.add_edge_e
-              (List.fold_left G.add_vertex graph dests) edges in
-          if !Params.progress && i mod 1000 = 0 then begin
-            print_string ("\r" ^ string_of_int (G.nb_vertex graph'));
-            flush_all ()
-          end;
-          if !Params.verbose >= 1 then begin
-            print_string (string_of_pstate "==> " pstate);
-            print_newline ();
-            List.iter (fun (_, pstate') ->
-                print_string (string_of_pstate "    " pstate');
-                print_newline ())
-              pstates;
-            print_newline ();
-          end;
-          Exploration.add todo (List.map snd pstates);
-          loop (PStateSet.add pstate visited) finished graph' (i+1)
-        end else begin
-          (* More than one thread, do the CPOR *)
-          let cv = calc_cv pstate in
-          let (graph', visited') = CVMap.fold
-              (fun tid (g, last) (graph, visited) ->
-                 (PStateMap.iter
-                    (fun pstate (tid, ctx) ->
-                       Exploration.add todo (step_context pstate tid ctx))
-                    last);
-                 (GOper.union graph g,
-                  G.fold_vertex PStateSet.add g visited))
-              cv
-              (graph, visited) in
-          loop visited' finished graph' (i+1)
-        end
-      | res ->
-        loop (PStateSet.add pstate visited) (res @ finished) graph (i+1)
+        | [] ->
+          if List.length (ThreadMap.bindings pstate.threads) == 1 then begin
+            (* Only one thread, same as without CPOR *)
+            let pstates = List.map (fun (transition, pstate) ->
+                if !Params.gc_after then
+                  (transition, gc pstate)
+                else
+                  (transition, pstate))
+                (step pstate) in
+            let source = G.V.create pstate
+            and dests = List.map (fun (_, pstate) -> G.V.create pstate) pstates in
+            let edges = List.map (fun (transition, dest) -> G.E.create source
+                                     transition dest) pstates in
+            let graph' =
+              List.fold_left G.add_edge_e
+                (List.fold_left G.add_vertex graph dests) edges in
+            if !Params.progress && i mod 1000 = 0 then begin
+              print_string ("\r" ^ string_of_int (G.nb_vertex graph'));
+              flush_all ()
+            end;
+            if !Params.verbose >= 1 then begin
+              print_string (string_of_pstate "==> " pstate);
+              print_newline ();
+              List.iter (fun (_, pstate') ->
+                  print_string (string_of_pstate "    " pstate');
+                  print_newline ())
+                pstates;
+              print_newline ();
+            end;
+            Exploration.add todo (List.map snd pstates);
+            loop (PStateSet.add pstate visited) finished graph' (i+1)
+          end else begin
+            (* More than one thread, do the CPOR *)
+            let cv = calc_cv pstate in
+            let (graph', visited') = CVMap.fold
+                (fun tid (g, last) (graph, visited) ->
+                   output_graph g ("/tmp/graph-" ^ (string_of_int i) ^ "-" ^
+                                   (string_of_tid tid) ^ ".dot");
+                   (PStateMap.iter
+                      (fun pstate (tid, ctx) ->
+                         let pstates = step_context pstate tid ctx in
+                         print_string (string_of_pstate "==> " pstate);
+                         print_newline ();
+                         List.iter (fun pstate' ->
+                             print_string (string_of_pstate "    " pstate');
+                             print_newline ())
+                           pstates;
+                         print_newline ();
+                         Exploration.add todo pstates)
+                      last);
+                   (GOper.union graph g,
+                    G.fold_vertex PStateSet.add g visited))
+                cv
+                (graph, visited) in
+            loop visited' finished graph' (i+1)
+          end
+        | res ->
+          loop (PStateSet.add pstate visited) (res @ finished) graph (i+1)
   in
   let initial_graph = G.add_vertex G.empty (G.V.create initial_state) in
   loop PStateSet.empty [] initial_graph 0
