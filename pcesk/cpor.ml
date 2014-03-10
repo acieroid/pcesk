@@ -6,7 +6,12 @@ open Pviz
 open Types
 
 let step_context' pstate t c =
-  List.fold_left (fun s x -> PStateSet.add x s) PStateSet.empty
+  List.fold_left
+    (fun s pstate ->
+       PStateSet.add
+         (if !Params.gc then gc pstate else pstate)
+         s)
+    PStateSet.empty
     (step_context pstate t c)
 
 let are_independent pstate t1 c1 t2 c2 =
@@ -25,8 +30,6 @@ module TidSet = Set.Make(struct
     type t = tid
     let compare = Pervasives.compare
   end)
-
-(* TODO: incorporate gc *)
 
 let rec calc_cv_aux cv extendable =
   if TidSet.is_empty extendable then
