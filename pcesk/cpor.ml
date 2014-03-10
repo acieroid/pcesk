@@ -180,6 +180,7 @@ let eval e =
       let pstate = Exploration.pick todo in
       let found = PStateSet.mem pstate visited in
       if found then begin
+        print_string "state found"; print_newline ();
         loop visited finished graph (i+1)
       end
       else match extract_finals pstate with
@@ -221,8 +222,8 @@ let eval e =
                 (fun tid (g, last) (graph, visited) ->
                    output_graph g ("/tmp/graph-" ^ (string_of_int i) ^ "-" ^
                                    (string_of_tid tid) ^ ".dot");
-                   (PStateMap.iter
-                      (fun pstate (tid, ctx) ->
+                   let visited = (PStateMap.fold
+                      (fun pstate (tid, ctx) visited ->
                          let pstates = step_context pstate tid ctx in
                          print_string (string_of_pstate "==> " pstate);
                          print_newline ();
@@ -231,15 +232,20 @@ let eval e =
                              print_newline ())
                            pstates;
                          print_newline ();
-                         Exploration.add todo pstates)
-                      last);
+                         Exploration.add todo pstates;
+                         List.fold_left
+                           (fun set pstate -> PStateSet.remove pstate set)
+                           visited pstates)
+                      last
+                      (G.fold_vertex PStateSet.add g visited)) in
                    (GOper.union graph g,
-                    G.fold_vertex PStateSet.add g visited))
+                    visited))
                 cv
                 (graph, visited) in
             loop visited' finished graph' (i+1)
           end
         | res ->
+          print_string "finished"; print_newline ();
           loop (PStateSet.add pstate visited) (res @ finished) graph (i+1)
   in
   let initial_graph = G.add_vertex G.empty (G.V.create initial_state) in
