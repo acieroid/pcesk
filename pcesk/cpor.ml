@@ -5,23 +5,41 @@ open Pcesk_types
 open Pviz
 open Types
 
-let step_context' pstate t c =
-  List.fold_left
-    (fun s pstate ->
-       PStateSet.add
-         (if !Params.gc then gc pstate else pstate)
-         s)
-    PStateSet.empty
-    (step_context pstate t c)
+let step_thread1_ctx pstate t =
+  if ThreadMap.mem t pstate.threads then
+    let contexts = ThreadMap.find t pstate.threads in
+    match ContextSet.elements contexts with
+    | [ctx] -> Some (step_context pstate t ctx, ctx)
+    | _ ->
+      (* We only support CPOR when there is at most one context associated
+         with a thread id. This may be adapted later *)
+      failwith ("More than one context for a tid (got " ^
+                (string_of_int (ContextSet.cardinal contexts)) ^ ")")
+  else
+    None
 
-let are_independent pstate t1 c1 t2 c2 =
-  let step_context_aux t c pstate set =
-    PStateSet.union (step_context' pstate t c) set in
+let step_thread1 pstate t =
+  match step_thread1_ctx pstate t with
+  | None -> []
+  | Some res -> fst res
+
+let step_thread1' pstate t =
+  List.fold_left
+    (fun s pstate' ->
+       PStateSet.add
+         (if !Params.gc then gc pstate' else pstate')
+         s)
+      PStateSet.empty
+      (step_thread1 pstate t)
+
+let are_independent pstate t1 t2 =
+  let step_thread_aux t pstate set =
+    PStateSet.union (step_thread1' pstate t) set in
   PStateSet.compare
-    (PStateSet.fold (step_context_aux t2 c2)
-       (step_context' pstate t1 c1) PStateSet.empty)
-    (PStateSet.fold (step_context_aux t1 c1)
-       (step_context' pstate t2 c2) PStateSet.empty)
+    (PStateSet.fold (step_thread_aux t2)
+       (step_thread1' pstate t1) PStateSet.empty)
+    (PStateSet.fold (step_thread_aux t1)
+       (step_thread1' pstate t2) PStateSet.empty)
   = 0
 
 module CVMap = ThreadMap
@@ -31,6 +49,20 @@ module TidSet = Set.Make(struct
     let compare = Pervasives.compare
   end)
 
+let string_of_extendable extendable =
+  "{" ^ (String.concat ", " (List.map string_of_tid
+                               (TidSet.elements extendable))) ^ "}"
+
+let string_of_cv cv =
+  "{" ^ (String.concat ", \n\n"
+           (List.map (fun (tid, (g, pstates)) ->
+                String.concat "\n"
+                   (List.map (fun pstate ->
+                        (string_of_pstate "    " pstate))
+                          (PStateSet.elements pstates)))
+               (CVMap.bindings cv))) ^ "}"
+  
+
 let rec calc_cv_aux cv extendable =
   if TidSet.is_empty extendable then
     (* No more CV can be extended, we computed all the maximal CVs *)
@@ -38,15 +70,27 @@ let rec calc_cv_aux cv extendable =
   else
     (* Pick any tid in extendable *)
     let tid = TidSet.min_elt extendable in
+    print_string ("Computing CV for thread " ^ (string_of_tid tid));
+    print_newline ();
+(*    print_string "CV: "; print_newline ();
+    print_string (string_of_cv cv); print_newline (); *)
     let cont, cv, extendable =
       (* For every state in last(CV[tid]) *)
-      PStateMap.fold
-        (fun pstate (_tid, context) (cont, cv, extendable) ->
+      PStateSet.fold
+        (fun pstate (cont, cv, extendable) ->
+           print_string "Picked pstate in last(CV[tid])";
+           print_newline ();
+           print_string (string_of_pstate "    " pstate);
+           print_newline ();
            if cont then
-             (* for every last (pstate, context) computed by the transition *)
-             let s' = step_context' pstate tid context in
+             (* for every new pstate computed by the transition *)
+             let s' = step_thread1' pstate tid in
              PStateSet.fold
                (fun pstate' (cont, cv, extendable) ->
+                  print_string "Picked pstate in new last(CV[tid])";
+                  print_newline ();
+                  print_string (string_of_pstate "    " pstate');
+                  print_newline ();
                   if cont then
                     (* if the transition is not independent from a transition
                        in one of the other CVs (except in the `last` component),
@@ -55,15 +99,19 @@ let rec calc_cv_aux cv extendable =
                       CVMap.for_all
                         (fun tid' (g, last) ->
                            G.fold_edges_e
-                             (fun (ps, (_, ctx), ps') indep ->
+                             (fun (ps, (tid, ctx), ps') indep ->
+                                print_string (string_of_context ctx);
+                                print_newline ();
                                 indep &&
-                                (PStateMap.mem ps' last ||
+                                (PStateSet.mem ps' last ||
                                  (compare_pstates pstate' ps != 0 ||
-                                  are_independent pstate' tid context tid' ctx)))
+                                  are_independent pstate' tid tid')))
                              g
                              true)
                         cv
                     in
+                    print_string ("indep: " ^ (string_of_bool indep));
+                    print_newline ();
                     if not indep then
                       (false, cv, TidSet.remove tid extendable)
                     else
@@ -76,24 +124,29 @@ let rec calc_cv_aux cv extendable =
                                extendable
                              else
                                let indep =
-                                 PStateMap.for_all
-                                   (fun ps (tid, ctx) ->
-                                      compare_pstates pstate' ps = 0 &&
-                                      are_independent pstate' tid context tid' ctx)
+                                 PStateSet.for_all
+                                   (fun ps ->
+                                      compare_pstates pstate' ps != 0 ||
+                                      are_independent pstate' tid tid')
                                    last in
                                if indep then
                                  extendable
-                               else
-                                 TidSet.remove tid (TidSet.remove tid' extendable))
+                               else begin
+                                 print_string ("Removing tid from extendable " ^ (string_of_tid tid'));
+                                 print_newline ();
+                                 TidSet.remove tid (TidSet.remove tid' extendable)
+                               end)
                           cv
                           extendable in
                       (* if the new state is already present, this CV is
                          infinite and we can stop computing it *)
                       let extendable = 
                         let (g, last) = CVMap.find tid cv in
-                        if G.mem_vertex g pstate' then
+                        if G.mem_vertex g pstate' then begin
+                          print_string ("Removing tid from extendable " ^ (string_of_tid tid));
+                          print_newline ();
                           TidSet.remove tid extendable
-                        else
+                        end else
                           extendable in
                       (cont, cv, extendable)
                   else
@@ -105,43 +158,59 @@ let rec calc_cv_aux cv extendable =
         (snd (CVMap.find tid cv))
         (true, cv, extendable) in
     (* Finally, we add the next transition and state to the CV *)
-    let cv =
+    print_string "Adding next transitions";
+    print_newline ();
+    let cv, extendable =
       if cont then
-        CVMap.add tid
-          (let (g, last) = CVMap.find tid cv in
-           let (new_g, new_last) =
-             PStateMap.fold
-               (fun pstate (tid, ctx) (gr, l) ->
-                  let pstates = step_context pstate tid ctx in
-                  List.fold_left
-                    (fun (graph, last) pstate' ->
-                       (G.add_edge_e (G.add_vertex graph pstate')
-                          (G.E.create pstate (tid, ctx) pstate'),
-                        PStateMap.add pstate' (tid, ctx) last))
-                    (g, last)
-                    pstates)
-               last
-               (g, last) in
-           (new_g, new_last))
-          cv
+        let (g, last) = CVMap.find tid cv in
+        let (new_g, new_last) =
+          PStateSet.fold
+            (fun pstate (gr, l) ->
+               print_string ("Adding next of " ^ (string_of_tid tid) ^ "\n");
+               print_string (string_of_pstate "--> " pstate);
+               print_newline ();
+               print_newline ();
+               match step_thread1_ctx pstate tid with
+               | Some (pstates, ctx) ->
+                 List.fold_left
+                   (fun (graph, last) pstate' ->
+                      print_string (string_of_pstate "--- " pstate');
+                      print_newline ();
+                      (G.add_edge_e (G.add_vertex graph pstate')
+                         (G.E.create pstate (tid, ctx) pstate'),
+                       PStateSet.add pstate' last))
+                   (gr, l)
+                   pstates
+               | None ->
+                 (* TODO: remove from extendable *)
+                 (g, l))
+            last
+            (g, PStateSet.empty) in
+        (CVMap.add tid (new_g, new_last) cv,
+         if PStateSet.is_empty new_last then
+           TidSet.remove tid extendable
+         else
+           extendable)
       else
-        cv in
+        (cv, extendable) in
     calc_cv_aux cv extendable
 
 let calc_cv pstate =
   let initial tid contexts =
     let pstates =
-      List.concat
-        (List.map (fun context ->
-            List.map (fun pstate' -> (pstate', context))
-              (step_context pstate tid context))
-            (ContextSet.elements contexts)) in
+      match ContextSet.elements contexts with
+      | [] -> []
+      | [ctx] ->
+        List.map (fun pstate -> pstate, ctx)
+          (step_thread1 pstate tid)
+      | _ -> failwith ("More than one context for tid " ^
+                       (string_of_tid tid)) in
     List.fold_left
       (fun (graph, last) (pstate', context) ->
          (G.add_edge_e (G.add_vertex graph pstate)
             (G.E.create pstate (tid, context) pstate'),
-          PStateMap.add pstate' (tid, context) last))
-      (G.add_vertex G.empty pstate, PStateMap.empty)
+          PStateSet.add pstate' last))
+      (G.add_vertex G.empty pstate, PStateSet.empty)
       pstates in
   let cv =
     ThreadMap.fold
@@ -153,6 +222,11 @@ let calc_cv pstate =
       (fun s (k, _) -> TidSet.add k s)
       TidSet.empty
       (ThreadMap.bindings pstate.threads) in
+  print_string "CV:"; print_newline ();
+  print_string (string_of_cv cv);
+  print_newline ();
+  print_string ("extendable:" ^ (string_of_extendable extendable));
+  print_newline ();
   calc_cv_aux cv extendable
 
 let eval e =
@@ -186,6 +260,7 @@ let eval e =
       else match extract_finals pstate with
         | [] ->
           if List.length (ThreadMap.bindings pstate.threads) == 1 then begin
+            print_string "normal step"; print_newline ();
             (* Only one thread, same as without CPOR *)
             let pstates = List.map (fun (transition, pstate) ->
                 if !Params.gc_after then
@@ -216,15 +291,16 @@ let eval e =
             Exploration.add todo (List.map snd pstates);
             loop (PStateSet.add pstate visited) finished graph' (i+1)
           end else begin
+            print_string "CPOR "; print_int i; print_newline ();
             (* More than one thread, do the CPOR *)
             let cv = calc_cv pstate in
             let (graph', visited') = CVMap.fold
                 (fun tid (g, last) (graph, visited) ->
                    output_graph g ("/tmp/graph-" ^ (string_of_int i) ^ "-" ^
                                    (string_of_tid tid) ^ ".dot");
-                   let visited = (PStateMap.fold
-                      (fun pstate (tid, ctx) visited ->
-                         let pstates = step_context pstate tid ctx in
+                   let visited = (PStateSet.fold
+                      (fun pstate visited ->
+                         let pstates = step_thread1 pstate tid in
                          print_string (string_of_pstate "==> " pstate);
                          print_newline ();
                          List.iter (fun pstate' ->
