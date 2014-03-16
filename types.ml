@@ -67,7 +67,7 @@ let string_of_time = function
                                  (List.map Ast.string_of_node l)) ^ "]"
 
 let string_of_tid = function
-  | InitialTid -> "main"
+  | InitialTid -> "1"
   | IntTid n -> (string_of_int n)
   | TagTid (n, t) -> (string_of_int n) ^ (string_of_time t)
 
