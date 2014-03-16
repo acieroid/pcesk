@@ -57,25 +57,25 @@ let compare_pstates_no_subsumption s1 s2 =
 
 
 let compare_pstates s1 s2 =
-      (* If two states are only different in their store, and the first state's
-        store subsumes the second, then they are considered as equal (since all
-        the behaviours found by exploring from the second state will be already
-        found by exploring the first one). *)
-      if !Params.subsumption then
-        let s1_without_store = { s1 with pstore = Store.empty }
-        and s2_without_store = { s2 with pstore = Store.empty } in
-        let cmp = compare_pstates_no_subsumption s1_without_store s2_without_store
-        in
-        match cmp, Store.subsumes s1.pstore s2.pstore with
-        | 0, true -> 0
-        | 0, false -> Store.compare s1.pstore s2.pstore
-        | n, _ -> n
-      else
-        compare_pstates_no_subsumption s1 s2
+  (* If two states are only different in their store, and the first state's
+     store subsumes the second, then they are considered as equal (since all
+     the behaviours found by exploring from the second state will be already
+     found by exploring the first one). *)
+  if !Params.subsumption then
+    let s1_without_store = { s1 with pstore = Store.empty }
+    and s2_without_store = { s2 with pstore = Store.empty } in
+    let cmp = compare_pstates_no_subsumption s1_without_store s2_without_store
+    in
+    match cmp, Store.subsumes s1.pstore s2.pstore with
+    | 0, true -> 0
+    | 0, false -> Store.compare s1.pstore s2.pstore
+    | n, _ -> n
+  else
+    compare_pstates_no_subsumption s1 s2
 
 module PStateOrdered = struct
-    type t = pstate
-    let compare = compare_pstates
+  type t = pstate
+  let compare = compare_pstates
 end
 
 (** String conversions *)

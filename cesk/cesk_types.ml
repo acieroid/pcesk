@@ -28,7 +28,7 @@ type state = {
 }
 
 (** State comparison *)
-let compare_states s1 s2 =
+let compare_states_no_subsumption s1 s2 =
   Util.order_concat [Pervasives.compare s1.exp s2.exp;
                      Env.compare s1.env s2.env;
                      Store.compare s1.store s2.store;
@@ -36,21 +36,23 @@ let compare_states s1 s2 =
                      Pervasives.compare s1.change s2.change;
                      Time.compare s1.time s2.time]
 
+let compare_states s1 s2 =
+  (* See explanation in pcesk_types.ml *)
+  if !Params.subsumption then
+    let s1_without_store = { s2 with store = Store.empty }
+    and s2_without_store = { s1 with store = Store.empty } in
+    let cmp = compare_states_no_subsumption s1_without_store s2_without_store
+    in
+    match cmp, Store.subsumes s1.store s2.store with
+    | 0, true -> 0
+    | 0, false -> Store.compare s1.store s2.store
+    | n, _ -> n
+  else
+    compare_states_no_subsumption s1 s2
+
 module StateOrdered = struct
-    type t = state
-    let compare x y =
-      (* See explanation in pcesk_types.ml *)
-      if !Params.subsumption then
-        let x_without_store = { x with store = Store.empty }
-        and y_without_store = { y with store = Store.empty } in
-        let cmp = compare_states x_without_store y_without_store
-        in
-        match cmp, Store.subsumes x.store y.store with
-        | 0, true -> 0
-        | 0, false -> Store.compare x.store y.store
-        | n, _ -> n
-      else
-        compare_states x y
+  type t = state
+  let compare = compare_states
 end
 
 (** Print differences between states *)
