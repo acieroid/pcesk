@@ -25,7 +25,7 @@ module GraphNode = struct
   type t = pstate
   let compare = compare_pstates
   let hash = Hashtbl.hash
-  let equal = (=)
+  let equal p1 p2 = compare_pstates p1 p2 == 0
 end
 
 module GraphEdge = struct
@@ -33,7 +33,7 @@ module GraphEdge = struct
   let compare (t1, c1) (t2, c2) =
     order_concat [Pervasives.compare t1 t2;
                   compare_contexts c1 c2]
-  let equal = (=)
+  let equal e1 e2 = compare e1 e2 == 0
   let default = (IntTid (-1), { cexp = Value (AbsUnique Nil);
                                 cenv = Env.Env.empty;
                                 caddr = TagAddr (-1, IntTime (-1));

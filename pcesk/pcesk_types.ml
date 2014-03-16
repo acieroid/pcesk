@@ -48,31 +48,34 @@ let context_set_of_list l =
   context_set_of_list' l ContextSet.empty
 
 (** State comparison *)
-let compare_pstates s1 s2 =
+let compare_pstates_no_subsumption s1 s2 =
   Util.order_concat [ThreadMap.compare ContextSet.compare s1.threads s2.threads;
                      Pervasives.compare s1.nthreads s2.nthreads;
                      Store.compare s1.pstore s2.pstore;
                      ThreadMap.compare Pervasives.compare s1.tcount s2.tcount;
                      Pervasives.compare s1.a_halt s2.a_halt]
 
-module PStateOrdered = struct
-    type t = pstate
-    let compare x y =
+
+let compare_pstates s1 s2 =
       (* If two states are only different in their store, and the first state's
         store subsumes the second, then they are considered as equal (since all
         the behaviours found by exploring from the second state will be already
         found by exploring the first one). *)
       if !Params.subsumption then
-        let x_without_store = { x with pstore = Store.empty }
-        and y_without_store = { y with pstore = Store.empty } in
-        let cmp = compare_pstates x_without_store y_without_store
+        let s1_without_store = { s1 with pstore = Store.empty }
+        and s2_without_store = { s2 with pstore = Store.empty } in
+        let cmp = compare_pstates_no_subsumption s1_without_store s2_without_store
         in
-        match cmp, Store.subsumes x.pstore y.pstore with
+        match cmp, Store.subsumes s1.pstore s2.pstore with
         | 0, true -> 0
-        | 0, false -> Store.compare x.pstore y.pstore
+        | 0, false -> Store.compare s1.pstore s2.pstore
         | n, _ -> n
       else
-        compare_pstates x y
+        compare_pstates_no_subsumption s1 s2
+
+module PStateOrdered = struct
+    type t = pstate
+    let compare = compare_pstates
 end
 
 (** String conversions *)
