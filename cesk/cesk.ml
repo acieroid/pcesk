@@ -87,7 +87,7 @@ let cas_case x e_old env store =
     (* x can't be equal to v_old *)
     `NotEqual
   else match Lattice.conc value, Lattice.conc v_old with
-    | [v1], [v2] when v1 = v2 ->
+    | [AbsUnique v1], [AbsUnique v2] when v1 = v2 ->
       (* x is equal to v_old *)
       `Equal
     | _ ->
