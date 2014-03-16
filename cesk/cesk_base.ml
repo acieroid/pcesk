@@ -18,7 +18,7 @@ let env_extend env name a =
 (** Store *)
 
 let print_store store =
-  print_string ("store(" ^ (Store.string_of_store store) ^ ")\n")
+  print_string (Store.string_of_store store)
 
 let empty_store = Store.empty
 
