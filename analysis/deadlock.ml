@@ -58,25 +58,25 @@ let has_cycle_to_itself graph initial =
      Implementation inspired from ocamlgraph's Travers.has_cycle. *)
   let todo = Dfs.create initial in
   let rec aux i visited =
-    let pstate = Dfs.pick todo in
-    if i > 0 && compare_pstates initial pstate == 0 then
-      (* Found a cycle *)
-      (* TODO: we could extract the cycle to produce a trace that leads
-         to a deadlock *)
-      true
-    else if PStateSet.mem pstate visited then
-      (* State already visited, skip it *)
-      aux (succ i) visited
-    else if Dfs.is_empty todo then
+    if Dfs.is_empty todo then
       (* Finished, no cycle *)
       false
-    else begin
-      (* New state, different from the initial one, add its successors
-         and continue visiting *)
-      Dfs.add todo (G.succ graph pstate);
-      aux (succ i) (PStateSet.add pstate visited) end in
+    else
+      let pstate = Dfs.pick todo in
+      if i > 0 && compare_pstates initial pstate == 0 then
+        (* Found a cycle *)
+        (* TODO: we could extract the cycle to produce a trace that leads
+           to a deadlock *)
+        true
+      else if PStateSet.mem pstate visited then
+        (* State already visited, skip it *)
+        aux (succ i) visited
+      else begin
+        (* New state, different from the initial one, add its successors
+           and continue visiting *)
+        Dfs.add todo (G.succ graph pstate);
+        aux (succ i) (PStateSet.add pstate visited) end in
   aux 0 PStateSet.empty
-    
 
 let deadlocks graph =
   (* A deadlock is present if we have a cycle from a pstate to itself,
