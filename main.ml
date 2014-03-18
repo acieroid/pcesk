@@ -89,6 +89,25 @@ let detect_conflicts ?handle_cas:(handle_cas=true) node =
     raise (BadArguments
            "cannot do conflict detection without parallelism turned on (use -p)")
 
+let detect_deadlocks node =
+  if !Params.parallel then
+    let _, graph= Pcesk.eval node in
+    let deadlocks = Deadlock.deadlocks graph in
+    match deadlocks with
+    | [] -> print_string "No deadlocks detected\n"
+    | l ->
+      print_string ((string_of_int (List.length l)) ^
+                    " possible deadlocks detected, starting at the following nodes:\n");
+      List.iter (fun (pstate, tid) ->
+          print_string (Pcesk_types.string_of_pstate "" pstate);
+          print_newline ();
+          print_string ("(on tid " ^ (string_of_tid tid) ^ ")");
+          print_newline ())
+        l
+  else
+    raise (BadArguments
+            "cannot do deadlock detection without parallelism turned on (use -p)")
+
 let compare_states node = match !Params.tag1, !Params.tag2 with
   | Some t1, Some t2 ->
     begin if !Params.parallel then
@@ -128,7 +147,7 @@ let () =
       | Params.SetConflicts -> detect_conflicts ~handle_cas:false
       | Params.Conflicts -> detect_conflicts ~handle_cas:true
       | Params.RaceDetection -> failwith "TODO"
-      | Params.DeadlockDetection -> failwith "TODO"
+      | Params.DeadlockDetection -> detect_deadlocks
       | Params.CompareStates -> compare_states in
     let node = Parser.parse (Lexer.lex !input) in
     action node

@@ -1,5 +1,4 @@
 open Cesk_types
-open Env
 open Exploration
 open Pcesk
 open Pcesk_types
@@ -68,6 +67,9 @@ let has_cycle_to_itself graph initial =
     else if PStateSet.mem pstate visited then
       (* State already visited, skip it *)
       aux (succ i) visited
+    else if Dfs.is_empty todo then
+      (* Finished, no cycle *)
+      false
     else begin
       (* New state, different from the initial one, add its successors
          and continue visiting *)
@@ -76,7 +78,7 @@ let has_cycle_to_itself graph initial =
   aux 0 PStateSet.empty
     
 
-let deadlock graph =
+let deadlocks graph =
   (* A deadlock is present if we have a cycle from a pstate to itself,
      and if that pstate evaluates a `cas` and never results in a
      successful evaluation of the `cas` (ie. there is no #t state in its

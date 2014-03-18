@@ -126,7 +126,7 @@ let speclist = [
                             | "mhp" -> target := MHP
                             | "cmp" -> target := CompareStates
                             | "race" -> target := RaceDetection
-                            | "deadlock" -> target := DeadlockDetection
+                            | "deadlocks" -> target := DeadlockDetection
                             | "setconflicts" -> target := SetConflicts
                             | "conflicts" -> target := Conflicts
                             | t -> failwith ("Invalid target: " ^ t))),
