@@ -57,7 +57,15 @@ let tag1 = ref None
 let tag2 = ref None
 
 (* Possible targets *)
-type target = PrintAST | Run | MHP | RaceDetection | CompareStates
+type target =
+  | PrintAST
+  | Run
+  | MHP
+  | SetConflicts
+  | Conflicts
+  | RaceDetection
+  | DeadlockDetection
+  | CompareStates
 
 (* Current target *)
 let target = ref Run
@@ -111,13 +119,16 @@ let speclist = [
    ": tag corresponding to the first expression used for MHP analysis");
   ("-t2", Arg.Int (fun t -> tag2 := Some t),
    ": tag corresponding to the second expression used for MHP analysis");
-  ("-target", Arg.Symbol (["run"; "ast"; "mhp"; "cmp"; "race"],
+  ("-target", Arg.Symbol (["run"; "ast"; "mhp"; "cmp"; "race"; "deadlocks"; "setconflicts"; "conflicts"],
                           (function
                             | "run" -> target := Run
                             | "ast" -> target := PrintAST
                             | "mhp" -> target := MHP
                             | "cmp" -> target := CompareStates
                             | "race" -> target := RaceDetection
+                            | "deadlock" -> target := DeadlockDetection
+                            | "setconflicts" -> target := SetConflicts
+                            | "conflicts" -> target := Conflicts
                             | t -> failwith ("Invalid target: " ^ t))),
    ": action to do with the input (run by default)");
   ("-e", Arg.Symbol (["bfs"; "dfs"],

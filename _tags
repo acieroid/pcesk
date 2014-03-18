@@ -1,1 +1,1 @@
-<ast> or <cesk> or <address> or <env> or <store> or <lattice> or <test> or <pcesk> : include
+<ast> or <cesk> or <address> or <env> or <store> or <lattice> or <test> or <pcesk> or <analysis> : include

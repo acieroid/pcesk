@@ -7,6 +7,7 @@ S ast
 S lattice
 S test
 S pcesk
+S analysis
 B _build
 B _build/address
 B _build/cesk
@@ -16,6 +17,7 @@ B _build/ast
 B _build/lattice
 B _build/test
 B _build/pcesk
+B _build/analysis
 PKG ocamlgraph
 PKG oUnit
 PKG batteries
