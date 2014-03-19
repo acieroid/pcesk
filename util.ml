@@ -6,7 +6,7 @@ module StringSet = Set.Make(struct
 module IntSet = Set.Make(struct
     type t = int
     let compare = Pervasives.compare
-end)
+  end)
 
 let string_set_of_list l =
   List.fold_left (fun set x -> StringSet.add x set) StringSet.empty l
@@ -24,8 +24,8 @@ let debug s =
 let flatmap f l =
   List.flatten (List.map f l)
 
-(* composition law in the ordering monoid (whose possible values are
-  "negative integer", "zero", "positive integer") *)
+(* composition law in the ordering monoid (whose values are "negative integer",
+   "zero", "positive integer") *)
 let order_comp x y =
   if x = 0 then y else x
 

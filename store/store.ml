@@ -1,12 +1,11 @@
 open Address
 open Lattice
 
-(* The store binds addresses to (possibly multiple) abstract values,
-   stored inside a lattice *)
+(* The store binds addresses to (possibly multiple) abstract values, stored
+ * inside a lattice *)
 module type STORE =
   functor (Addr : ADDRESS) ->
-  functor (Lattice : LATTICE) ->
-  sig
+  functor (Lattice : LATTICE) -> sig
     type content = Lattice.t
     type t
 
@@ -51,8 +50,7 @@ module type STORE =
 (* Implementation of store using OCaml's Map *)
 module Store : STORE =
   functor (Addr : ADDRESS) ->
-  functor (Lattice : LATTICE) ->
-  struct
+  functor (Lattice : LATTICE) -> struct
 
     type content = Lattice.t
     module StoreMap = Map.Make(Addr)
@@ -111,10 +109,10 @@ module Store : STORE =
       StoreMap.compare Pervasives.compare s1 s2
 
     let subsumes s1 s2 =
-      (* TODO: a way to improve performances of this function would be to
-         define our own map whose 'compare' function would be very similar
-         to Map.S.compare, but would have the properties we want when a key
-         exists in only one of the two maps *)
+      (* TODO: a way to improve performances of this function would be todefine
+       * our own map whose 'compare' function would be very similarto
+       * Map.S.compare, but would have the properties we want when a key exists
+       * in only one of the two maps *)
       let merge_val _ v1 v2 =
         (* TODO: what about freshness? *)
         match v1, v2 with
@@ -124,10 +122,10 @@ module Store : STORE =
         | None, Some _ -> v2
         | Some _, None -> None
         | None, None -> None in
-      (* Merge the two store by removing keys that either have equal values,
-         or whose value in s1 subsumes value in s2. If the store resulting
-         from this merge is empty, it means that all the values in s2 are
-         subsumed in s2. *)
+      (* Merge the two store by removing keys that either have equal values, or
+       * whose value in s1 subsumes value in s2. If the store resulting fromthis
+       * merge is empty, it means that all the values in s2 are subsumedin s2.
+       *)
       StoreMap.is_empty (StoreMap.merge merge_val s1 s2)
 
     let size store =

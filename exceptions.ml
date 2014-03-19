@@ -1,8 +1,8 @@
 open Types
 
-(* Very few exceptions are used since most of the time, when an exception
-   would occur in a normal execution of the program, we just don't create
-   a successor state instead of raising an exception *)
+(* Very few exceptions are used since most of the time, when an exception would
+ * occur in a normal execution of the program, we just don't create a successor
+ * state instead of raising an exception *)
 
 exception NotYetImplemented
 exception Malformed of string * Ast.node

@@ -39,9 +39,9 @@ let test_multiple_calls ctx =
 
 let test_recursive_calls ctx =
   (* TODO: I don't know why, but there is a "bad file descriptor" exception
-     before lexing the string "done" when reading from count.scm, and only
-     when it is made from the test suite (running with -i input/count.scm works
-     perfectly). *)
+   * before lexing the string "done" when reading from count.scm, and only when
+   * it is made from the test suite (running with -i input/count.scm works
+   * perfectly). *)
   "(letrec ((count (lambda (n)
                   (if (= n 0)
                     \"done\"
@@ -53,10 +53,10 @@ let test_fibo ctx =
   "fib.scm" $=> AbsInteger
 
 let test_widen ctx =
-  (* If the CESK machine does not widen the values at a certain points,
-     this example will keep running, with values staying at the same
-     "level" of the lattice, but with different values (in case the
-     lattice as an infinite width) *)
+  (* If the CESK machine does not widen the values at a certain points, this
+   * example will keep running, with values staying at the same "level" of the
+   * lattice, but with different values (in case thelattice as an infinite
+   * width) *)
   "widen.scm" $=> AbsInteger
 
 let test_church_numerals ctx =
@@ -116,21 +116,21 @@ let test_rotate ctx =
 
 let suite =
   "Advanced tests" >:::
-    ["multiple calls" >:: test_multiple_calls;
-     "recursive calls" >:: test_recursive_calls;
-     "fibonacci" >:: test_fibo;
-     "widen" >:: test_widen;
-     "church numerals" >:: test_church_numerals;
-     "infinitely recursive functions" >:: test_infinite;
-     "call/cc" >:: test_callcc;
-     "blur" >:: test_blur;
-     (* Parser problem (only when ran from OUnit) *)
-     (* "CPS tak" >:: test_cpstak; *)
-     "eta" >:: test_eta;
-     "gcipd" >:: test_gcipd;
-     "kcfa2" >:: test_kcfa2;
-     "kcfa3" >:: test_kcfa3;
-     "mj09" >:: test_mj09;
-     (* Parser problem *)
-     (* "rotate" >:: test_rotate; *)
-    ]
+  ["multiple calls" >:: test_multiple_calls;
+   "recursive calls" >:: test_recursive_calls;
+   "fibonacci" >:: test_fibo;
+   "widen" >:: test_widen;
+   "church numerals" >:: test_church_numerals;
+   "infinitely recursive functions" >:: test_infinite;
+   "call/cc" >:: test_callcc;
+   "blur" >:: test_blur;
+   (* Parser problem (only when ran from OUnit) *)
+   (* "CPS tak" >:: test_cpstak; *)
+   "eta" >:: test_eta;
+   "gcipd" >:: test_gcipd;
+   "kcfa2" >:: test_kcfa2;
+   "kcfa3" >:: test_kcfa3;
+   "mj09" >:: test_mj09;
+   (* Parser problem *)
+   (* "rotate" >:: test_rotate; *)
+  ]

@@ -22,8 +22,6 @@ let int_comp f = function
   | hd :: tl -> int_op f hd tl
 
 let cons = function
-  (* TODO: abstract lists in some useful way *)
-  (* TODO: use aval *)
   | car :: cdr :: [] -> Some (Aval.aval (Cons (car, cdr)))
   | _ -> None
 
@@ -73,8 +71,8 @@ let primitives : prim list =
    ("<", int_comp value_lt);
    ("<=", int_comp value_lte);
    ("not", function
-     | [hd] -> value_not hd
-     | _ -> None);
+       | [hd] -> value_not hd
+       | _ -> None);
    ("cons", cons);
    ("car", car);
    ("cdr", cdr);

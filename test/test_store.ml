@@ -35,7 +35,7 @@ let test_update ctx =
 
 let test_store_comp op_name op s1 s2 expected =
   assert_equal ~msg:(Store.string_of_store s1 ^ " " ^ op_name ^ " " ^
-                       Store.string_of_store s2)
+                     Store.string_of_store s2)
     ~printer:string_of_bool
     expected (op s1 s2)
 
@@ -62,7 +62,7 @@ let test_subsumes ctx =
 
 let suite =
   "Store tests" >:::
-    ["alloc" >:: test_alloc;
-     "update" >:: test_update;
-     "subsumes" >:: test_subsumes;
-    ]
+  ["alloc" >:: test_alloc;
+   "update" >:: test_update;
+   "subsumes" >:: test_subsumes;
+  ]

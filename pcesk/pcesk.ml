@@ -28,8 +28,8 @@ let remove_thread context tid x y =
   match x, y with
   | Some x, Some y ->
     simplify (ContextSet.union
-            (ContextSet.remove context x)
-            (ContextSet.remove context y))
+                (ContextSet.remove context x)
+                (ContextSet.remove context y))
   | Some x, None | None, Some x ->
     simplify (ContextSet.remove context x)
   | None, None -> None
@@ -48,9 +48,9 @@ let step_spawn pstate tid context tag e =
                    caddr = pstate.a_halt;
                    cchange = Epsilon;
                    (* TODO probably not the best initial time one could find
-                      (since the corresponding address will already be used by
-                      other threads in the store). It should depend on the tid
-                      I guess *)
+                    * (since the corresponding address will already be used by
+                    * other threads in the store). It should depend on the tid
+                    * I guess *)
                    ctime = Time.initial} in
   let context' = {context with
                   cexp = Value (AbsUnique (Tid tid'));
@@ -84,7 +84,8 @@ let step_join pstate tid context tag e =
                let context' =
                  { context with
                    cexp = Value v;
-                   ctime = Cesk.tick (state_of_context context pstate.pstore) } in
+                   ctime = Cesk.tick (state_of_context context pstate.pstore)
+                 } in
                { pstate with
                  threads = ThreadMap.merge (merge_threads context pstate.tcount)
                      pstate.threads
@@ -114,8 +115,8 @@ let step_halt pstate tid context value =
          pstate.threads;
      tcount =
        (* TODO: it is not precised in A Family of... if the count should be
-          decreased only when halted threads are removed, or in general. Here
-          we do it only when halted threads are removed *)
+        * decreased only when halted threads are removed, or in general. Here
+        * we do it only when halted threads are removed *)
        if !Params.remove_threads then
          match ThreadMap.find tid pstate.tcount with
          (* If it was the only thread, remove its count (since it halted) *)
@@ -140,7 +141,7 @@ let step_cesk pstate tid context =
 
 let step_context pstate tid context =
   (* Step a context, creating a (or multiple) new pstate for each stepped
-     context *)
+   * context *)
   match context.cexp with
   | Node ((Ast.Spawn _, _) as n)
   | Node ((Ast.Join _, _) as n) ->
@@ -162,7 +163,8 @@ let step_contexts pstate (tid, cs) =
 
 let step pstate =
   let pstate = if !Params.gc then gc pstate else pstate in
-  List.concat (List.map (step_contexts pstate) (ThreadMap.bindings pstate.threads))
+  List.concat
+    (List.map (step_contexts pstate) (ThreadMap.bindings pstate.threads))
 
 (** Injection *)
 let inject e =
@@ -195,7 +197,7 @@ let eval e =
       [] initial_thread_contexts
   and todo = Exploration.create initial_state
   (* Stop the execution if there are some input on stdin (allows to inspect
-     the current state space) *)
+   * the current state space) *)
   and interrupted () = match Unix.select [Unix.stdin] [] [] 0. with
     | (_ :: _, _, _) -> true
     | _ -> false in

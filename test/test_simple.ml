@@ -21,7 +21,8 @@ let test_lists ctx =
   "nil" => Nil;
   "(cons 1 2)" => Cons (AbsInteger, AbsInteger);
   "(cons 1 (cons 2 nil))" => Cons (AbsInteger,
-                                   AbsUnique (Cons (AbsInteger, AbsUnique Nil)));
+                                   AbsUnique (Cons (AbsInteger,
+                                                    AbsUnique Nil)));
   "(car (cons 1 2))" => Integer 1;
   "(cdr (cons 1 2))" => Integer 2;
   "(cdr (cons 1 nil))" => Nil;
@@ -80,13 +81,13 @@ let test_cas ctx =
 
 let suite =
   "Simple tests" >:::
-    ["atom" >:: test_atoms;
-     "lists" >:: test_lists;
-     "lambda with one argument" >:: test_lambda1;
-     "lambda with two arguments" >:: test_lambda2;
-     "begin" >:: test_begin;
-     "letrec" >:: test_letrec;
-     "if" >:: test_if;
-     "set" >:: test_set;
-     "primitives" >:: test_primitives;
-    ]
+  ["atom" >:: test_atoms;
+   "lists" >:: test_lists;
+   "lambda with one argument" >:: test_lambda1;
+   "lambda with two arguments" >:: test_lambda2;
+   "begin" >:: test_begin;
+   "letrec" >:: test_letrec;
+   "if" >:: test_if;
+   "set" >:: test_set;
+   "primitives" >:: test_primitives;
+  ]

@@ -1,7 +1,6 @@
-(* The container used to do the exploration of the graph.
-   Use in-place modification. *)
-module type EXPLORATION =
-sig
+(* The container used to do the exploration of the graph. Use in-place
+ * modification. *)
+module type EXPLORATION = sig
   type 'a t
   (* Name of this exploration method *)
   val name : string
@@ -16,8 +15,7 @@ sig
 end
 
 (* Depth-first search *)
-module Dfs : EXPLORATION =
-struct
+module Dfs : EXPLORATION = struct
   type 'a t = 'a Stack.t
 
   let name = "dfs"
@@ -37,8 +35,7 @@ struct
 end
 
 (* Breadth-first search *)
-module Bfs : EXPLORATION =
-struct
+module Bfs : EXPLORATION = struct
   type 'a t = 'a Queue.t
 
   let name = "bfs"

@@ -38,9 +38,9 @@ module G = Persistent.Digraph.ConcreteBidirectionalLabeled(GraphNode)(GraphEdge)
 
 let find_node graph id =
   G.fold_vertex (fun pstate -> function
-    | Some state -> Some state
-    | None when node_id pstate = id -> Some pstate
-    | None -> None)
+      | Some state -> Some state
+      | None when node_id pstate = id -> Some pstate
+      | None -> None)
     graph None
 
 module DotArg =

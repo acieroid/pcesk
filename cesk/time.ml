@@ -21,9 +21,9 @@ module AbstractTime : TIME = struct
     (* update the time only at a call site *)
     | ((Ast.Funcall _), _) as node ->
       begin match t with
-      | KCallSitesTime l ->
-        KCallSitesTime (BatList.take !Params.k (node :: l))
-      | _ -> failwith "invalid time"
+        | KCallSitesTime l ->
+          KCallSitesTime (BatList.take !Params.k (node :: l))
+        | _ -> failwith "invalid time"
       end
     | _ -> t
 end

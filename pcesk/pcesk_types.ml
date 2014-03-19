@@ -5,9 +5,9 @@ open Cesk_types
 (** Types and modules *)
 
 module ThreadMap = Map.Make (struct
-  type t = tid
-  let compare = Pervasives.compare
-end)
+    type t = tid
+    let compare = Pervasives.compare
+  end)
 
 type context = {
   cexp : exp;
@@ -27,7 +27,7 @@ let compare_contexts c1 c2 =
 module ContextSet = Set.Make (struct
     type t = context
     let compare = compare_contexts
- end)
+  end)
 
 type thread_count = One | Infinity
 module ThreadCountMap = ThreadMap
@@ -58,9 +58,9 @@ let compare_pstates_no_subsumption s1 s2 =
 
 let compare_pstates s1 s2 =
   (* If two states are only different in their store, and the first state's
-     store subsumes the second, then they are considered as equal (since all
-     the behaviours found by exploring from the second state will be already
-     found by exploring the first one). *)
+   * store subsumes the second, then they are considered as equal (since all
+   * the behaviours found by exploring from the second state will be already
+   * found by exploring the first one). *)
   if !Params.subsumption then
     let s1_without_store = { s1 with pstore = Store.empty }
     and s2_without_store = { s2 with pstore = Store.empty } in
@@ -88,15 +88,15 @@ let string_of_context ?color:(color=true) context =
 
 let string_of_pstate ?color:(color=true) prefix pstate =
   prefix ^ "{" ^
-    (String.concat ("\n" ^ prefix ^ " ")
-       (List.map (fun (tid, cs) ->
-            (string_of_tid tid) ^ ": " ^
-              "{" ^ (String.concat ", " (List.map (string_of_context ~color)
-                                         (ContextSet.elements cs))) ^
-              "}")
-          (ThreadMap.bindings pstate.threads))) ^
-    "}" (* ^
-    prefix ^ (Store.string_of_store pstate.pstore) *)
+  (String.concat ("\n" ^ prefix ^ " ")
+     (List.map (fun (tid, cs) ->
+          (string_of_tid tid) ^ ": " ^
+          "{" ^ (String.concat ", " (List.map (string_of_context ~color)
+                                       (ContextSet.elements cs))) ^
+          "}")
+         (ThreadMap.bindings pstate.threads))) ^
+  "}" (* ^
+         prefix ^ (Store.string_of_store pstate.pstore) *)
 
 (** Conversion between CESK state and PCESK state *)
 

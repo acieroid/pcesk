@@ -66,7 +66,7 @@ let is_retried graph initial tid tag =
 
 let unretried_cas graph =
   (* A cas is not retried if it has a #f successor such that the same cas is
-   * never retried. Such a cas is a source of race conditions *)
+   * never retried.  Such a cas is a source of race conditions *)
   let unretried = BatList.filter_map
       (fun (pstate, tid, tag) ->
          if is_retried graph pstate tid tag then

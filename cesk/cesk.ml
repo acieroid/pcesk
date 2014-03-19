@@ -64,7 +64,7 @@ let step_letrec state tag bindings body = match bindings with
   | ((name, tag), node) :: rest ->
     let a = env_lookup state.env name in
     let kont = LetRecKont (tag, a, rest, body, state.env, state.addr) in
-     [state_push state node kont]
+    [state_push state node kont]
 
 let step_if state tag cond cons alt =
   let kont = IfKont (tag, cons, alt, state.env, state.addr) in
@@ -186,7 +186,7 @@ and step_node state (e, tag) =
     let kont = OperatorKont (tag, rands, state.env, state.addr) in
     [state_push state rator kont]
   | Ast.Cas ((x, _), e_old, e_new) ->
-    step_cas state x e_old e_new 
+    step_cas state x e_old e_new
   | Ast.Spawn _
   | Ast.Join _ -> failwith "Can't deal with parallelism in CESK machine"
 
@@ -382,8 +382,8 @@ let eval e =
             print_string ("==> " ^ (string_of_state state) ^ "\n");
             List.iter (fun state' ->
                 print_string ("    " ^
-                                (string_of_update state state') ^ " -> " ^
-                                (string_of_state state') ^ "\n")) states;
+                              (string_of_update state state') ^ " -> " ^
+                              (string_of_state state') ^ "\n")) states;
             print_newline ();
           end;
           Exploration.add todo states;

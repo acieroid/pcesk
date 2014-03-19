@@ -11,8 +11,8 @@ let step_thread1_ctx pstate t =
     match ContextSet.elements contexts with
     | [ctx] -> Some (step_context pstate t ctx, ctx)
     | _ ->
-      (* We only support CPOR when there is at most one context associated
-         with a thread id. This may be adapted later *)
+      (* We only support CPOR when there is at most one context associated with
+       * a thread id. This may be adapted later *)
       failwith ("More than one context for a tid (got " ^
                 (string_of_int (ContextSet.cardinal contexts)) ^ ")")
   else
@@ -29,8 +29,8 @@ let step_thread1' pstate t =
        PStateSet.add
          (if !Params.gc then gc pstate' else pstate')
          s)
-      PStateSet.empty
-      (step_thread1 pstate t)
+    PStateSet.empty
+    (step_thread1 pstate t)
 
 let are_independent pstate t1 t2 =
   let step_thread_aux t pstate set =
@@ -57,11 +57,11 @@ let string_of_cv cv =
   "{" ^ (String.concat ", \n\n"
            (List.map (fun (tid, (g, pstates)) ->
                 String.concat "\n"
-                   (List.map (fun pstate ->
-                        (string_of_pstate "    " pstate))
-                          (PStateSet.elements pstates)))
+                  (List.map (fun pstate ->
+                       (string_of_pstate "    " pstate))
+                      (PStateSet.elements pstates)))
                (CVMap.bindings cv))) ^ "}"
-  
+
 
 let rec calc_cv_aux cv extendable =
   if TidSet.is_empty extendable then
@@ -81,8 +81,8 @@ let rec calc_cv_aux cv extendable =
                (fun pstate' (cont, cv, extendable) ->
                   if cont then
                     (* if the transition is not independent from a transition
-                       in one of the other CVs (except in the `last` component),
-                       we cannot extend this CV anymore *)
+                     * in one of the other CVs (except in the `last` component),
+                     * we cannot extend this CV anymore *)
                     let indep =
                       CVMap.for_all
                         (fun tid' (g, last) ->
@@ -100,7 +100,7 @@ let rec calc_cv_aux cv extendable =
                       (false, cv, TidSet.remove tid extendable)
                     else
                       (* we also cannot extend every CV which has a last
-                         transition dependent from this transition *)
+                       * transition dependent from this transition *)
                       let extendable =
                         CVMap.fold
                           (fun tid' (g, last) extendable ->
@@ -116,13 +116,14 @@ let rec calc_cv_aux cv extendable =
                                if indep then
                                  extendable
                                else begin
-                                 TidSet.remove tid (TidSet.remove tid' extendable)
+                                 TidSet.remove tid
+                                   (TidSet.remove tid' extendable)
                                end)
                           cv
                           extendable in
                       (* if the new state is already present, this CV is
-                         infinite and we can stop computing it *)
-                      let extendable = 
+                       * infinite and we can stop computing it *)
+                      let extendable =
                         let (g, last) = CVMap.find tid cv in
                         if G.mem_vertex g pstate' then begin
                           TidSet.remove tid extendable
@@ -131,8 +132,8 @@ let rec calc_cv_aux cv extendable =
                       (cont, cv, extendable)
                   else
                     (cont, cv, extendable))
-                 s'
-                 (true, cv, extendable)
+               s'
+               (true, cv, extendable)
            else
              (cont, cv, extendable))
         (snd (CVMap.find tid cv))
@@ -158,13 +159,13 @@ let rec calc_cv_aux cv extendable =
                  (g, l))
             last
             (g, PStateSet.empty) in
-         if PStateSet.is_empty new_last then
-           (* No next state, fill the graph and remove tid from extendable *)
-           (CVMap.add tid (new_g, last) cv,
-            TidSet.remove tid extendable)
-         else
-           (CVMap.add tid (new_g, new_last) cv,
-            extendable)
+        if PStateSet.is_empty new_last then
+          (* No next state, fill the graph and remove tid from extendable *)
+          (CVMap.add tid (new_g, last) cv,
+           TidSet.remove tid extendable)
+        else
+          (CVMap.add tid (new_g, new_last) cv,
+           extendable)
       else
         (cv, extendable) in
     calc_cv_aux cv extendable
@@ -235,9 +236,10 @@ let eval e =
                   (transition, pstate))
                 (step pstate) in
             let source = G.V.create pstate
-            and dests = List.map (fun (_, pstate) -> G.V.create pstate) pstates in
-            let edges = List.map (fun (transition, dest) -> G.E.create source
-                                     transition dest) pstates in
+            and dests = List.map (fun (_, pstate) ->
+                G.V.create pstate) pstates in
+            let edges = List.map (fun (transition, dest) ->
+                G.E.create source transition dest) pstates in
             let graph' =
               List.fold_left G.add_edge_e
                 (List.fold_left G.add_vertex graph dests) edges in
@@ -262,11 +264,11 @@ let eval e =
             let (graph', visited') = CVMap.fold
                 (fun tid (g, last) (graph, visited) ->
                    let visited = (PStateSet.fold
-                      (fun pstate visited ->
-                         Exploration.add todo [pstate];
-                         PStateSet.remove pstate visited)
-                      last
-                      (G.fold_vertex PStateSet.add g visited)) in
+                                    (fun pstate visited ->
+                                       Exploration.add todo [pstate];
+                                       PStateSet.remove pstate visited)
+                                    last
+                                    (G.fold_vertex PStateSet.add g visited)) in
                    (GOper.union graph g,
                     visited))
                 cv

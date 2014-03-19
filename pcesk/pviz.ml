@@ -45,15 +45,14 @@ module G = Persistent.Digraph.ConcreteBidirectionalLabeled(GraphNode)(GraphEdge)
 
 let find_node graph id =
   G.fold_vertex (fun pstate -> function
-    | Some state -> Some state
-    | None when node_id pstate = id -> Some pstate
-    | None -> None)
+      | Some state -> Some state
+      | None when node_id pstate = id -> Some pstate
+      | None -> None)
     graph None
 
 module GOper = Oper.P(G)
 
-module DotArg =
-struct
+module DotArg = struct
   include G
   let edge_attributes ((_, (tid, ctx), _) : E.t) = [`Label (string_of_tid tid)]
   let default_edge_attributes _ = []
@@ -62,8 +61,8 @@ struct
     [`Shape `Box; `Label (BatString.escaped
                             (begin if !Params.verbose >= 2 then
                                 (string_of_int (node_id pstate)) ^ " "
-                             else
-                               ""
+                              else
+                                ""
                             end
                              ^ (string_of_pstate ~color:false "" pstate)))]
   let vertex_name (pstate : V.t) =

@@ -2,8 +2,7 @@ open Types
 
 exception TooAbstracted
 
-module type LATTICE =
-sig
+module type LATTICE = sig
   (* An element of the lattice *)
   type t
 
@@ -22,9 +21,9 @@ sig
   (* Join two lattice elements together *)
   val join : t -> t -> t
 
-  (* Return the list of values corresponding to this lattice element.
-     If elements are too abstracted to be extracted, raise a
-     TooAbstracted exception *)
+  (* Return the list of values corresponding to this lattice element. If
+   * elements are too abstracted to be extracted, raise a TooAbstracted
+   * exception *)
   val conc : t -> value list
 
   (* Compute the intersection of the first lattice value with the

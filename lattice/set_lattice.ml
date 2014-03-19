@@ -2,19 +2,17 @@ open Types
 open Lattice
 open OUnit2
 
-(** TODO: since the number of possible abstract values in the same lattice
-    elements will always be bounded (assuming that the number of closures,
-    primitives and continuations is bounded), we probably don't need to
-    bound the size of the set lattice *)
-module type SIZE =
-sig
+(* TODO: since the number of possible abstract values in the same lattice
+ * elements will always be bounded (assuming that the number of closures,
+ * primitives and continuations is bounded), we probably don't need to bound
+ * the size of the set lattice *)
+module type SIZE = sig
   val size : int
 end
 
-(** TODO: use set instead of list *)
+(* TODO: use set instead of list *)
 module Set_lattice : functor (Size : SIZE) -> LATTICE =
-  functor (Size : SIZE) ->
-  struct
+  functor (Size : SIZE) -> struct
 
     let product l1 l2 =
       let rec product' l1 l2 acc = match l1 with

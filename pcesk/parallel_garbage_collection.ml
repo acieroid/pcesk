@@ -4,7 +4,7 @@ open Pcesk_types
 open Garbage_collection
 
 (* Parallel version of the garbage collector. Reclaim addresses that are not
-   reachable from any of the state, and return the narrowed store *)
+ * reachable from any of the state, and return the narrowed store *)
 let gc pstate =
   let contexts = List.fold_left ContextSet.union ContextSet.empty
       (List.map snd (ThreadMap.bindings pstate.threads)) in

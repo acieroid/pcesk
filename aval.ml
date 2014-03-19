@@ -1,7 +1,6 @@
 open Types
 
-module type AVAL =
-sig
+module type AVAL = sig
   val aval : prim_value -> value
 end
 
@@ -18,11 +17,11 @@ module AbstractAval = struct
         AbsUnique (Cons (car, abstract_cons cdar cddr (length-1)))
       | _ -> AbsUnique (Cons (car, cdr))
   let aval = function
-  (* some values are directly abstracted, to avoid having infinite width
-     in the value lattice *)
-  | String _ -> AbsString
-  | Integer _ -> AbsInteger
-  | Symbol _ -> AbsSymbol
-  | Cons (car, cdr) -> abstract_cons car cdr !Params.list_length
-  | v -> AbsUnique v
+    (* some values are directly abstracted, to avoid having infinite width in
+     * the value lattice *)
+    | String _ -> AbsString
+    | Integer _ -> AbsInteger
+    | Symbol _ -> AbsSymbol
+    | Cons (car, cdr) -> abstract_cons car cdr !Params.list_length
+    | v -> AbsUnique v
 end

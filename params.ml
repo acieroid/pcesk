@@ -28,7 +28,7 @@ let remove_threads = ref false
 let join_strong = ref false
 
 (* If a state is subsumed by another already visited state, it is considered as
-   already visited *)
+ * already visited *)
 let subsumption = ref false
 
 (* Maximum length for abstracted lists *)
@@ -44,7 +44,7 @@ let progress = ref false
 let debug_level = 2
 
 (* Input file *)
-let input = ref stdin
+let input_chan = ref stdin
 
 (* Output for the dot file *)
 let graph_file = ref None
@@ -74,16 +74,16 @@ let target = ref Run
 let exploration = ref (module Bfs : EXPLORATION)
 
 let usage = "usage: " ^ (Sys.argv.(0)) ^
-              " [-v level] [-i input] [-g graph_output] [-k polyvariance]\n" ^
-              "        [-t1 tag] [-t2 tag] [-target target]" ^
-              " [other flags (see below)]"
+            " [-v level] [-i input] [-g graph_output] [-k polyvariance]\n" ^
+            "        [-t1 tag] [-t2 tag] [-target target]" ^
+            " [other flags (see below)]"
 
 let speclist = [
   ("-v", Arg.Set_int verbose,
    ": verbose level (0 by default)");
   ("-progress", Arg.Set progress,
    ": print progress (number of states computed)");
-  ("-i", Arg.String (fun s -> input := open_in s),
+  ("-i", Arg.String (fun s -> input_chan := open_in s),
    ": input file (stdin by default)");
   ("-g", Arg.String (fun s -> graph_file := Some s),
    ": output file for the generated graph (nothing by default)");
@@ -93,7 +93,8 @@ let speclist = [
    ": turn on abstract garbage collection (disabled by default)");
   ("-gc-after", Arg.Set gc_after,
    ": run garbage collection after stepping (disabled by default)");
-  ("-no-store-strong-updates", Arg.Unit (fun () -> store_strong_updates := false),
+  ("-no-store-strong-updates", Arg.Unit
+     (fun () -> store_strong_updates := false),
    ": turn off strong updates in the store");
   ("-p", Arg.Set parallel,
    ": turn on parallelism with spawn and join (disabled by default)");
@@ -108,13 +109,16 @@ let speclist = [
   ("-j", Arg.Set join_strong,
    ": do strong updates when evaluating a join (disabled by default)");
   ("-s", Arg.Set subsumption,
-   ": don't explore state if another state that subsumes them has been explored (disabled by default)");
+   ": don't explore state if another state that subsumes them has been " ^
+   "explored (disabled by default)");
   ("-l", Arg.Set_int list_length,
    ": maximum length of abstracted lists (5 by default)");
-  ("-no-threads-strong-updates", Arg.Unit (fun () -> threads_strong_updates := false),
+  ("-no-threads-strong-updates", Arg.Unit
+     (fun () -> threads_strong_updates := false),
    ": turn off strong updates for the threads");
   ("-quiet", Arg.Set quiet,
-   ": don't print the results nor the parameters used, only the time and graph size (disabled by default)");
+   ": don't print the results nor the parameters used, only the time and " ^
+   "graph size (disabled by default)");
   ("-t1", Arg.Int (fun t -> tag1 := Some t),
    ": tag corresponding to the first expression used for MHP analysis");
   ("-t2", Arg.Int (fun t -> tag2 := Some t),
@@ -158,5 +162,6 @@ let string_of_configuration () =
              string_of_bool_param "join-strong-updates" !join_strong;
              string_of_bool_param "subsumption" !subsumption;
              string_of_bool_param "store-strong-updates" !store_strong_updates;
-             string_of_bool_param "threads-strong-updates" !threads_strong_updates;
+             string_of_bool_param "threads-strong-updates"
+               !threads_strong_updates;
             ])

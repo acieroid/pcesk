@@ -27,7 +27,7 @@ and kont =
   | OperandsKont of int * value * Ast.node list * value list * env * addr
   | BeginKont of int * Ast.node list * env * addr
   | LetRecKont of int * addr * (Ast.var * Ast.node) list *
-                    Ast.node list * env * addr
+                  Ast.node list * env * addr
   | IfKont of int * Ast.node * Ast.node * env * addr
   | SetKont of int * string * env * addr
   | CallccKont of int * env * addr
@@ -80,13 +80,13 @@ let rec string_of_prim_value = function
   | Tid t -> "#<thread " ^ (string_of_tid t) ^ ">"
   | Cons (car, cdr) ->
     "(" ^ (string_of_value car) ^ " . " ^
-      (string_of_value cdr) ^")"
+    (string_of_value cdr) ^")"
   | Nil -> "()"
   | Unspecified -> "#<unspecified>"
   | Closure ((args, body), _) ->
     "#<closure (lambda (" ^ (String.concat " "
-                       (List.map fst args)) ^ ") " ^
-      (Ast.string_of_nodes " " body) ^ ")>"
+                               (List.map fst args)) ^ ") " ^
+    (Ast.string_of_nodes " " body) ^ ")>"
   | Primitive name -> "#<primitive " ^ name ^ ">"
   | Kont k -> "#<continuation " ^ (string_of_kont k) ^ ">"
 
@@ -123,7 +123,7 @@ end
 module AddressSet = Set.Make(struct
     type t = addr
     let compare = Pervasives.compare
-end)
+  end)
 
 let string_of_address_set set =
   "{" ^ (String.concat ", " (List.map Addr.string_of_address

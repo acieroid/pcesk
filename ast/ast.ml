@@ -26,20 +26,21 @@ let rec string_of_exp ?tags:(tags=false) = function
   | Boolean false -> "#f"
   | Nil -> "nil"
   | Funcall (f, args) ->
-    "(" ^ (string_of_node ~tags f) ^ " " ^ (string_of_nodes ~tags " " args) ^ ")"
+    "(" ^ (string_of_node ~tags f) ^ " " ^ (string_of_nodes ~tags " " args) ^
+    ")"
   | Lambda (args, body) ->
     "(lambda (" ^ (string_of_vars ~tags " " args) ^ ") " ^
-      (string_of_nodes ~tags " " body) ^ ")"
+    (string_of_nodes ~tags " " body) ^ ")"
   | Begin [] -> "(begin)"
   | Begin body ->
     "(begin " ^ (string_of_nodes ~tags " " body) ^ ")"
   | LetRec (bindings, body) ->
     "(letrec (" ^ (string_of_bindings ~tags bindings) ^ ") " ^
-      (string_of_nodes ~tags " " body) ^ ")"
+    (string_of_nodes ~tags " " body) ^ ")"
   | If (cond, cons, alt) ->
     "(if " ^ (string_of_node ~tags cond) ^ " " ^
-      (string_of_node ~tags cons) ^ " " ^
-      (string_of_node ~tags alt) ^ ")"
+    (string_of_node ~tags cons) ^ " " ^
+    (string_of_node ~tags alt) ^ ")"
   | Set ((v, _), e) ->
     "(set! " ^ v ^ " " ^ (string_of_node ~tags e) ^ ")"
   | Callcc e ->
@@ -50,7 +51,7 @@ let rec string_of_exp ?tags:(tags=false) = function
     "(join " ^ (string_of_node ~tags e) ^ ")"
   | Cas ((v, _), e1, e2) ->
     "(cas " ^ v ^ " " ^ (string_of_node ~tags e1) ^ " " ^
-      (string_of_node ~tags e2) ^ ")"
+    (string_of_node ~tags e2) ^ ")"
 
 and string_of_node ?tags:(tags=false) (exp, tag) =
   string_of_exp ~tags exp ^ (if tags then "@" ^ (string_of_int tag) else "")
@@ -67,8 +68,8 @@ and string_of_bindings ?tags:(tags=false) bindings =
   String.concat " "
     (List.map (fun ((var, t), value) ->
          "(" ^ var ^
-           (if tags then "@" ^ (string_of_int t) else "") ^
-           " " ^ (string_of_node ~tags value) ^ ")") bindings)
+         (if tags then "@" ^ (string_of_int t) else "") ^
+         " " ^ (string_of_node ~tags value) ^ ")") bindings)
 
 (* Extract all the tags that are contained in a node *)
 let rec extract_tags = function
@@ -81,12 +82,12 @@ let rec extract_tags = function
     t :: ((extract_tags f) @ (Util.flatmap extract_tags args))
   | (Lambda (vars, body), t) ->
     t :: ((List.map (fun (_, t) -> t) vars) @
-            (Util.flatmap extract_tags body))
+          (Util.flatmap extract_tags body))
   | (Begin body, t) ->
     t :: (Util.flatmap extract_tags body)
   | (LetRec (bindings, body), t) ->
     t :: (Util.flatmap (fun ((_, t), n) -> t :: extract_tags n) bindings) @
-      (Util.flatmap extract_tags body)
+    (Util.flatmap extract_tags body)
   | (If (cond, cons, alt), t) ->
     t :: (Util.flatmap extract_tags [cond; cons; alt])
   | (Set ((_, t'), exp), t) ->
@@ -101,9 +102,8 @@ let rec extract_tags = function
 (* Try to find a node corresponding to a tag in a given node *)
 let rec find_node tag node =
   (* mplus operation on the option monad. Unfortunately, it forces the
-     evaluation of both arguments (it shouldn't be a problem, but if it
-     is, adding some laziness (lazy and Lazy.force) will probably do
-     the trick) *)
+   * evaluation of both arguments (it shouldn't be a problem, but if it is,
+   * adding some laziness (lazy and Lazy.force) will probably do the trick) *)
   let (++) x y = match x with
     | None -> y
     | Some _ -> x in
@@ -125,7 +125,7 @@ let rec find_node tag node =
   | (LetRec (bindings, body), _) ->
     List.fold_left (++) None
       (List.map (fun (_, n) -> find_node tag n) bindings) ++
-      find_node' body
+    find_node' body
   | (If (cond, cons, alt), _) ->
     find_node tag cond ++ find_node tag cons ++ find_node tag alt
   | (Set (_, e), _)
