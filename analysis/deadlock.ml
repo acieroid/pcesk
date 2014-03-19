@@ -23,20 +23,22 @@ let extract_cas_tids pstate =
     []
     (ThreadMap.bindings pstate.threads)
 
-let has_true_successor graph pstate tid =
-  (* Check if a pstate has a successor for which a context associated to
-     tid evaluated to #t *)
+let has_successor control graph pstate tid =
+  (* Check if a pstate has a successor that has the given control component, for
+     a context associated with tid *)
   List.exists
     (fun pstate' ->
        ContextSet.exists
-         (fun context ->
-            match context.cexp with
-            | Value (AbsUnique (Boolean true)) -> true
-            | _ -> false)
+         (fun context -> context.cexp = control)
          (ThreadMap.find tid pstate'.threads))
     (G.succ graph pstate)
 
-let find_cas_false graph =
+let has_true_successor =
+  (* Check if a pstate has a successor for which a context associated to
+     tid evaluated to #t *)
+  has_successor (Value (AbsUnique (Boolean true)))
+
+let find_cas_only_false graph =
   (* Find all the graph nodes that evaluate (cas v e1 e2) and lead to
        only a #f state (ie. the cas failed). *)
   G.fold_vertex
@@ -86,4 +88,4 @@ let deadlocks graph =
   List.filter
     (fun (pstate, tid) ->
        has_cycle_to_itself graph pstate)
-    (find_cas_false graph)
+    (find_cas_only_false graph)
