@@ -80,56 +80,62 @@ let rec calc_cv_aux cv extendable =
              PStateSet.fold
                (fun pstate' (cont, cv, extendable) ->
                   if cont then
-                    (* if the transition is not independent from a transition
-                     * in one of the other CVs (except in the `last` component),
-                     * we cannot extend this CV anymore *)
-                    let indep =
-                      CVMap.for_all
-                        (fun tid' (g, last) ->
-                           G.fold_edges_e
-                             (fun (ps, (tid, ctx), ps') indep ->
-                                indep &&
-                                (PStateSet.mem ps' last ||
-                                 (compare_pstates pstate' ps != 0 ||
-                                  are_independent pstate' tid tid')))
-                             g
-                             true)
-                        cv
-                    in
-                    if not indep then
+                    (* if a new thread was spawned during the transition, we
+                     * stop the CV here *)
+                    if not (ThreadMap.cardinal pstate.threads =
+                            ThreadMap.cardinal pstate.threads) then
                       (false, cv, TidSet.remove tid extendable)
                     else
-                      (* we also cannot extend every CV which has a last
-                       * transition dependent from this transition *)
-                      let extendable =
-                        CVMap.fold
-                          (fun tid' (g, last) extendable ->
-                             if tid = tid' then
-                               extendable
-                             else
-                               let indep =
-                                 PStateSet.for_all
-                                   (fun ps ->
-                                      compare_pstates pstate' ps != 0 ||
-                                      are_independent pstate' tid tid')
-                                   last in
-                               if indep then
-                                 extendable
-                               else begin
-                                 TidSet.remove tid
-                                   (TidSet.remove tid' extendable)
-                               end)
+                      (* if the transition is not independent from a transition
+                       * in one of the other CVs (except in the `last`
+                       * component), we cannot extend this CV anymore *)
+                      let indep =
+                        CVMap.for_all
+                          (fun tid' (g, last) ->
+                             G.fold_edges_e
+                               (fun (ps, (tid, ctx), ps') indep ->
+                                  indep &&
+                                  (PStateSet.mem ps' last ||
+                                   (compare_pstates pstate' ps != 0 ||
+                                    are_independent pstate' tid tid')))
+                               g
+                               true)
                           cv
-                          extendable in
-                      (* if the new state is already present, this CV is
-                       * infinite and we can stop computing it *)
-                      let extendable =
-                        let (g, last) = CVMap.find tid cv in
-                        if G.mem_vertex g pstate' then begin
-                          TidSet.remove tid extendable
-                        end else
-                          extendable in
-                      (cont, cv, extendable)
+                      in
+                      if not indep then
+                        (false, cv, TidSet.remove tid extendable)
+                      else
+                        (* we also cannot extend every CV which has a last
+                         * transition dependent from this transition *)
+                        let extendable =
+                          CVMap.fold
+                            (fun tid' (g, last) extendable ->
+                               if tid = tid' then
+                                 extendable
+                               else
+                                 let indep =
+                                   PStateSet.for_all
+                                     (fun ps ->
+                                        compare_pstates pstate' ps != 0 ||
+                                        are_independent pstate' tid tid')
+                                     last in
+                                 if indep then
+                                   extendable
+                                 else begin
+                                   TidSet.remove tid
+                                     (TidSet.remove tid' extendable)
+                                 end)
+                            cv
+                            extendable in
+                        (* if the new state is already present, this CV is
+                         * infinite and we can stop computing it *)
+                        let extendable =
+                          let (g, last) = CVMap.find tid cv in
+                          if G.mem_vertex g pstate' then begin
+                            TidSet.remove tid extendable
+                          end else
+                            extendable in
+                        (cont, cv, extendable)
                   else
                     (cont, cv, extendable))
                s'
@@ -204,15 +210,20 @@ let eval e =
   let initial_state = inject e in
   let a_halt = initial_state.a_halt in
   let extract_finals pstate =
-    let initial_thread_contexts =
-      ContextSet.elements
-        (ThreadMap.find InitialTid pstate.threads) in
-    List.fold_left (fun acc c ->
-        match c.cexp, c.caddr with
-        | Value result, addr when addr = a_halt ->
-          (result, c.cenv, pstate.pstore) :: acc
-        | _ -> acc)
-      [] initial_thread_contexts
+    if ThreadMap.mem InitialTid pstate.threads then
+      let initial_thread_contexts =
+        ContextSet.elements
+          (ThreadMap.find InitialTid pstate.threads) in
+      List.fold_left (fun acc c ->
+          match c.cexp, c.caddr with
+          | Value result, addr when addr = a_halt ->
+            (result, c.cenv, pstate.pstore) :: acc
+          | _ -> acc)
+        [] initial_thread_contexts
+    else
+      (* TODO: this should not happen, since when the main thread halts, we
+       * should stop evaluating *)
+      []
   and todo = Exploration.create initial_state
   and interrupted () = match Unix.select [Unix.stdin] [] [] 0. with
     | (_ :: _, _, _) -> true
