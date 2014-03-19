@@ -5,21 +5,18 @@ open Pcesk_types
 open Pviz
 open Types
 
-let extract_cas_tids pstate =
-  (* Extract all the tids that are currently evaluating a cas in the
-     given pstate *)
+let extract_cas pstate =
+  (* Extract the tid and tag of all cas in the pstate *)
   List.fold_left
     (fun acc (tid, contexts) ->
-       let has_cas = ContextSet.exists
-           (fun context ->
+       let cas = ContextSet.fold
+           (fun context acc ->
               match context.cexp with
-              | Node (Ast.Cas _, _) -> true
-              | _ -> false)
-           contexts in
-       if has_cas then
-         tid :: acc
-       else
-         acc)
+              | Node (Ast.Cas _, tag) -> (tid, tag)::acc
+              | _ -> acc)
+           contexts
+           [] in
+       cas @ acc)
     []
     (ThreadMap.bindings pstate.threads)
 
@@ -43,15 +40,15 @@ let find_cas_only_false graph =
        only a #f state (ie. the cas failed). *)
   G.fold_vertex
     (fun pstate acc ->
-       let tids = extract_cas_tids pstate in
+       let cas = extract_cas pstate in
        List.fold_left
-         (fun acc tid ->
+         (fun acc (tid, tag) ->
             if not (has_true_successor graph pstate tid) then
-              (pstate, tid) :: acc
+              (pstate, tid, tag) :: acc
             else
               acc)
          acc
-         tids)
+         cas)
     graph
     []
 
@@ -80,12 +77,26 @@ let has_cycle_to_itself graph initial =
         aux (succ i) (PStateSet.add pstate visited) end in
   aux 0 PStateSet.empty
 
+module TidTagSet = Set.Make(struct
+    type t = tid * tag
+    let compare = Pervasives.compare
+end)
+
 let deadlocks graph =
   (* A deadlock is present if we have a cycle from a pstate to itself,
      and if that pstate evaluates a `cas` and never results in a
      successful evaluation of the `cas` (ie. there is no #t state in its
      successors *)
-  List.filter
-    (fun (pstate, tid) ->
-       has_cycle_to_itself graph pstate)
-    (find_cas_only_false graph)
+  let deadlocks = BatList.filter_map
+      (fun (pstate, tid, tag) ->
+         if has_cycle_to_itself graph pstate then
+           Some (tid, tag)
+         else
+           None)
+      (find_cas_only_false graph) in
+  (* Filter duplicates *)
+  TidTagSet.elements
+    (List.fold_left
+       (fun s x -> TidTagSet.add x s)
+       TidTagSet.empty
+       deadlocks)

@@ -1,25 +1,11 @@
 open Cesk_types
+open Deadlock
 open Exploration
 open Pcesk
 open Pcesk_types
 open Pviz
 open Types
-open Deadlock
-
-let extract_cas pstate =
-  (* Extract the tid and tag of all cas in the pstate *)
-  List.fold_left
-    (fun acc (tid, contexts) ->
-       let cas = ContextSet.fold
-           (fun context acc ->
-              match context.cexp with
-              | Node (Ast.Cas _, tag) -> (tid, tag)::acc
-              | _ -> acc)
-           contexts
-           [] in
-       cas @ acc)
-    []
-    (ThreadMap.bindings pstate.threads)
+open Util
 
 let has_false_successor =
   (* Check if a pstate has a successor for which a context associated to tid has
@@ -77,11 +63,6 @@ let is_retried graph initial tid tag =
         Dfs.add todo (G.succ graph pstate);
         aux (succ i) (PStateSet.add pstate visited) end in
   aux 0 PStateSet.empty
-
-module IntSet = BatSet.Make(struct
-    type t = int
-    let compare = Pervasives.compare
-end)
 
 let unretried_cas graph =
   (* A cas is not retried if it has a #f successor such that the same cas is

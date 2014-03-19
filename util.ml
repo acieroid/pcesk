@@ -3,6 +3,11 @@ module StringSet = Set.Make(struct
     let compare = Pervasives.compare
   end)
 
+module IntSet = Set.Make(struct
+    type t = int
+    let compare = Pervasives.compare
+end)
+
 let string_set_of_list l =
   List.fold_left (fun set x -> StringSet.add x set) StringSet.empty l
 

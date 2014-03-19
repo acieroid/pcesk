@@ -97,14 +97,15 @@ let detect_deadlocks node =
     | [] -> print_string "No deadlocks detected\n"
     | l ->
       print_string ((string_of_int (List.length l)) ^
-                    " possible deadlocks detected, starting at the following states:\n");
-      (* TODO: we can also use the tag to extract the relevant expression, as in
-       * detect_unretried_cas *)
-      List.iter (fun (pstate, tid) ->
-          print_string (Pcesk_types.string_of_pstate "" pstate);
-          print_newline ();
-          print_string ("(on tid " ^ (string_of_tid tid) ^ ")");
-          print_newline ())
+                    " possible deadlocks detected, starting at the following expressions:\n");
+      List.iter (fun (tid, tag) ->
+          match Ast.find_node tag node with
+          | Some exp ->
+            print_string (Ast.string_of_node ~tags:true exp);
+            print_newline ();
+            print_string ("(on tid " ^ (string_of_tid tid) ^ ")\n");
+          | None ->
+            print_string "Unknown node (should not happen)\n")
         l
   else
     raise (BadArguments
@@ -124,7 +125,7 @@ let detect_unretried_cas node =
           | Some exp ->
             print_string (Ast.string_of_node ~tags:true exp);
             print_newline ()
-          | _ ->
+          | None ->
             print_string "Unknown node (should not happen)\n")
         l
   else
