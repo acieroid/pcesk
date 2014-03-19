@@ -119,13 +119,13 @@ let detect_unretried_cas node =
     | l ->
       print_string ((string_of_int (List.length l)) ^
                     " unretried cas found:\n");
-      List.iter (fun (pstate, tid, tag) ->
+      List.iter (fun tag ->
           match Ast.find_node tag node with
           | Some exp ->
             print_string (Ast.string_of_node ~tags:true exp);
             print_newline ()
           | _ ->
-            print_string "Unknown node (should not happen)\n";)
+            print_string "Unknown node (should not happen)\n")
         l
   else
     raise (BadArguments

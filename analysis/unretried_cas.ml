@@ -27,8 +27,8 @@ let has_false_successor =
   has_successor (Value (AbsUnique (Boolean false)))
 
 let find_cas graph =
-  (* Find all the graph nodes that evaluate (cas v e1 e2) and lead to at least
-   * a #f state *)
+  (* Find all the graph nodes that evaluate (cas v e1 e2) and lead to at least a
+   * #f state *)
   G.fold_vertex
     (fun pstate acc ->
        let cas = extract_cas pstate in
@@ -78,10 +78,24 @@ let is_retried graph initial tid tag =
         aux (succ i) (PStateSet.add pstate visited) end in
   aux 0 PStateSet.empty
 
+module IntSet = BatSet.Make(struct
+    type t = int
+    let compare = Pervasives.compare
+end)
+
 let unretried_cas graph =
   (* A cas is not retried if it has a #f successor such that the same cas is
    * never retried. Such a cas is a source of race conditions *)
-  List.filter
-    (fun (pstate, tid, tag) ->
-       not (is_retried graph pstate tid tag))
-    (find_cas graph)
+  let unretried = BatList.filter_map
+      (fun (pstate, tid, tag) ->
+         if is_retried graph pstate tid tag then
+           None
+         else
+           Some tag)
+      (find_cas graph) in
+  (* filter duplicates *)
+  IntSet.elements
+    (List.fold_left
+       (fun s x -> IntSet.add x s)
+       IntSet.empty
+       unretried)
