@@ -91,13 +91,15 @@ let detect_conflicts ?handle_cas:(handle_cas=true) node =
 
 let detect_deadlocks node =
   if !Params.parallel then
-    let _, graph= Pcesk.eval node in
+    let _, graph = Pcesk.eval node in
     let deadlocks = Deadlock.deadlocks graph in
     match deadlocks with
     | [] -> print_string "No deadlocks detected\n"
     | l ->
       print_string ((string_of_int (List.length l)) ^
-                    " possible deadlocks detected, starting at the following nodes:\n");
+                    " possible deadlocks detected, starting at the following states:\n");
+      (* TODO: we can also use the tag to extract the relevant expression, as in
+       * detect_unretried_cas *)
       List.iter (fun (pstate, tid) ->
           print_string (Pcesk_types.string_of_pstate "" pstate);
           print_newline ();
@@ -107,6 +109,27 @@ let detect_deadlocks node =
   else
     raise (BadArguments
             "cannot do deadlock detection without parallelism turned on (use -p)")
+
+let detect_unretried_cas node =
+  if !Params.parallel then
+    let _, graph = Pcesk.eval node in
+    let unretried = Unretried_cas.unretried_cas graph in
+    match unretried with
+    | [] -> print_string "No unretried cas detected\n"
+    | l ->
+      print_string ((string_of_int (List.length l)) ^
+                    " unretried cas found:\n");
+      List.iter (fun (pstate, tid, tag) ->
+          match Ast.find_node tag node with
+          | Some exp ->
+            print_string (Ast.string_of_node ~tags:true exp);
+            print_newline ()
+          | _ ->
+            print_string "Unknown node (should not happen)\n";)
+        l
+  else
+    raise (BadArguments
+             "cannot do unretried cas analysis without parallelism turned on (use -p)")
 
 let compare_states node = match !Params.tag1, !Params.tag2 with
   | Some t1, Some t2 ->
@@ -146,7 +169,7 @@ let () =
       | Params.MHP -> mhp
       | Params.SetConflicts -> detect_conflicts ~handle_cas:false
       | Params.Conflicts -> detect_conflicts ~handle_cas:true
-      | Params.RaceDetection -> failwith "TODO"
+      | Params.UnretriedCas -> detect_unretried_cas
       | Params.DeadlockDetection -> detect_deadlocks
       | Params.CompareStates -> compare_states in
     let node = Parser.parse (Lexer.lex !input) in

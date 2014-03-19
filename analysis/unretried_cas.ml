@@ -46,12 +46,15 @@ let find_cas graph =
 let has_cas pstate tid tag =
   (* Check if the given pstate evaluates a cas of the given tag on the given
    * tid *)
-  let contexts = ThreadMap.find tid pstate.threads in
-  ContextSet.exists (fun context ->
-      match context.cexp with
-      | Node (Ast.Cas _, tag') when tag' = tag -> true
-      | _ -> false)
-    contexts
+  if ThreadMap.mem tid pstate.threads then
+    let contexts = ThreadMap.find tid pstate.threads in
+    ContextSet.exists (fun context ->
+        match context.cexp with
+        | Node (Ast.Cas _, tag') when tag' = tag -> true
+        | _ -> false)
+      contexts
+  else
+    false
 
 let is_retried graph initial tid tag =
   (* A cas is retried if it has some successor that has the same cas in the
@@ -75,7 +78,7 @@ let is_retried graph initial tid tag =
         aux (succ i) (PStateSet.add pstate visited) end in
   aux 0 PStateSet.empty
 
-let unretriedcas graph =
+let unretried_cas graph =
   (* A cas is not retried if it has a #f successor such that the same cas is
    * never retried. Such a cas is a source of race conditions *)
   List.filter

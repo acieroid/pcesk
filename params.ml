@@ -63,7 +63,7 @@ type target =
   | MHP
   | SetConflicts
   | Conflicts
-  | RaceDetection
+  | UnretriedCas
   | DeadlockDetection
   | CompareStates
 
@@ -119,13 +119,14 @@ let speclist = [
    ": tag corresponding to the first expression used for MHP analysis");
   ("-t2", Arg.Int (fun t -> tag2 := Some t),
    ": tag corresponding to the second expression used for MHP analysis");
-  ("-target", Arg.Symbol (["run"; "ast"; "mhp"; "cmp"; "race"; "deadlocks"; "setconflicts"; "conflicts"],
+  ("-target", Arg.Symbol (["run"; "ast"; "mhp"; "cmp"; "unretriedcas";
+                           "deadlocks"; "setconflicts"; "conflicts"],
                           (function
                             | "run" -> target := Run
                             | "ast" -> target := PrintAST
                             | "mhp" -> target := MHP
                             | "cmp" -> target := CompareStates
-                            | "race" -> target := RaceDetection
+                            | "unretriedcas" -> target := UnretriedCas
                             | "deadlocks" -> target := DeadlockDetection
                             | "setconflicts" -> target := SetConflicts
                             | "conflicts" -> target := Conflicts
