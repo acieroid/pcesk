@@ -1,4 +1,3 @@
-open Cesk_types
 open Parallel_garbage_collection
 open Pcesk
 open Pcesk_types
@@ -80,8 +79,8 @@ let rec calc_cv_aux cv extendable =
              PStateSet.fold
                (fun pstate' (cont, cv, extendable) ->
                   if cont then
-                    (* if a new thread was spawned during the transition, we
-                     * stop the CV here *)
+                    (* if a new thread was spawned during the transition, or if
+                     * a thread stopped , we stop the CV here *)
                     if not (ThreadMap.cardinal pstate.threads =
                             ThreadMap.cardinal pstate.threads) then
                       (false, cv, TidSet.remove tid extendable)
@@ -208,22 +207,7 @@ let calc_cv pstate =
 let eval e =
   let module Exploration = (val !Params.exploration) in
   let initial_state = inject e in
-  let extract_finals pstate =
-    if ThreadMap.mem InitialTid pstate.threads then
-      let initial_thread_contexts =
-        ContextSet.elements
-          (ThreadMap.find InitialTid pstate.threads) in
-      List.fold_left (fun acc c ->
-          match c.cexp, c.caddr with
-          | Value result, HaltAddr ->
-            (result, c.cenv, pstate.pstore) :: acc
-          | _ -> acc)
-        [] initial_thread_contexts
-    else
-      (* TODO: this should not happen, since when the main thread halts, we
-       * should stop evaluating *)
-      []
-  and todo = Exploration.create initial_state
+  let  todo = Exploration.create initial_state
   and interrupted () = match Unix.select [Unix.stdin] [] [] 0. with
     | (_ :: _, _, _) -> true
     | _ -> false in
@@ -269,21 +253,28 @@ let eval e =
             Exploration.add todo (List.map snd pstates);
             loop (PStateSet.add pstate visited) finished graph' (i+1)
           end else begin
-            (* More than one thread, do the CPOR *)
-            let cv = calc_cv pstate in
-            let (graph', visited') = CVMap.fold
-                (fun tid (g, last) (graph, visited) ->
-                   let visited = (PStateSet.fold
-                                    (fun pstate visited ->
-                                       Exploration.add todo [pstate];
-                                       PStateSet.remove pstate visited)
-                                    last
-                                    (G.fold_vertex PStateSet.add g visited)) in
-                   (GOper.union graph g,
-                    visited))
-                cv
-                (graph, visited) in
-            loop visited' finished graph' (i+1)
+            if not (ThreadMap.mem InitialTid pstate.threads) then begin
+              (* This state doesn't have a main thread anymore.  This can happen
+               * when computing the CVs, but we don't want to keep such states
+               * so we remove them from the graph and ignore them *)
+              loop visited finished (G.remove_vertex graph pstate) (i+1)
+            end else
+              (* More than one thread, do the CPOR *)
+              let cv = calc_cv pstate in
+              let (graph', visited') = CVMap.fold
+                  (fun tid (g, last) (graph, visited) ->
+                     let visited =
+                       (PStateSet.fold
+                          (fun pstate visited ->
+                             Exploration.add todo [pstate];
+                             PStateSet.remove pstate visited)
+                          last
+                          (G.fold_vertex PStateSet.add g visited)) in
+                     (GOper.union graph g,
+                      visited))
+                  cv
+                  (graph, visited) in
+              loop visited' finished graph' (i+1)
           end
         | res ->
           loop (PStateSet.add pstate visited) (res @ finished) graph (i+1)

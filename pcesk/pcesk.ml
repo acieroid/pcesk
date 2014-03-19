@@ -180,10 +180,10 @@ let inject e =
 (** Evaluation *)
 module PStateSet = Set.Make(PStateOrdered)
 
-let eval e =
-  let module Exploration = (val !Params.exploration) in
-  let initial_state = inject e in
-  let extract_finals pstate =
+(* Extract the final values of a pstate, ie. the values returned by the main
+  * thread when it halted (if it did) *)
+let extract_finals pstate =
+  if ThreadMap.mem InitialTid pstate.threads then
     let initial_thread_contexts =
       ContextSet.elements
         (ThreadMap.find InitialTid pstate.threads) in
@@ -193,7 +193,15 @@ let eval e =
           (result, c.cenv, pstate.pstore) :: acc
         | _ -> acc)
       [] initial_thread_contexts
-  and todo = Exploration.create initial_state
+  else
+    (* We assume that the caller of this function will handle the fact that not
+     * having a main thread means that the program should stop *)
+    []
+
+let eval e =
+  let module Exploration = (val !Params.exploration) in
+  let initial_state = inject e in
+  let todo = Exploration.create initial_state
   (* Stop the execution if there are some input on stdin (allows to inspect
    * the current state space) *)
   and interrupted () = match Unix.select [Unix.stdin] [] [] 0. with
