@@ -108,8 +108,7 @@ let detect_deadlocks node =
           match Ast.find_node tag node with
           | Some exp ->
             print_string (Ast.string_of_node ~tags:true exp);
-            print_newline ();
-            print_string ("(on tid " ^ (string_of_tid tid) ^ ")\n");
+            print_string (" [on tid " ^ (string_of_tid tid) ^ "]\n");
           | None ->
             print_string "Unknown node (should not happen)\n")
         l
