@@ -7,13 +7,12 @@ let now () = Unix.gettimeofday ()
 let print_infos time vertex edges =
   Printf.printf "%d/%d/%.3f\n" vertex edges time
 
+let peval node =
+  if !Params.cpor then Cpor.eval node else Pcesk.eval node
+
 let eval node =
   if !Params.parallel then begin
-    let res, graph =
-      if !Params.cpor then
-        Cpor.eval node
-      else
-        Pcesk.eval node in
+    let res, graph = peval node in
     BatOption.may (Pviz.output_graph graph) !graph_file;
     close_in !input_chan;
     (res, Pviz.G.nb_vertex graph, Pviz.G.nb_edges graph)
@@ -45,7 +44,7 @@ let mhp node = match !Params.tag1, !Params.tag2 with
       let e1, e2 = Ast.find_node t1 node, Ast.find_node t2 node in
       match e1, e2 with
       | Some exp1, Some exp2 ->
-        let _, graph = Pcesk.eval node in
+        let _, graph = peval node in
         let may = Mhp.mhp graph t1 t2 in
         print_string ("The expressions " ^
                       (Ast.string_of_node ~tags:true exp1) ^ " and " ^
@@ -62,7 +61,7 @@ let mhp node = match !Params.tag1, !Params.tag2 with
 
 let detect_conflicts ?handle_cas:(handle_cas=true) node =
   if !Params.parallel then
-    let _, graph = Pcesk.eval node in
+    let _, graph = peval node in
     let conflicts = Conflict.conflicts ~handle_cas graph in
     match conflicts with
     | [] -> print_string "No conflicts detected\n"
@@ -96,7 +95,7 @@ let detect_conflicts ?handle_cas:(handle_cas=true) node =
 
 let detect_deadlocks node =
   if !Params.parallel then
-    let _, graph = Pcesk.eval node in
+    let _, graph = peval node in
     let deadlocks = Deadlock.deadlocks graph in
     match deadlocks with
     | [] -> print_string "No deadlocks detected\n"
@@ -118,7 +117,7 @@ let detect_deadlocks node =
 
 let detect_unretried_cas node =
   if !Params.parallel then
-    let _, graph = Pcesk.eval node in
+    let _, graph = peval node in
     let unretried = Unretried_cas.unretried_cas graph in
     match unretried with
     | [] -> print_string "No unretried cas detected\n"
@@ -140,7 +139,7 @@ let detect_unretried_cas node =
 let compare_states node = match !Params.tag1, !Params.tag2 with
   | Some t1, Some t2 ->
     begin if !Params.parallel then
-        let _, graph = Pcesk.eval node in
+        let _, graph = peval node in
         let s1, s2 = Pviz.find_node graph t1, Pviz.find_node graph t2 in
         match s1, s2 with
         | Some state1, Some state2 -> Pcesk_types.print_difference state1 state2
