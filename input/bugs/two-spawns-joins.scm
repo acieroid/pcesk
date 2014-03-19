@@ -1,0 +1,5 @@
+(letrec ((t1 (spawn 1))
+         (t2 (spawn 2))
+         (jt1 (join t1))
+         (jt2 (join t2)))
+  1)
