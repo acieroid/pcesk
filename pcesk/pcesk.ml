@@ -45,7 +45,7 @@ let step_spawn pstate tid context tag e =
   let tid' = Tid.newtid pstate.nthreads context pstate.threads
   and context'' = {context with
                    cexp = Node e;
-                   caddr = pstate.a_halt;
+                   caddr = HaltAddr;
                    cchange = Epsilon;
                    (* TODO probably not the best initial time one could find
                     * (since the corresponding address will already be used by
@@ -149,7 +149,7 @@ let step_context pstate tid context =
   | Node _ ->
     step_cesk pstate tid context
   | Value v ->
-    if context.caddr = pstate.a_halt then
+    if context.caddr = HaltAddr then
       step_halt pstate tid context v
     else
       step_cesk pstate tid context
@@ -169,13 +169,12 @@ let step pstate =
 (** Injection *)
 let inject e =
   let tid = InitialTid in
-  let state, a_halt = Cesk.inject e in
-  {threads = ThreadMap.singleton tid
-       (ContextSet.singleton (context_of_state state));
-   pstore = state.store;
-   tcount = ThreadCountMap.singleton tid One;
-   a_halt = a_halt;
-   nthreads = 1;
+  let state = Cesk.inject e in
+  { threads = ThreadMap.singleton tid
+        (ContextSet.singleton (context_of_state state));
+    pstore = state.store;
+    tcount = ThreadCountMap.singleton tid One;
+    nthreads = 1;
   }
 
 (** Evaluation *)
@@ -184,14 +183,13 @@ module PStateSet = Set.Make(PStateOrdered)
 let eval e =
   let module Exploration = (val !Params.exploration) in
   let initial_state = inject e in
-  let a_halt = initial_state.a_halt in
   let extract_finals pstate =
     let initial_thread_contexts =
       ContextSet.elements
         (ThreadMap.find InitialTid pstate.threads) in
     List.fold_left (fun acc c ->
         match c.cexp, c.caddr with
-        | Value result, addr when addr = a_halt ->
+        | Value result, HaltAddr ->
           (result, c.cenv, pstate.pstore) :: acc
         | _ -> acc)
       [] initial_thread_contexts

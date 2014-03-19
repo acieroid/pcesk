@@ -313,14 +313,12 @@ let empty_state = {
 
 let inject e =
   let state = install_primitives empty_state in
-  let a_halt = alloc_kont state e in
-  let store = store_extend1 state.store a_halt (AbsUnique (Kont HaltKont)) in
-  ({ state with
-     exp = Node e;
-     store = store;
-     addr = a_halt;
-     time = tick state},
-   a_halt)
+  let store = store_extend1 state.store HaltAddr (AbsUnique (Kont HaltKont)) in
+  { state with
+    exp = Node e;
+    store = store;
+    addr = HaltAddr;
+    time = tick state }
 
 (** Evaluation *)
 
@@ -348,10 +346,10 @@ module StateSet = Set.Make(StateOrdered)
 
 let eval e =
   let module Exploration = (val !Params.exploration) in
-  let (initial_state, a_halt) = inject e in
+  let initial_state = inject e in
   let extract_final state =
     match state.exp, state.addr with
-    | Value result, addr when addr = a_halt ->
+    | Value result, HaltAddr ->
       Some (result, state.env, state.store)
     | _ -> None
   and todo = Exploration.create initial_state in

@@ -37,6 +37,7 @@ and time =
   | IntTime of int
   | KCallSitesTime of Ast.node list
 and addr =
+  | HaltAddr
   | TagAddr of int * time
   | VarAddr of string * time
   | PrimAddr of string * time
@@ -108,6 +109,8 @@ module Addr = struct
     | TidAddr _ -> false
     | _ -> true
   let string_of_address = function
+    | HaltAddr ->
+      "HaltAddr"
     | TagAddr (n, t) ->
       "TagAddr(" ^ (string_of_int n) ^ "," ^ (string_of_time t) ^ ")"
     | VarAddr (s, t) ->

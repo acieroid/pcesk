@@ -38,7 +38,6 @@ type pstate = {
   nthreads : int; (* number of created threads (does not decrease) *)
   pstore : store;
   tcount : thread_count ThreadCountMap.t;
-  a_halt : addr
 }
 
 let context_set_of_list l =
@@ -52,8 +51,7 @@ let compare_pstates_no_subsumption s1 s2 =
   Util.order_concat [ThreadMap.compare ContextSet.compare s1.threads s2.threads;
                      Pervasives.compare s1.nthreads s2.nthreads;
                      Store.compare s1.pstore s2.pstore;
-                     ThreadMap.compare Pervasives.compare s1.tcount s2.tcount;
-                     Pervasives.compare s1.a_halt s2.a_halt]
+                     ThreadMap.compare Pervasives.compare s1.tcount s2.tcount]
 
 
 let compare_pstates s1 s2 =
@@ -132,6 +130,4 @@ let print_difference s1 s2 =
     end;
     if not (s1.tcount = s2.tcount) then
       print_string "  tcounts are different\n";
-    if not (s1.a_halt = s2.a_halt) then
-      print_string "  a_halts are different\n"
   end

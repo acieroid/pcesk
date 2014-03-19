@@ -208,7 +208,6 @@ let calc_cv pstate =
 let eval e =
   let module Exploration = (val !Params.exploration) in
   let initial_state = inject e in
-  let a_halt = initial_state.a_halt in
   let extract_finals pstate =
     if ThreadMap.mem InitialTid pstate.threads then
       let initial_thread_contexts =
@@ -216,7 +215,7 @@ let eval e =
           (ThreadMap.find InitialTid pstate.threads) in
       List.fold_left (fun acc c ->
           match c.cexp, c.caddr with
-          | Value result, addr when addr = a_halt ->
+          | Value result, HaltAddr ->
             (result, c.cenv, pstate.pstore) :: acc
           | _ -> acc)
         [] initial_thread_contexts
