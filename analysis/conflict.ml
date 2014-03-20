@@ -106,6 +106,11 @@ let conflict_pstate ~handle_cas pstate =
       List.concat (List.map (find_conflicts ~handle_cas pstate w) tids))
       writes)
 
+let is_cas node tag =
+  match Ast.find_node tag node with
+  | Some (Ast.Cas _, _) -> true
+  | _ -> false
+
 (* A program may contain a read/write or a write/write conflict if there exists
  * a state where two different contexts contains either a read and a write to a
  * variable which points to the same address in both threads, or a write and a
@@ -114,12 +119,39 @@ let conflict_pstate ~handle_cas pstate =
  * write) happen in parallel on a variable that points to the same address *)
 let conflicts
     ?handle_cas:(handle_cas=true)
-    ?ignore_unique_cas:(ignore_unique_cas=true)
-    graph =
-  TagPairAddrSet.elements
-    (G.fold_vertex
-       (fun pstate found ->
-          List.fold_left
-            (fun r s -> TagPairAddrSet.add s r)
-            found (conflict_pstate ~handle_cas pstate))
-       graph TagPairAddrSet.empty)
+    ?ignore_unique_cas:(ignore_unique_cas=false)
+    graph node =
+  let res = TagPairAddrSet.elements
+      (G.fold_vertex
+         (fun pstate found ->
+            List.fold_left
+              (fun r s -> TagPairAddrSet.add s r)
+              found (conflict_pstate ~handle_cas pstate))
+         graph TagPairAddrSet.empty) in
+  if ignore_unique_cas then
+    (* Drop the conflicts for which there is a rw and a ww conflict with the
+     * same address, where the write part is the same cas, and if there is no
+     * other conflict for this address *)
+    let grouped = BatList.group
+        (fun (_, _, a) (_, _, a') -> Pervasives.compare a a')
+        res in
+    List.concat
+      (List.map
+         (function
+           | [(t1, t2, _); (t1', t2', _)] as l ->
+             let nwrites = List.length (List.filter (is_cas node)
+                                          [t1; t2; t1'; t2']) in
+             if nwrites = 3 &&
+                ((t1 = t2 && t1 = t1' || t1 = t2') ||
+                 (t1' = t2' && t1' = t1 || t1' = t2')) then
+               (* Got a rw & a ww, and they matches the pattern we want
+                * (two cas writes with the same tag on one side, a read and a
+                * cas write with the same tag as previously on the other side
+                * we ignore it *)
+               []
+             else
+               l
+           | l -> l)
+         grouped)
+  else
+    res
