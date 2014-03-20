@@ -32,6 +32,7 @@ usage: ./main.byte [-v level] [-i input] [-g graph_output] [-k polyvariance]
   -gc-after : run garbage collection after stepping (disabled by default)
   -no-store-strong-updates : turn off strong updates in the store
   -p : turn on parallelism with spawn and join (disabled by default)
+  -cpor : turn on cartesian partial order reduction (disabled by default)
   -r : remove threads when they halt (disabled by default)
   -j : do strong updates when evaluating a join (disabled by default)
   -s : don't explore state if another state that subsumes them has been explored (disabled by default)
@@ -40,10 +41,10 @@ usage: ./main.byte [-v level] [-i input] [-g graph_output] [-k polyvariance]
   -quiet : don't print the results nor the parameters used, only the time and graph size (disabled by default)
   -t1 : tag corresponding to the first expression used for MHP analysis
   -t2 : tag corresponding to the second expression used for MHP analysis
-  -target {run|ast|mhp|cmp|race}: action to do with the input (run by default)
+  -target {run|ast|mhp|cmp|unretriedcas|deadlocks|setconflicts|conflicts}: action to do with the input (run by default)
   -e {bfs|dfs}: graph traversal method used ('bfs' or 'dfs', bfs by default)
   -help  Display this list of options
-  --help  Display this list of options
+  --help  Display this list of option
 #+END_SRC
 
 Those parameters are explained in more details below, and examples
@@ -85,6 +86,7 @@ options.
     map. It should result in a better precision.
   - =-no-threads-strong-updates=: disable strong updates in the
     thread map. It should result in a great loss of precision.
+  - =-cpor=: uses [[http://users.soe.ucsc.edu/~cormac/papers/spin07.pdf][Cartesian Partial Order Reduction]] to reduce the state space
 *** Targets
 Multiple target (ie. actions to run) exists. Each target makes use of
 the previously defined options.
@@ -102,9 +104,22 @@ parameters. For doing so, it computes the state graph and traverses it
 in order to find a state where the two nodes can be evaluated. It then
 prints whether they can be evaluated in parallel or not.
 
-The =race= tries to detect race conditions in a program, in a similar
-way as how MHP is done, except that the user doesn't have to specify
-two expressions to check (the whole program is checked).
+The =conflicts= target detects read/write and write/write conflicts in a
+program, in a similar way as how MHP is done (but the user doesn't have to
+specify two expressions to check, the whole program is checked.
+
+The =setconflicts= target is similar to =conflicts= but only checks for
+read/write and write/write conflicts involving a =set!= (it assumes =cas= is
+correctly used).
+
+The =unretriedcas= target finds potential errors when =cas= is incorrectly
+used. The return value of =cas= should always be checked and the =cas= should
+be retried if it failed. This analysis looks for =cas= that are not retried
+when they failed. This is a source of race conditions.
+
+The =deadlocks= target finds potential deadlocks in programs where locks are
+implemented through =cas=. It does so by looking for cycles on a =cas= that will
+not terminate (ie. the =cas= will always evaluate to =#f= and be retried).
 
 *** Examples
 **** CESK Machine
@@ -192,17 +207,46 @@ The expressions (cas counter old@17 new@18)@15 and (cas counter old@17 new@18)@1
 (The two =cas= expressions may safely happen in parallel because of
 their atomicity)
 **** Detecting Race Conditions
-A program can be checked against race conditions with the =race=
-target, which will print every conflicting pair of expressions.
+We can detect race conditions in a program with the following targets:
+=conflicts=, =setconflicts=, and =unretriedcas=. =conflicts= will look for every
+read/write and write/write conflicts, but some conflicts (those involving =cas=)
+might not lead to race conditions. We can thus make the assumption that =cas= is
+correctly used and look for =setconflicts= instead (ie. conflicts that does not
+involve =cas= usages). To verify the assumption that =cas= is correctly used,
+we can finally use the =unretriedcas= analysis.
 
 For example:
 
 #+BEGIN_SRC shell
-$ ./main.byte -i input/pcounter.scm -p -j -s -r -target race -quiet             
-No race condition detected
+$ ./main.byte -p -r -j -i input/pcounter.scm -target setconflicts -quiet -gc-after -s
+No conflicts detected
 
-$ ./main.byte -i input/pcounter-race.scm -p -j -s -r -target race -quiet
-2 race conditions detected between the following pairs of expressions:
+$ ./main.byte -p -r -j -i input/pcounter.scm -target unretriedcas -quiet -gc-after -s                                                                                                                                    
+No unretried cas detected
+
+$ ./main.byte -p -r -j -i input/pcounter-race.scm -target setconflicts -quiet -gc-after -s                                                                                                                                  
+2 conflicts detected between the following pairs of expressions:
 (set! counter (+@9 counter@10 1@11)@8)@6, (set! counter (+@9 counter@10 1@11)@8)@6
 (set! counter (+@9 counter@10 1@11)@8)@6, counter@10
 #+END_SRC
+**** Detecting Deadlocks
+To detect deadlocks in a program, the target =deadlocks= looks for a cycle in
+the state graph starting at a state that evaluates a =cas= and that fails
+(resulting in =#f=). If such a cycle exists, there is a possibility of staying
+blocked in this cycle infinitely.
+
+For example:
+
+#+BEGIN_SRC shell
+$ ./main.byte -p -r -j -i input/deadlock-simple.scm -target deadlocks -quiet -gc-after -s
+1 possible deadlocks detected, starting at the following expressions:
+(cas lock #f@9 #t@10)@7 [on tid 1]
+#+END_SRC
+
+** Bugs
+  - The use of state subsumption (=-s=) might produce incorrect graphs
+  - Cartesian Partial Order Reduction (=-cpor=) might introduce unsoundness,
+    even though it should not (except for MHP analysis).
+  - Deadlock detection has many false positives. This might be solved by the use
+    of CPOR (but then we have to make sure CPOR maintains the soundness of this
+    analysis).
