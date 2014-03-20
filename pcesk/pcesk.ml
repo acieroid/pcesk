@@ -215,7 +215,27 @@ let eval e =
       let found = PStateSet.mem pstate visited in
       if found then
         loop visited finished graph (i+1)
-      else match extract_finals pstate with
+      else
+        let subsumed_by =
+          if !Params.subsumption then
+            PStateSet.filter (fun pstate' -> pstate_subsumes pstate' pstate)
+              visited
+          else
+            PStateSet.empty in
+        if not (PStateSet.is_empty subsumed_by) then
+          (* This state is subsumed by another, we remove it from the graph and
+           * change all its incoming edges to point towards the subsuming state.
+           * We then skip this state *)
+          let subsuming_pstate =
+            (* We pick the max, but there should only be one subsuming state *)
+            PStateSet.max_elt subsumed_by in
+          let preds = G.pred_e graph pstate in
+          let graph = List.fold_left (fun graph (ps, e, _) ->
+              G.add_edge_e graph (ps, e, subsuming_pstate))
+              (G.remove_vertex graph pstate)
+              preds in
+          loop (PStateSet.add pstate visited) finished graph (i+1)
+        else match extract_finals pstate with
         | [] ->
           let pstates = List.map (fun (transition, pstate) ->
               if !Params.gc_after then
