@@ -59,13 +59,13 @@ let mhp node = match !Params.tag1, !Params.tag2 with
   | _ -> raise (BadArguments
                   "two tags should be specified (use -target ast to find them)")
 
-let detect_conflicts ?handle_cas:(handle_cas=true) node =
+let detect_conflicts handle_cas ignore_unique_cas node =
   if !Params.parallel then
     let _, graph = peval node in
-    let conflicts = Conflict.conflicts ~handle_cas graph in
+    let conflicts = Conflict.conflicts ~handle_cas ~ignore_unique_cas graph in
     match conflicts with
     | [] -> print_string "No conflicts detected\n"
-    | [(t1,t2)] ->
+    | [(t1, t2, a)] ->
       begin match Ast.find_node t1 node, Ast.find_node t2 node with
         | Some e1, Some e2 ->
           print_string ("One conflict detected between the following " ^
@@ -80,7 +80,7 @@ let detect_conflicts ?handle_cas:(handle_cas=true) node =
       print_string (string_of_int (List.length l) ^
                     " conflicts detected between the following pairs of" ^
                     " expressions:\n");
-      List.iter (fun (t1, t2) ->
+      List.iter (fun (t1, t2, a) ->
           match Ast.find_node t1 node, Ast.find_node t2 node with
           | Some e1, Some e2 ->
             print_string ((Ast.string_of_node ~tags:true e1) ^ ", " ^
@@ -172,8 +172,9 @@ let () =
       | Params.Run -> run
       | Params.PrintAST -> print_ast
       | Params.MHP -> mhp
-      | Params.SetConflicts -> detect_conflicts ~handle_cas:false
-      | Params.Conflicts -> detect_conflicts ~handle_cas:true
+      | Params.SetConflicts -> detect_conflicts false false
+      | Params.AllConflicts -> detect_conflicts true false
+      | Params.Conflicts -> detect_conflicts true true
       | Params.UnretriedCas -> detect_unretried_cas
       | Params.DeadlockDetection -> detect_deadlocks
       | Params.CompareStates -> compare_states in
