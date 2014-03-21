@@ -62,7 +62,8 @@ let mhp node = match !Params.tag1, !Params.tag2 with
 let detect_conflicts handle_cas ignore_unique_cas node =
   if !Params.parallel then
     let _, graph = peval node in
-    let conflicts = Conflict.conflicts ~handle_cas ~ignore_unique_cas graph in
+    let conflicts = Conflict.conflicts ~handle_cas ~ignore_unique_cas
+        graph node in
     match conflicts with
     | [] -> print_string "No conflicts detected\n"
     | [(t1, t2, a)] ->
