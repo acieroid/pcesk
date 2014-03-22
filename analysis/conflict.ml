@@ -138,10 +138,17 @@ let conflicts
     List.concat
       (List.map
          (function
+           | [(t1, t2, _)] as l ->
+             if t1 = t2 && is_cas node t1 then
+               (* Only a ww conflict between a cas and itself, that can be
+                * dropped *)
+               []
+             else
+               l
            | [(t1, t2, _); (t1', t2', _)] as l ->
-             let nwrites = List.length (List.filter (is_cas node)
+             let ncas = List.length (List.filter (is_cas node)
                                           [t1; t2; t1'; t2']) in
-             if nwrites = 3 &&
+             if ncas = 3 &&
                 ((t1 = t2 && t1 = t1' || t1 = t2') ||
                  (t1' = t2' && t1' = t1 || t1' = t2')) then
                (* Got a rw & a ww, and they matches the pattern we want
