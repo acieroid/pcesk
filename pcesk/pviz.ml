@@ -64,7 +64,18 @@ module DotArg = struct
                               else
                                 ""
                             end
-                             ^ (string_of_pstate ~color:false "" pstate)))]
+                             ^ (string_of_pstate ~color:false "" pstate)));
+     `Style `Filled;
+     `Fillcolor
+       (if (ThreadMap.exists (fun _ contexts ->
+            ContextSet.exists (fun context -> match context.cexp with
+                | Node (Ast.Cas _, _) -> true
+                | _ -> false)
+              contexts)
+            pstate.threads) then
+          0xDDFFDD
+        else
+          0xFFFFFF)]
   let vertex_name (pstate : V.t) =
     let state_id = (string_of_int (node_id pstate)) in
     "pstate_" ^ state_id
