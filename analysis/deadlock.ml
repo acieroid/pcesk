@@ -69,7 +69,7 @@ let has_cycle_to_itself graph initial =
              (fun pstate ->
                 print_string (string_of_pstate "" pstate);
                 print_newline ())
-             history);
+             (List.rev history));
         end;
         true
       end else if PStateSet.mem pstate visited then
