@@ -43,8 +43,7 @@ let find_node graph id =
       | None -> None)
     graph None
 
-module DotArg =
-struct
+module DotArg = struct
   include G
   let edge_attributes ((_, e, _) : E.t) = [`Label (BatString.escaped e)]
   let default_edge_attributes _ = []
