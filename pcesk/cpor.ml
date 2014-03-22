@@ -253,6 +253,10 @@ let eval e =
             Exploration.add todo (List.map snd pstates);
             loop (PStateSet.add pstate visited) finished graph' (i+1)
           end else begin
+            print_string ("CPOR iteration " ^ (string_of_int i) ^
+                          " (" ^ (string_of_int (G.nb_vertex graph)) ^
+                          " vertices)");
+            print_newline ();
             if not (ThreadMap.mem InitialTid pstate.threads) then begin
               (* This state doesn't have a main thread anymore.  This can happen
                * when computing the CVs, but we don't want to keep such states
