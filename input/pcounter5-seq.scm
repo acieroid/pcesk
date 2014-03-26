@@ -3,7 +3,7 @@
               (letrec ((old counter)
                        (new (+ old 1)))
                 (if (cas counter old new)
-                  "done"
+                  #t
                   (f)))))
          (t1 (spawn (f)))
          (jt1 (join t1))

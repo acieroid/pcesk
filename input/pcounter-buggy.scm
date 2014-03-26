@@ -4,7 +4,7 @@
                        ;; Bug introduced here
                        (new (+ counter 1)))
                 (if (cas counter old new)
-                  "done"
+                  #t
                   (f)))))
          (t1 (spawn (f)))
          (t2 (spawn (f))))
