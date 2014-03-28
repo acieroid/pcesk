@@ -118,7 +118,8 @@ let lock_value state var =
   else match Lattice.conc value with
   | [AbsUnique Unlocked] -> `Unlocked
   | [AbsUnique Locked] -> `Locked
-  | _ -> failwith "Not enough precision"
+  | v -> failwith ("Not enough precision on a lock: " ^
+                   (String.concat ", " (List.map string_of_value v)))
 
 let step_acquire state var =
   let addr = env_lookup state.env var in
