@@ -36,6 +36,10 @@ let free_variables node =
       free_variables' n
     | Cas ((name, _), e1, e2) ->
       StringSet.add name
-        (StringSet.union (free_variables' e1) (free_variables' e2)) in
+        (StringSet.union (free_variables' e1) (free_variables' e2))
+    | Acquire (name, _)
+    | Release (name, _) ->
+      StringSet.singleton name
+ in
   StringSet.diff (free_variables' node)
     (string_set_of_list (List.map fst primitives))

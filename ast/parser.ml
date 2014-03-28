@@ -24,6 +24,8 @@ let parse stream =
     | "spawn" -> parse_spawn tag
     | "join" -> parse_join tag
     | "cas" -> parse_cas tag
+    | "acquire" -> parse_acquire tag
+    | "release" -> parse_release tag
     | f -> parse_funcall_rest tag ((Identifier f), tag+2)
 
   and parse_begin tag = parser
@@ -78,6 +80,14 @@ let parse stream =
     | [< 'IDENTIFIER v; (e1, tag') = parse' (tag+2);
          (e2, tag'') = parse' tag'; 'RPAR >] ->
       ((Cas ((v, tag+2), e1, e2), tag+1), tag'')
+
+  and parse_acquire tag = parser
+    | [< 'IDENTIFIER v; 'RPAR >] ->
+      ((Acquire (v, tag+2), tag+1), tag+3)
+
+  and parse_release tag = parser
+    | [< 'IDENTIFIER v; 'RPAR >] ->
+      ((Release (v, tag+2), tag+1), tag+3)
 
   and parse_funcall_rest tag f = parser
     | [< (args, tag') = parse_list (tag+2) >] ->

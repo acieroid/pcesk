@@ -16,6 +16,8 @@ type exp =
   | Spawn of node
   | Join of node (* argument of join should be an atomic expression *)
   | Cas of var * node * node (* both node arguments should be atomic *)
+  | Acquire of var
+  | Release of var
 and node = exp * int
 
 let rec string_of_exp ?tags:(tags=false) = function
@@ -52,6 +54,10 @@ let rec string_of_exp ?tags:(tags=false) = function
   | Cas ((v, _), e1, e2) ->
     "(cas " ^ v ^ " " ^ (string_of_node ~tags e1) ^ " " ^
     (string_of_node ~tags e2) ^ ")"
+  | Acquire (v, _) ->
+    "(acquire " ^ v ^ ")"
+  | Release (v, _) ->
+    "(release " ^ v ^ ")"
 
 and string_of_node ?tags:(tags=false) (exp, tag) =
   string_of_exp ~tags exp ^ (if tags then "@" ^ (string_of_int tag) else "")
@@ -76,8 +82,9 @@ let rec extract_tags = function
   | (Identifier _, t)
   | (String _, t)
   | (Integer _, t)
-  | (Boolean _, t) -> [t]
-  | (Nil, t) -> [t]
+  | (Boolean _, t)
+  | (Nil, t) ->
+    [t]
   | (Funcall (f, args), t) ->
     t :: ((extract_tags f) @ (Util.flatmap extract_tags args))
   | (Lambda (vars, body), t) ->
@@ -98,6 +105,10 @@ let rec extract_tags = function
     t :: (extract_tags exp)
   | (Cas ((_, t'), eold, enew), t) ->
     t :: t' :: ((extract_tags eold) @ (extract_tags enew))
+  | (Acquire (_, t'), t)
+  | (Release (_, t'), t) ->
+    [t; t']
+
 
 (* Try to find a node corresponding to a tag in a given node *)
 let rec find_node tag node =
@@ -116,7 +127,10 @@ let rec find_node tag node =
   | (String _, _)
   | (Integer _, _)
   | (Boolean _, _)
-  | (Nil, _) -> None
+  | (Nil, _)
+  | (Acquire _, _)
+  | (Release _, _) ->
+    None
   | (Funcall (f, args), _) ->
     find_node tag f ++ find_node' args
   | (Lambda (_, body), _)
