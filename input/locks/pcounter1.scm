@@ -1,0 +1,8 @@
+(letrec ((lock #unlocked)
+         (counter 0)
+         (inc (lambda ()
+                (acquire lock)
+                (set! counter (+ counter 1))
+                (release lock))))
+  (inc)
+  counter)
