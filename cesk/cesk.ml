@@ -128,7 +128,15 @@ let step_acquire state var =
   | `Unlocked ->
     [{ (state_produce_value state (Aval.aval Nil))
        with store = store_update state.store addr locked }]
-  | `Locked | `NotALock ->
+  | `Locked ->
+    []
+  | `NotALock ->
+    if !Params.verbose >= 3 then
+      print_string ("Not a lock: " ^
+                    (string_of_address_set (AddressSet.singleton addr)) ^ ": " ^
+                    (Lattice.string_of_lattice_value
+                       (store_lookup state.store addr)) ^
+                  "\n");
     []
 
 let step_release state var =
@@ -288,7 +296,7 @@ and step_value state v kont =
       | ((name, tag), node) :: rest ->
         let a = env_lookup env name in
         let kont = LetRecKont (tag, a, rest, body, state.env, c) in
-        [state_push state node kont]
+        [state_push {state with env; store} node kont]
     end
   (** if *)
   | IfKont (_, consequent, alternative, env, c) ->
