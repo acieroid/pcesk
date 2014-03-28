@@ -286,11 +286,9 @@ and step_value state v kont =
             [state_push { state with env; store } node kont]
         end
       | ((name, tag), node) :: rest ->
-        let a = alloc state tag in
-        let env = env_extend env name a in
-        let store = store_extend store a Lattice.bottom  in
-        let kont = LetRecKont (tag, a, rest, body, env, c) in
-        [state_push { state with env; store } node kont]
+        let a = env_lookup env name in
+        let kont = LetRecKont (tag, a, rest, body, state.env, c) in
+        [state_push state node kont]
     end
   (** if *)
   | IfKont (_, consequent, alternative, env, c) ->
