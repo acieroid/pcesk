@@ -8,3 +8,5 @@ type scheme_token =
   | INTEGER of int
   | IDENTIFIER of string
   | NIL
+  | LOCKED
+  | UNLOCKED

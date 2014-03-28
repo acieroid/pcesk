@@ -5,7 +5,8 @@ open Primitives
 let free_variables node =
   let rec free_variables' (exp, _) = match exp with
     | Identifier s -> StringSet.singleton s
-    | String _ | Integer _ | Boolean _ | Nil -> StringSet.empty
+    | String _ | Integer _ | Boolean _ | Nil | Locked | Unlocked ->
+      StringSet.empty
     | Funcall (f, args) ->
       List.fold_left StringSet.union (free_variables' f)
         (List.map free_variables' args)

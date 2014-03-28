@@ -8,6 +8,8 @@ let parse stream =
     | [< 'STRING s >] -> ((String s, tag+1), tag+1)
     | [< 'BOOLEAN b >] -> ((Boolean b, tag+1), tag+1)
     | [< 'NIL >] -> ((Nil, tag+1), tag+1)
+    | [< 'LOCKED >] -> ((Locked, tag+1), tag+1)
+    | [< 'UNLOCKED >] -> ((Unlocked, tag+1), tag+1)
     | [< 'LPAR; f = parse_funcall tag >] -> f
 
   and parse_funcall tag = parser

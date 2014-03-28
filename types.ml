@@ -10,6 +10,8 @@ type prim_value =
   | Symbol of string
   | Tid of tid
   | Cons of value * value
+  | Unlocked
+  | Locked
   | Nil
   | Unspecified
   | Closure of lam * env
@@ -82,6 +84,8 @@ let rec string_of_prim_value = function
   | Cons (car, cdr) ->
     "(" ^ (string_of_value car) ^ " . " ^
     (string_of_value cdr) ^")"
+  | Locked -> "#locked"
+  | Unlocked -> "#unlocked"
   | Nil -> "()"
   | Unspecified -> "#<unspecified>"
   | Closure ((args, body), _) ->

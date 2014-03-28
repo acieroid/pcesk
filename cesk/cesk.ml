@@ -105,6 +105,42 @@ let step_cas state x e_old e_new =
   | `NotEqual -> [state_neq]
   | `Unknown -> [state_eq; state_neq]
 
+let lock_value state var =
+  let addr = env_lookup state.env var in
+  let value = store_lookup state.store addr in
+  let locked = (Lattice.abst1 (AbsUnique Locked))
+  and unlocked = (Lattice.abst1 (AbsUnique Unlocked)) in
+  let proj_locked = Lattice.meet value locked
+  and proj_unlocked = Lattice.meet value unlocked in
+  if Lattice.is_bottom proj_locked && Lattice.is_bottom proj_unlocked then
+    (* Trying to lock a non-lock *)
+    `NotALock
+  else match Lattice.conc value with
+  | [AbsUnique Unlocked] -> `Unlocked
+  | [AbsUnique Locked] -> `Locked
+  | _ -> failwith "Not enough precision"
+
+let step_acquire state var =
+  let addr = env_lookup state.env var in
+  let locked = (Lattice.abst1 (AbsUnique Locked)) in
+  match lock_value state var with
+  | `Unlocked ->
+    [{ (state_produce_value state (Aval.aval Nil))
+       with store = store_update state.store addr locked }]
+  | `Locked | `NotALock ->
+    []
+
+let step_release state var =
+  let addr = env_lookup state.env var in
+  let unlocked = (Lattice.abst1 (AbsUnique Unlocked)) in
+  match lock_value state var with
+  | `Locked | `Unlocked ->
+    (* We can release an already unlocked lock *)
+    [{ (state_produce_value state (Aval.aval Nil))
+       with store = store_update state.store addr unlocked }]
+  | `NotALock ->
+    []
+
 (** State manipulation *)
 
 let rec apply_function rator rands state = match rator with
@@ -170,6 +206,10 @@ and step_node state (e, tag) =
     [state_produce_value state (Aval.aval (Boolean b))]
   | Ast.Nil ->
     [state_produce_value state (Aval.aval Nil)]
+  | Ast.Locked ->
+    [state_produce_value state (Aval.aval Locked)]
+  | Ast.Unlocked ->
+    [state_produce_value state (Aval.aval Unlocked)]
   | Ast.Lambda (vars, body) ->
     step_lambda state tag vars body
   | Ast.Begin body ->
@@ -187,6 +227,10 @@ and step_node state (e, tag) =
     [state_push state rator kont]
   | Ast.Cas ((x, _), e_old, e_new) ->
     step_cas state x e_old e_new
+  | Ast.Acquire (var, _) ->
+    step_acquire state var
+  | Ast.Release (var, _) ->
+    step_release state var
   | Ast.Spawn _
   | Ast.Join _ -> failwith "Can't deal with parallelism in CESK machine"
 
