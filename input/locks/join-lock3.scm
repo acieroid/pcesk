@@ -1,0 +1,6 @@
+(letrec ((t1 (spawn (begin (+ 1 2) (join t3))))
+         (t2 (spawn (begin #f (join t1))))
+         (t3 (spawn (begin "foo" (join t2)))))
+  (join t1)
+  (join t2)
+  (join t3))
