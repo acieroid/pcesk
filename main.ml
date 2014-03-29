@@ -116,6 +116,23 @@ let detect_deadlocks node =
     raise (BadArguments ("cannot do deadlock detection without parallelism " ^
                          "turned on (use -p)"))
 
+let detect_ldeadlocks node =
+  if !Params.parallel then
+    let _, graph = peval node in
+    let deadlocks = Ldeadlock.deadlocks graph in
+    match deadlocks with
+    | [] -> print_string "No deadlocks detected\n"
+    | l ->
+      print_string ((string_of_int (List.length l)) ^
+                    " possible deadlocks detected, at the following states:\n");
+      List.iter (fun pstate ->
+          print_string (Pcesk_types.string_of_pstate "    " pstate);
+          print_newline ())
+        l
+  else
+    raise (BadArguments ("cannot do deadlock detection without parallelism " ^
+                         "turned on (use -p)"))
+
 let detect_unretried_cas node =
   if !Params.parallel then
     let _, graph = peval node in
@@ -178,6 +195,7 @@ let () =
       | Params.Conflicts -> detect_conflicts true true
       | Params.UnretriedCas -> detect_unretried_cas
       | Params.DeadlockDetection -> detect_deadlocks
+      | Params.LDeadlockDetection -> detect_ldeadlocks
       | Params.CompareStates -> compare_states in
     let node = Parser.parse (Lexer.lex !input_chan) in
     action node

@@ -1,7 +1,6 @@
 open Cesk_types
 open Pcesk_types
 open Pviz
-open Types
 
 let is_potential_deadlock pstate =
   (* Check if a state is a potential deadlock, that is if it only contains
