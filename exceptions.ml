@@ -23,4 +23,8 @@ let string_of_exception = function
     "Unbound identifier: " ^ s
   | BadArguments s ->
     "Bad arguments: " ^ s
+  | UnboundAddress a ->
+    "Unbound address: " ^ (Addr.string_of_address a)
+  | NotAtomic n ->
+    "Not atomic: " ^ (Ast.string_of_node n)
   | e -> raise e
