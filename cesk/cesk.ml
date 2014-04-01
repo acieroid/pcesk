@@ -295,7 +295,7 @@ and step_value state v kont =
         end
       | ((name, tag), node) :: rest ->
         let a = env_lookup env name in
-        let kont = LetRecKont (tag, a, rest, body, state.env, c) in
+        let kont = LetRecKont (tag, a, rest, body, env, c) in
         [state_push {state with env; store} node kont]
     end
   (** if *)
