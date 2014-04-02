@@ -1,7 +1,7 @@
 TIMEOUT=300 # 5 min
 FAIL=124
-CMD="timeout $TIMEOUT ./main.byte -quiet"
-FILES=$(find input/seq -type f -name \*.scm)
+CMD="timeout $TIMEOUT ./main.byte -quiet -r -j -p"
+FILES=$(find input/par -type f -name \*.scm)
 
 function run {
   FILE="$1"
