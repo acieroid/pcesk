@@ -8,9 +8,7 @@
                       (set! lock #f)))
          (t1 (spawn (begin
                       (acquire)
-                      1 ; forgot to release the lock!
+                      ; forgot to release the lock!
                       ))))
   (acquire)
-  2
-  (release)
   (join t1))

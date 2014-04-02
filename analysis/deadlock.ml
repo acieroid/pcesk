@@ -52,6 +52,51 @@ let find_cas_only_false graph =
     graph
     []
 
+let deadlock_cycle history =
+  (* A cycle is a deadlock if it either:
+   *   - starts at a state that has only one cas and all the other contexts are
+   *     joins
+   *   - has more than one cas, but involves more than one thread
+  *)
+  let _, initial = List.hd history in
+  let _, only_one_cas =
+    ThreadMap.fold (fun _ contexts (seen_cas, good)->
+        if not good then
+          (seen_cas, good)
+        else
+          let cas, joins, other =
+            ContextSet.fold (fun ctx (cas, join, other) ->
+                match ctx.cexp with
+                | Node (Ast.Cas _, _) -> (cas+1, join, other)
+                | Node (Ast.Join _, _) -> (cas, join+1, other)
+                | _ -> (cas, join, other+1))
+              contexts
+              (0, 0, 0) in
+          match cas, joins, other with
+          | 1, _, 0 ->
+            (* We only one want cas *)
+            (true, not seen_cas)
+          | 0, _, 0 ->
+            (seen_cas, true)
+          | _, _, _ ->
+            (seen_cas, false))
+      initial.threads
+      (false, true) in
+  if only_one_cas then
+    true
+  else
+    let _, only_one_thread =
+        (* Check if the cycle involves more than one thread *)
+        (List.fold_left (fun (tid', res) (tid, _) ->
+             match tid', tid with
+             | IntTid (-1), _ -> (tid, true)
+             | _, IntTid (-1) -> (tid', true)
+             | _, _ when tid' = tid -> (tid, res)
+             | _, _ -> (tid, false))
+            (IntTid (-1), true)
+            history) in
+    not only_one_thread
+
 let has_cycle_to_itself graph skip_single initial =
   (* Check if a pstate has a cycle that points back to itself.  When skip_single
    * is true, skip the deadlocks that involve a single thread (eg. if a thread
@@ -68,25 +113,16 @@ let has_cycle_to_itself graph skip_single initial =
       if i > 0 && compare_pstates initial pstate == 0 then
         if skip_single then
           (* Found a cycle *)
-          let only_one_thread = snd
-              (* Check if the cycle involves more than one thread *)
-              (List.fold_left (fun (tid', res) (tid, _) ->
-                   match tid', tid with
-                   | IntTid (-1), _ -> (tid, true)
-                   | _, IntTid (-1) -> (tid', true)
-                   | _, _ when tid' = tid -> (tid, res)
-                   | _, _ -> (tid, false))
-                  (IntTid (-1), true)
-                  history) in
-          if only_one_thread then begin
+          if deadlock_cycle (List.rev history) then
+            (* Deadlock detected *)
+            true
+          else begin
             (* Not an interesting cycle, continue *)
             let succ = List.map (fun (_, (tid, _), s) -> (s, (tid, s)::history))
                 (G.succ_e graph pstate) in
             Dfs.add todo succ;
             aux (i+1) (PStateSet.add pstate visited)
-          end else
-            (* Deadlock detected *)
-            true
+          end
         else
           true
       else if PStateSet.mem pstate visited then
