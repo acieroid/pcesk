@@ -224,7 +224,7 @@ let eval e =
           if List.length (ThreadMap.bindings pstate.threads) == 1 then begin
             (* Only one thread, same as without CPOR *)
             let pstates = List.map (fun (transition, pstate) ->
-                if !Params.gc_after then
+                if !Params.gc then
                   (transition, gc pstate)
                 else
                   (transition, pstate))

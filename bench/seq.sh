@@ -1,4 +1,4 @@
-TIMEOUT=600 # 10 min
+TIMEOUT=300 # 5 min
 FAIL=124
 CMD="timeout $TIMEOUT ./main.byte -quiet"
 FILES=$(find input/seq -type f -name \*.scm)

@@ -343,7 +343,10 @@ and step_value state v kont =
   | HaltKont -> [{ state with change = Epsilon; time = tick state}]
 
 let step state =
-  let state = if !Params.gc && not !Params.parallel then gc state else state in
+  let state = if !Params.gc_before && not !Params.parallel then
+      gc state
+    else
+      state in
   match state.exp with
   | Node n -> step_node state n
   | Value v -> List.flatten (List.map (step_value state v)
@@ -432,7 +435,7 @@ let eval e =
             loop (StateSet.add state visited) (res::finished) graph
           | None ->
             let states = List.map (fun state ->
-                if !Params.gc_after then gc state else state)
+                if !Params.gc then gc state else state)
                 (step state) in
             let source = G.V.create state
             and dests = List.map G.V.create states in

@@ -162,7 +162,7 @@ let step_contexts pstate (tid, cs) =
                  (ContextSet.elements cs))
 
 let step pstate =
-  let pstate = if !Params.gc then gc pstate else pstate in
+  let pstate = if !Params.gc_before then gc pstate else pstate in
   List.concat
     (List.map (step_contexts pstate) (ThreadMap.bindings pstate.threads))
 
@@ -238,7 +238,7 @@ let eval e =
         else match extract_finals pstate with
         | [] ->
           let pstates = List.map (fun (transition, pstate) ->
-              if !Params.gc_after then
+              if !Params.gc then
                 (transition, gc pstate)
               else
                 (transition, pstate))

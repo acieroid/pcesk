@@ -1,9 +1,8 @@
 * PCESK
-This is an implementation of an abstract CESK machine which supports
-concurrent constructs (spawn/join), based on Matthew Might's
-description of CESK machines (mainly from the papers [[http://matt.might.net/papers/vanhorn2010abstract.pdf][Abstracting
-Abstract Machines]] and [[http://matt.might.net/papers/might2011pceks.pdf][A Family of Abstract Interpretations for Static
-Analysis of Concurrent Higher-Order Programming]])
+This is an implementation of an abstract CESK machine which supports concurrent
+constructs (spawn/join), based on Matthew Might's description of CESK machines
+(mainly from the papers [[http://matt.might.net/papers/vanhorn2010abstract.pdf][Abstracting Abstract Machines]] and [[http://matt.might.net/papers/might2011pceks.pdf][A Family of Abstract
+Interpretations for Static Analysis of Concurrent Higher-Order Programming]])
 ** Dependencies and compilation
 The following OCaml packages are required:
   - ocamlgraph
@@ -28,8 +27,8 @@ usage: ./main.byte [-v level] [-i input] [-g graph_output] [-k polyvariance]
   -i : input file (stdin by default)
   -g : output file for the generated graph (nothing by default)
   -k : polyvariance (k-CFA) (k=0 by default)
-  -gc : turn on abstract garbage collection (disabled by default)
-  -gc-after : run garbage collection after stepping (disabled by default)
+  -gc-before : run garbage collection before stepping (disabled by default)
+  -gc : run garbage collection after stepping (disabled by default)
   -no-store-strong-updates : turn off strong updates in the store
   -p : turn on parallelism with spawn and join (disabled by default)
   -cpor : turn on cartesian partial order reduction (disabled by default)
@@ -48,62 +47,61 @@ usage: ./main.byte [-v level] [-i input] [-g graph_output] [-k polyvariance]
   --help  Display this list of options
 #+END_SRC
 
-Those parameters are explained in more details below, and examples
-are given after.
+Those parameters are explained in more details below, and examples are given
+after.
 
 *** General Parameters
-  - =-v=: when the verbose mode is activated (> 0), the execution will
-    also print a trace of the states computed (before the results),
-    with eval states being printed in red, and continuation states
-    being printed in green.
-  - =-i=: indicates the input file from which to read the input. By
-    default, standard input is read. For example input files, look at
-    the =input/= directory.
-  - =-g=: indicates where to write the state graph. Graphviz's dot
-    format is used and images can be generated using =dot= (=dot -Tpng
-    foo.dot > foo.png=).
-  - =-quiet= disables the values outputted at the beginning of the
-    execution.
-  - =-p=: turns on parallelism (use PCESK instead of CESK), thus
-    supporting =spawn= and =join=.
+  - =-v=: when the verbose mode is activated (> 0), the execution will also
+    print a trace of the states computed (before the results), with eval states
+    being printed in red, and continuation states being printed in green.
+  - =-i=: indicates the input file from which to read the input. By default,
+    standard input is read. For example input files, look at the =input/=
+    directory.
+  - =-g=: indicates where to write the state graph. Graphviz's dot format is
+    used and images can be generated using =dot= (=dot -Tpng foo.dot >
+    foo.png=).
+  - =-quiet= disables the values outputted at the beginning of the execution.
+  - =-p=: turns on parallelism (use PCESK instead of CESK), thus supporting
+    =spawn= and =join=.
 *** CESK Precision Parameters
-  - =-k=: tune polyvariance (see Abstracting Abstract Machines), the
-    higher the k, the higher the precision. However, for higher-order
-    programs, k > 1 is not really useful.
-  - =-gc=: activates abstract garbage collection. It will result in a
-    much higher precision on complex programs.
-  - =-gc-after=: similar to =-gc=, but the garbage collection will be
-    done /after/ the transition function, and not before. The
-    resulting state space should be smaller, especially for the PCESK
-    machine.
+  - =-k=: tune polyvariance (see Abstracting Abstract Machines), the higher the
+    k, the higher the precision. However, for higher-order programs, k > 1 is
+    not really useful.
+  - =-gc=: activates abstract garbage collection. It will result in a much
+    higher precision on complex programs.
+  - =-gc-before=: similar to =-gc=, but the garbage collection will be done
+    /before/ the transition function, and not after. This is generally a bad
+    idea, as running the GC after the transition reclaimes more unreachable
+    addresses.
   - =-s=: activate reduction of the state space by subsumption. This
     experimentally gives really good results for the PCESK machine.
-  - =-no-store-strong-updates=: disable strong updates in the
-    store. It should result in a loss of precision.
+  - =-no-store-strong-updates=: disable strong updates in the store. It should
+    result in a loss of precision.
 *** PCESK Precision Parameters
-First, parallelism should be turned on with =-p= before using those
-options.
-  - =-r=: each times a thread halts, remove it from the thread
-    map. It should result in a better precision.
-  - =-no-threads-strong-updates=: disable strong updates in the
-    thread map. It should result in a great loss of precision.
+First, parallelism should be turned on with =-p= before using those options.
+  - =-j=: when a =join= is done, a strong update will be done to increase
+    precision.
+  - =-r=: each times a thread halts, remove it from the thread map. It should
+    result in a better precision.
+  - =-no-threads-strong-updates=: disable strong updates in the thread map. It
+    should result in a great loss of precision.
   - =-cpor=: uses [[http://users.soe.ucsc.edu/~cormac/papers/spin07.pdf][Cartesian Partial Order Reduction]] to reduce the state space
 *** Targets
-Multiple target (ie. actions to run) exists. Each target makes use of
-the previously defined options.
+Multiple target (ie. actions to run) exists. Each target makes use of the
+previously defined options.
 
-The default target is =run=, which simply computes the state graph for
-the given program.
+The default target is =run=, which simply computes the state graph for the given
+program.
 
-The =ast= target allows the user to display the parsed AST, annotated
-with tags (number corresponding to an AST node), in order to find the
-tags to use for the =mhp= target.
+The =ast= target allows the user to display the parsed AST, annotated with tags
+(number corresponding to an AST node), in order to find the tags to use for the
+=mhp= target.
 
-The =mhp= target does a may-happen-in-parallel (MHP) analysis, using
-the nodes described by the tags given by the =-t1= and =-t2=
-parameters. For doing so, it computes the state graph and traverses it
-in order to find a state where the two nodes can be evaluated. It then
-prints whether they can be evaluated in parallel or not.
+The =mhp= target does a may-happen-in-parallel (MHP) analysis, using the nodes
+described by the tags given by the =-t1= and =-t2= parameters. For doing so, it
+computes the state graph and traverses it in order to find a state where the two
+nodes can be evaluated. It then prints whether they can be evaluated in parallel
+or not.
 
 The =conflicts= target detects read/write and write/write conflicts in a
 program, in a similar way as how MHP is done (but the user doesn't have to
@@ -114,9 +112,9 @@ read/write and write/write conflicts involving a =set!= (it assumes =cas= is
 correctly used).
 
 The =unretriedcas= target finds potential errors when =cas= is incorrectly
-used. The return value of =cas= should always be checked and the =cas= should
-be retried if it failed. This analysis looks for =cas= that are not retried
-when they failed. This is a source of race conditions.
+used. The return value of =cas= should always be checked and the =cas= should be
+retried if it failed. This analysis looks for =cas= that are not retried when
+they failed. This is a source of race conditions.
 
 The =deadlocks= target finds potential deadlocks in programs where locks are
 implemented through =cas=. It does so by looking for cycles on a =cas= that will
@@ -124,16 +122,15 @@ not terminate (ie. the =cas= will always evaluate to =#f= and be retried).
 
 *** Examples
 **** CESK Machine
-You can run a sequential CESK machine on programs that do not make
-use of the parallel operators. Some examples are given in the
-=input/seq/= directory.
+You can run a sequential CESK machine on programs that do not make use of the
+parallel operators. Some examples are given in the =input/seq/= directory.
 
-With the =run= target, the program will be evaluated and the possible
-results will be printed. On each line the result will correspond to a
-possible final state of the execution.
+With the =run= target, the program will be evaluated and the possible results
+will be printed. On each line the result will correspond to a possible final
+state of the execution.
 
-The last line of the output contains the number of states in the
-graph, the number of edges and the time it took to compute this graph.
+The last line of the output contains the number of states in the graph, the
+number of edges and the time it took to compute this graph.
 
 For example:
 
@@ -141,8 +138,8 @@ For example:
 $ ./main.byte -i input/seq/mut-rec.scm
 Running with:
         exploration = bfs
+        gc-before = off
         gc = off
-        gc-after = off
         k = 0
         parallelism = off
         remove-threads = off
@@ -159,13 +156,12 @@ Running with:
 145/145/0.189
 #+END_SRC
 **** PCESK Machine
-The PCESK machine can be used to run simple programs that make use of
-the parallel operators. Parallelism is turned on by the =-p=
-parameter. By default, nothing is done to reduce the state space and
-the computation might take a long time. A sane default to improve this
-is to use the parameters =-j -s -r=. The garbage collector (=-gc= or
-=-gc-after=) tends to increase the size of the state space compared to
-just using a reduction by subsumption (=-s=).
+The PCESK machine can be used to run simple programs that make use of the
+parallel operators. Parallelism is turned on by the =-p= parameter. By default,
+nothing is done to reduce the state space and the computation might take a long
+time. A sane default to improve this is to use the parameters =-j -s -r=. The
+garbage collector (=-gc= or =-gc-before=) tends to increase the size of the
+state space compared to just using a reduction by subsumption (=-s=).
 
 For example:
 
@@ -173,8 +169,8 @@ For example:
 ./main.byte -i input/pcounter.scm -p -j -s -r
 Running with:
         exploration = bfs
+        gc-before = off
         gc = off
-        gc-after = off
         k = 0
         parallelism = on
         remove-threads = on
@@ -186,11 +182,10 @@ Int
 981/2298/9.63
 #+END_SRC
 **** MHP Analysis
-We can check whether two expressions may happen in parallel. First,
-the two expressions have to be identified by their tag, by analyzing
-the output of the =ast= target. Then, those two expressions
-identifiers (/tags/) are given as value for =t1= and =t2= and the
-target =mhp= is run.
+We can check whether two expressions may happen in parallel. First, the two
+expressions have to be identified by their tag, by analyzing the output of the
+=ast= target. Then, those two expressions identifiers (/tags/) are given as
+value for =t1= and =t2= and the target =mhp= is run.
 
 For example:
 
@@ -205,27 +200,27 @@ $ ./main.byte -i input/pcounter.scm -p -j -s -r -target mhp -quiet -t1  15 -t2 1
 The expressions (cas counter old@17 new@18)@15 and (cas counter old@17 new@18)@15 may happen in parallel
 #+END_SRC
 
-(The two =cas= expressions may safely happen in parallel because of
-their atomicity)
+(The two =cas= expressions may safely happen in parallel because of their
+atomicity)
 **** Detecting Race Conditions
 We can detect race conditions in a program with the following targets:
 =conflicts=, =setconflicts=, and =unretriedcas=. =conflicts= will look for every
 read/write and write/write conflicts, but some conflicts (those involving =cas=)
 might not lead to race conditions. We can thus make the assumption that =cas= is
 correctly used and look for =setconflicts= instead (ie. conflicts that does not
-involve =cas= usages). To verify the assumption that =cas= is correctly used,
-we can finally use the =unretriedcas= analysis.
+involve =cas= usages). To verify the assumption that =cas= is correctly used, we
+can finally use the =unretriedcas= analysis.
 
 For example:
 
 #+BEGIN_SRC shell
-$ ./main.byte -p -r -j -i input/pcounter.scm -target setconflicts -quiet -gc-after -s
+$ ./main.byte -p -r -j -i input/pcounter.scm -target setconflicts -quiet -gc -s
 No conflicts detected
 
-$ ./main.byte -p -r -j -i input/pcounter.scm -target unretriedcas -quiet -gc-after -s                                                                                                                                    
+$ ./main.byte -p -r -j -i input/pcounter.scm -target unretriedcas -quiet -gc -s
 No unretried cas detected
 
-$ ./main.byte -p -r -j -i input/pcounter-race.scm -target setconflicts -quiet -gc-after -s                                                                                                                                  
+$ ./main.byte -p -r -j -i input/pcounter-race.scm -target setconflicts -quiet -gc -s
 2 conflicts detected between the following pairs of expressions:
 (set! counter (+@9 counter@10 1@11)@8)@6, (set! counter (+@9 counter@10 1@11)@8)@6
 (set! counter (+@9 counter@10 1@11)@8)@6, counter@10
@@ -239,13 +234,12 @@ blocked in this cycle infinitely.
 For example:
 
 #+BEGIN_SRC shell
-$ ./main.byte -p -r -j -i input/deadlock-simple.scm -target deadlocks -quiet -gc-after -s
+$ ./main.byte -p -r -j -i input/deadlock-simple.scm -target deadlocks -quiet -gc -s
 1 possible deadlocks detected, starting at the following expressions:
 (cas lock #f@9 #t@10)@7 [on tid 1]
 #+END_SRC
 
 ** Bugs
-  - The use of state subsumption (=-s=) might produce incorrect graphs
   - Cartesian Partial Order Reduction (=-cpor=) might introduce unsoundness,
     even though it should not (except for MHP analysis).
   - Deadlock detection has many false positives. This might be solved by the use

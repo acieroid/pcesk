@@ -3,11 +3,11 @@ open Exploration
 (* k of the k-CFA *)
 let k = ref 0
 
-(* GC turned on or not *)
-let gc = ref false
+(* Run GC before doing a step *)
+let gc_before = ref false
 
-(* Also run GC after having done a step *)
-let gc_after = ref false
+(* Run GC after having done a step *)
+let gc = ref false
 
 (* Strong updates in the store *)
 let store_strong_updates = ref true
@@ -94,9 +94,9 @@ let speclist = [
    ": output file for the generated graph (nothing by default)");
   ("-k", Arg.Set_int k,
    ": polyvariance (k-CFA) (k=0 by default)");
+  ("-gc-before", Arg.Set gc_before,
+   ": run garbage collection before stepping (disabled by default)");
   ("-gc", Arg.Set gc,
-   ": turn on abstract garbage collection (disabled by default)");
-  ("-gc-after", Arg.Set gc_after,
    ": run garbage collection after stepping (disabled by default)");
   ("-no-store-strong-updates", Arg.Unit
      (fun () -> store_strong_updates := false),
@@ -164,8 +164,8 @@ let string_of_configuration () =
   let module Exploration = (val !exploration) in
   "\t" ^ (String.concat "\n\t"
             [string_of_param "exploration" Exploration.name;
+             string_of_bool_param "gc-before" !gc_before;
              string_of_bool_param "gc" !gc;
-             string_of_bool_param "gc-after" !gc_after;
              string_of_param "k" (string_of_int !k);
              string_of_bool_param "parallelism" !parallel;
              string_of_bool_param "remove-threads" !remove_threads;

@@ -90,7 +90,7 @@ let string_of_pstate ?color:(color=true) prefix pstate =
                                        (ContextSet.elements cs))) ^
           "}")
          (ThreadMap.bindings pstate.threads))) ^
-  "}" (* ^
+  "}" (* ^ "\n" ^
   prefix ^ (Store.string_of_store pstate.pstore) *)
 
 (** Conversion between CESK state and PCESK state *)
