@@ -94,10 +94,10 @@ let detect_conflicts handle_cas ignore_unique_cas node =
     raise (BadArguments ("cannot do conflict detection without parallelism " ^
                          "turned on (use -p)"))
 
-let detect_deadlocks node =
+let detect_deadlocks skip_single node =
   if !Params.parallel then
     let _, graph = peval node in
-    let deadlocks = Deadlock.deadlocks graph in
+    let deadlocks = Deadlock.deadlocks graph skip_single in
     match deadlocks with
     | [] -> print_string "No deadlocks detected\n"
     | l ->
@@ -194,7 +194,8 @@ let () =
       | Params.AllConflicts -> detect_conflicts true false
       | Params.Conflicts -> detect_conflicts true true
       | Params.UnretriedCas -> detect_unretried_cas
-      | Params.DeadlockDetection -> detect_deadlocks
+      | Params.DeadlockDetection -> detect_deadlocks true
+      | Params.DeadlockDetectionSingle -> detect_deadlocks false
       | Params.LDeadlockDetection -> detect_ldeadlocks
       | Params.CompareStates -> compare_states in
     let node = Parser.parse (Lexer.lex !input_chan) in

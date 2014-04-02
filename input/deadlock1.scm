@@ -1,24 +1,16 @@
-(letrec ((lock-a #f)
-         (lock-b #f)
-         (acquire-a (lambda ()
-                      (if (cas lock-a #f #t)
-                          nil
-                          (acquire-a))))
-         (release-a (lambda ()
-                      (set! lock-a #f)))
-         (acquire-b (lambda ()
-                      (if (cas lock-b #f #t)
-                          nil
-                          (acquire-b))))
-         (release-b (lambda ()
-                      (set! lock-b #f)))
+;; Deadlock involving only one lock, but two threads
+(letrec ((lock #f)
+         (acquire (lambda ()
+                    (if (cas lock #f #t)
+                        nil
+                        (acquire))))
+         (release (lambda ()
+                      (set! lock #f)))
          (t1 (spawn (begin
-                      (acquire-a)
-                      (acquire-b)
-                      (release-b)
-                      (release-a)))))
-  (acquire-b)
-  (acquire-a)
-  (release-a)
-  (release-b)
+                      (acquire)
+                      1 ; forgot to release the lock!
+                      ))))
+  (acquire)
+  2
+  (release)
   (join t1))

@@ -52,35 +52,54 @@ let find_cas_only_false graph =
     graph
     []
 
-let has_cycle_to_itself graph initial =
-  (* Check if a pstate has a cycle that points back to itself. *)
-  let todo = Dfs.create (initial, [initial]) in
+let has_cycle_to_itself graph skip_single initial =
+  (* Check if a pstate has a cycle that points back to itself.  When skip_single
+   * is true, skip the deadlocks that involve a single thread (eg. if a thread
+   * acquire a lock and another thread want to acquire it, if the other thread
+   * never gets executed the second thread will deadlock, even though in real
+   * situation the first thread will at some point get executed *)
+  let todo = Dfs.create (initial, [(IntTid (-1), initial)]) in
   let rec aux i visited =
     if Dfs.is_empty todo then
       (* Finished, no cycle *)
       false
     else
       let (pstate, history) = Dfs.pick todo in
-      if i > 0 && compare_pstates initial pstate == 0 then begin
-        (* Found a cycle *)
-        if !Params.verbose >= 2 then begin
-          print_string "History:\n";
-          (List.iter
-             (fun pstate ->
-                print_string (string_of_pstate "" pstate);
-                print_newline ())
-             (List.rev history));
-        end;
-        true
-      end else if PStateSet.mem pstate visited then
+      if i > 0 && compare_pstates initial pstate == 0 then
+        if skip_single then
+          (* Found a cycle *)
+          let only_one_thread = snd
+              (* Check if the cycle involves more than one thread *)
+              (List.fold_left (fun (tid', res) (tid, _) ->
+                   match tid', tid with
+                   | IntTid (-1), _ -> (tid, true)
+                   | _, IntTid (-1) -> (tid', true)
+                   | _, _ when tid' = tid -> (tid, res)
+                   | _, _ -> (tid, false))
+                  (IntTid (-1), true)
+                  history) in
+          if only_one_thread then begin
+            (* Not an interesting cycle, continue *)
+            let succ = List.map (fun (_, (tid, _), s) -> (s, (tid, s)::history))
+                (G.succ_e graph pstate) in
+            Dfs.add todo succ;
+            aux (i+1) (PStateSet.add pstate visited)
+          end else
+            (* Deadlock detected *)
+            true
+        else
+          true
+      else if PStateSet.mem pstate visited then
         (* State already visited, skip it *)
         aux (i+1) visited
       else begin
         (* New state, different from the initial one, add its successors and
          * continue visiting *)
-        let succ = List.map (fun s -> (s, s::history)) (G.succ graph pstate) in
+        let succ = List.map (fun (_, (tid, _), s) -> (s, (tid, s)::history))
+            (G.succ_e graph pstate) in
         Dfs.add todo succ;
-        aux (i+1) (PStateSet.add pstate visited) end in
+        aux (i+1) (PStateSet.add pstate visited)
+      end in
   aux 0 PStateSet.empty
 
 module TidTagSet = Set.Make(struct
@@ -88,13 +107,13 @@ module TidTagSet = Set.Make(struct
     let compare = Pervasives.compare
   end)
 
-let deadlocks graph =
+let deadlocks graph skip_single =
   (* A deadlock is present if we have a cycle from a pstate to itself, and if
    * that pstate evaluates a `cas` and never results in a successful evaluation
    * of the `cas` (ie. there is no #t state in its successors *)
   let deadlocks = BatList.filter_map
       (fun (pstate, tid, tag) ->
-         if has_cycle_to_itself graph pstate then
+         if has_cycle_to_itself graph skip_single pstate then
            Some (tid, tag)
          else
            None)
