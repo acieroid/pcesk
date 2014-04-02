@@ -34,8 +34,8 @@ let test_match f expected cmp =
     (Lattice.abst1 expected) merged
 
 let test_multiple_calls ctx =
-  "sq.scm" $=> AbsInteger;
-  "inc.scm" $=> AbsInteger
+  "seq/sq.scm" $=> AbsInteger;
+  "seq/inc.scm" $=> AbsInteger
 
 let test_recursive_calls ctx =
   (* TODO: I don't know why, but there is a "bad file descriptor" exception
@@ -47,17 +47,17 @@ let test_recursive_calls ctx =
                     \"done\"
                     (count (- n 1))))))
   (count 200))" => AbsString;
-  "fact.scm" $=> AbsInteger
+  "seq/fact.scm" $=> AbsInteger
 
 let test_fibo ctx =
-  "fib.scm" $=> AbsInteger
+  "seq/fib.scm" $=> AbsInteger
 
 let test_widen ctx =
   (* If the CESK machine does not widen the values at a certain points, this
    * example will keep running, with values staying at the same "level" of the
    * lattice, but with different values (in case thelattice as an infinite
    * width) *)
-  "widen.scm" $=> AbsInteger
+  "seq/widen.scm" $=> AbsInteger
 
 let test_church_numerals ctx =
   let test_clo f =
@@ -68,11 +68,11 @@ let test_church_numerals ctx =
              | AbsUnique (Closure _) -> true
              | _  -> false)
            (Lattice.conc y)); in
-  test_clo "church-0.scm";
-  test_clo "church-1.scm";
-  test_clo "church-2.scm";
-  test_clo "church-6.scm";
-  "church-2-num.scm" $=> AbsInteger
+  test_clo "seq/church-0.scm";
+  test_clo "seq/church-1.scm";
+  test_clo "seq/church-2.scm";
+  test_clo "seq/church-6.scm";
+  "seq/church-2-num.scm" $=> AbsInteger
 
 let test_infinite ctx =
   let test_no_result f =
@@ -84,35 +84,35 @@ let test_infinite ctx =
           "[" ^ (String.concat ", "
                    (List.map string_of_value l)) ^ "]")
       [] results in
-  test_no_result "infinite-1.scm";
-  test_no_result "infinite-2.scm"
+  test_no_result "seq/infinite-1.scm";
+  test_no_result "seq/infinite-2.scm"
 
 let test_callcc ctx =
-  "callcc-0.scm" $=> AbsInteger
+  "seq/callcc-0.scm" $=> AbsInteger
 
 let test_blur ctx =
-  "blur.scm" $=> AbsBoolean
+  "seq/blur.scm" $=> AbsBoolean
 
 let test_cpstak ctx =
-  "cpstak.scm" $=> AbsInteger
+  "seq/cpstak.scm" $=> AbsInteger
 
 let test_eta ctx =
-  "eta.scm" $=> AbsBoolean
+  "seq/eta.scm" $=> AbsBoolean
 
 let test_gcipd ctx =
-  "gcipd.scm" $=> AbsInteger
+  "seq/gcipd.scm" $=> AbsInteger
 
 let test_kcfa2 ctx =
-  "kcfa2.scm" $=> AbsBoolean
+  "seq/kcfa2.scm" $=> AbsBoolean
 
 let test_kcfa3 ctx =
-  "kcfa3.scm" $=> AbsBoolean
+  "seq/kcfa3.scm" $=> AbsBoolean
 
 let test_mj09 ctx =
-  "mj09.scm" $=> AbsInteger
+  "seq/mj09.scm" $=> AbsInteger
 
 let test_rotate ctx =
-  "rotate.scm" $=> AbsString
+  "seq/rotate.scm" $=> AbsString
 
 let suite =
   "Advanced tests" >:::

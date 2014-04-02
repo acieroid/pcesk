@@ -20,9 +20,11 @@ test_bin:
 
 test: test_bin
 	$(RUN_TEST) -k 0 -gc
-	$(RUN_TEST) -k 0
+	$(RUN_TEST) -k 0 -gc -s
+#	$(RUN_TEST) -k 0
 	$(RUN_TEST) -k 1 -gc
-	$(RUN_TEST) -k 1 # Will very likely timeout
+	$(RUN_TEST) -k 1 -gc -s
+#	$(RUN_TEST) -k 1 # Will very likely timeout
 
 doc:
 	$(OCAMLBUILD) $(DOCDIR)/index.html
