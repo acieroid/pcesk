@@ -36,15 +36,16 @@ usage: ./main.byte [-v level] [-i input] [-g graph_output] [-k polyvariance]
   -r : remove threads when they halt (disabled by default)
   -j : do strong updates when evaluating a join (disabled by default)
   -s : don't explore state if another state that subsumes them has been explored (disabled by default)
-  -l : maximum length of abstracted lists (5 by default)
+  -l : enable first-class locks (disabled by default)
+  -ll : maximum length of abstracted lists (5 by default)
   -no-threads-strong-updates : turn off strong updates for the threads
   -quiet : don't print the results nor the parameters used, only the time and graph size (disabled by default)
   -t1 : tag corresponding to the first expression used for MHP analysis
   -t2 : tag corresponding to the second expression used for MHP analysis
-  -target {run|ast|mhp|cmp|unretriedcas|deadlocks|setconflicts|conflicts}: action to do with the input (run by default)
+  -target {run|ast|mhp|cmp|unretriedcas|deadlocks|ldeadlocks|setconflicts|allconflicts|conflicts}: action to do with the input (run by default)
   -e {bfs|dfs}: graph traversal method used ('bfs' or 'dfs', bfs by default)
   -help  Display this list of options
-  --help  Display this list of option
+  --help  Display this list of options
 #+END_SRC
 
 Those parameters are explained in more details below, and examples
