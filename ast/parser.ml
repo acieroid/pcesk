@@ -26,8 +26,8 @@ let parse stream =
     | "spawn" -> parse_spawn tag
     | "join" -> parse_join tag
     | "cas" -> parse_cas tag
-    | "acquire" -> parse_acquire tag
-    | "release" -> parse_release tag
+    | "acquire" when !Params.locks -> parse_acquire tag
+    | "release" when !Params.locks -> parse_release tag
     | f -> parse_funcall_rest tag ((Identifier f), tag+2)
 
   and parse_begin tag = parser

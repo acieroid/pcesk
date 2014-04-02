@@ -31,6 +31,9 @@ let join_strong = ref false
  * already visited *)
 let subsumption = ref false
 
+(* Enable first-class locks *)
+let locks = ref false
+
 (* Maximum length for abstracted lists *)
 let list_length = ref 5
 
@@ -113,7 +116,9 @@ let speclist = [
   ("-s", Arg.Set subsumption,
    ": don't explore state if another state that subsumes them has been " ^
    "explored (disabled by default)");
-  ("-l", Arg.Set_int list_length,
+  ("-l", Arg.Set locks,
+   ": enable first-class locks (disabled by default)");
+  ("-ll", Arg.Set_int list_length,
    ": maximum length of abstracted lists (5 by default)");
   ("-no-threads-strong-updates", Arg.Unit
      (fun () -> threads_strong_updates := false),
