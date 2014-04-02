@@ -51,9 +51,10 @@ and live_locations_kont visited store = function
       (AddressSet.add addr
          (union
             [union (List.map (live_locations_node visited store env) body);
-             union (List.map (fun (_, n) -> live_locations_node
-                                 visited store env n)
-                      bindings);
+             union (List.map (fun ((var, _), n) ->
+                 AddressSet.add (Env.lookup env var)
+                   (live_locations_node visited store env n))
+                 bindings);
              live_locations_store visited store addr]))
   | IfKont (_, cons, alt, env, addr) ->
     AddressSet.add addr
