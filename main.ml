@@ -182,7 +182,7 @@ let () =
     (fun x -> raise (Arg.Bad ("Bad argument : " ^ x)))
     usage;
   try
-    if not !Params.quiet then begin
+    if !Params.verbose >= 1 then begin
       print_string ("Running with: \n" ^ (string_of_configuration ()));
       print_newline ()
     end;

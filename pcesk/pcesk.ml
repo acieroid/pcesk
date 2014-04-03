@@ -250,7 +250,7 @@ let eval e =
           let graph' =
             List.fold_left G.add_edge_e
               (List.fold_left G.add_vertex graph dests) edges in
-          if !Params.progress && i mod 1000 = 0 then begin
+          if !Params.progress && i mod 10 = 0 then begin
             print_string ("\r" ^ string_of_int (G.nb_vertex graph'));
             flush_all ()
           end;
