@@ -68,6 +68,7 @@ type target =
   | AllConflicts
   | Conflicts
   | UnretriedCas
+  | Race
   | LDeadlockDetection
   | DeadlockDetection
   | DeadlockDetectionSingle
@@ -133,7 +134,8 @@ let speclist = [
    ": tag corresponding to the second expression used for MHP analysis");
   ("-target", Arg.Symbol (["run"; "ast"; "mhp"; "cmp"; "unretriedcas";
                            "deadlocks"; "deadlocks1"; "ldeadlocks";
-                           "setconflicts"; "allconflicts"; "conflicts"],
+                           "setconflicts"; "allconflicts"; "conflicts";
+                           "race"],
                           (function
                             | "run" -> target := Run
                             | "ast" -> target := PrintAST
@@ -146,6 +148,7 @@ let speclist = [
                             | "setconflicts" -> target := SetConflicts
                             | "allconflicts" -> target := AllConflicts
                             | "conflicts" -> target := Conflicts
+                            | "race" -> target := Race
                             | t -> failwith ("Invalid target: " ^ t))),
    ": action to do with the input (run by default)");
   ("-e", Arg.Symbol (["bfs"; "dfs"],

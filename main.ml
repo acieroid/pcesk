@@ -155,6 +155,11 @@ let detect_unretried_cas_g graph node =
 let detect_unretried_cas node =
   detect_unretried_cas_g (build_pgraph node) node
 
+let detect_races node =
+  let graph = build_pgraph node in
+  detect_conflicts_g graph true true node;
+  detect_unretried_cas_g graph node
+
 let compare_states node = match !Params.tag1, !Params.tag2 with
   | Some t1, Some t2 ->
     begin if !Params.parallel then
@@ -195,6 +200,7 @@ let () =
       | Params.AllConflicts -> detect_conflicts true false
       | Params.Conflicts -> detect_conflicts true true
       | Params.UnretriedCas -> detect_unretried_cas
+      | Params.Race -> detect_races
       | Params.DeadlockDetection -> detect_deadlocks true
       | Params.DeadlockDetectionSingle -> detect_deadlocks false
       | Params.LDeadlockDetection -> detect_ldeadlocks
