@@ -38,121 +38,122 @@ let print_ast node =
   print_string (Ast.string_of_node ~tags:true node);
   print_newline ()
 
+let build_pgraph node =
+  if !Params.parallel then
+    let _, graph = peval node in
+    graph
+  else
+    raise (BadArguments
+             "cannot do this analysis without parallelism turned on (use -p)")
+
+let mhp_g graph node t1 t2 exp1 exp2 =
+  let may = Mhp.mhp graph t1 t2 in
+  print_string ("The expressions " ^
+                (Ast.string_of_node ~tags:true exp1) ^ " and " ^
+                (Ast.string_of_node ~tags:true exp2) ^ " may " ^
+                (if may then "" else "not ") ^ "happen in parallel\n")
+
+
 let mhp node = match !Params.tag1, !Params.tag2 with
   | Some t1, Some t2 ->
-    if !Params.parallel then
-      let e1, e2 = Ast.find_node t1 node, Ast.find_node t2 node in
-      match e1, e2 with
+    let e1, e2 = Ast.find_node t1 node, Ast.find_node t2 node in
+    begin match e1, e2 with
       | Some exp1, Some exp2 ->
-        let _, graph = peval node in
-        let may = Mhp.mhp graph t1 t2 in
-        print_string ("The expressions " ^
-                      (Ast.string_of_node ~tags:true exp1) ^ " and " ^
-                      (Ast.string_of_node ~tags:true exp2) ^ " may " ^
-                      (if may then "" else "not ") ^ "happen in parallel\n")
+        mhp_g (build_pgraph node) node t1 t2 exp1 exp2
       | _ -> raise (BadArguments
                       ("at least one of the tags is incorrect " ^
                        "(use -target ast to find them)"))
-    else
-      raise (BadArguments
-               "cannot do MHP analysis without parallelism turned on (use -p)")
+    end
   | _ -> raise (BadArguments
                   "two tags should be specified (use -target ast to find them)")
 
-let detect_conflicts handle_cas ignore_unique_cas node =
-  if !Params.parallel then
-    let _, graph = peval node in
-    let conflicts = Conflict.conflicts ~handle_cas ~ignore_unique_cas
-        graph node in
-    match conflicts with
-    | [] -> print_string "No conflicts detected\n"
-    | [(t1, t2, a)] ->
-      begin match Ast.find_node t1 node, Ast.find_node t2 node with
+
+let detect_conflicts_g graph handle_cas ignore_unique_cas node =
+  let conflicts = Conflict.conflicts ~handle_cas ~ignore_unique_cas
+      graph node in
+  match conflicts with
+  | [] -> print_string "No conflicts detected\n"
+  | [(t1, t2, a)] ->
+    begin match Ast.find_node t1 node, Ast.find_node t2 node with
+      | Some e1, Some e2 ->
+        print_string ("One conflict detected between the following " ^
+                      "expressions:\n" ^
+                      (Ast.string_of_node ~tags:true e1) ^ ", " ^
+                      (Ast.string_of_node ~tags:true e2) ^ "\n")
+      | _ ->
+        print_string ("Conflict detected between unknown nodes! " ^
+                      "(should not happen)")
+    end
+  | l ->
+    print_string (string_of_int (List.length l) ^
+                  " conflicts detected between the following pairs of" ^
+                  " expressions:\n");
+    List.iter (fun (t1, t2, a) ->
+        match Ast.find_node t1 node, Ast.find_node t2 node with
         | Some e1, Some e2 ->
-          print_string ("One conflict detected between the following " ^
-                        "expressions:\n" ^
-                        (Ast.string_of_node ~tags:true e1) ^ ", " ^
+          print_string ((Ast.string_of_node ~tags:true e1) ^ ", " ^
                         (Ast.string_of_node ~tags:true e2) ^ "\n")
         | _ ->
           print_string ("Conflict detected between unknown nodes! " ^
-                        "(should not happen)")
-      end
-    | l ->
-      print_string (string_of_int (List.length l) ^
-                    " conflicts detected between the following pairs of" ^
-                    " expressions:\n");
-      List.iter (fun (t1, t2, a) ->
-          match Ast.find_node t1 node, Ast.find_node t2 node with
-          | Some e1, Some e2 ->
-            print_string ((Ast.string_of_node ~tags:true e1) ^ ", " ^
-                          (Ast.string_of_node ~tags:true e2) ^ "\n")
-          | _ ->
-            print_string ("Conflict detected between unknown nodes! " ^
-                          "(should not happen)"))
-        l
-  else
-    raise (BadArguments ("cannot do conflict detection without parallelism " ^
-                         "turned on (use -p)"))
+                        "(should not happen)"))
+      l
+
+let detect_conflicts handle_cas ignore_unique_cas node =
+  detect_conflicts_g (build_pgraph node) handle_cas ignore_unique_cas node
+
+let detect_deadlocks_g graph skip_single node =
+  let deadlocks = Deadlock.deadlocks graph skip_single in
+  match deadlocks with
+  | [] -> print_string "No deadlocks detected\n"
+  | l ->
+    print_string ((string_of_int (List.length l)) ^
+                  " possible deadlocks detected, starting at the following" ^
+                  " expressions:\n");
+    List.iter (fun (tid, tag) ->
+        match Ast.find_node tag node with
+        | Some exp ->
+          print_string (Ast.string_of_node ~tags:true exp);
+          print_string (" [on tid " ^ (string_of_tid tid) ^ "]\n");
+        | None ->
+          print_string "Unknown node (should not happen)\n")
+      l
 
 let detect_deadlocks skip_single node =
-  if !Params.parallel then
-    let _, graph = peval node in
-    let deadlocks = Deadlock.deadlocks graph skip_single in
-    match deadlocks with
-    | [] -> print_string "No deadlocks detected\n"
-    | l ->
-      print_string ((string_of_int (List.length l)) ^
-                    " possible deadlocks detected, starting at the following" ^
-                    " expressions:\n");
-      List.iter (fun (tid, tag) ->
-          match Ast.find_node tag node with
-          | Some exp ->
-            print_string (Ast.string_of_node ~tags:true exp);
-            print_string (" [on tid " ^ (string_of_tid tid) ^ "]\n");
-          | None ->
-            print_string "Unknown node (should not happen)\n")
-        l
-  else
-    raise (BadArguments ("cannot do deadlock detection without parallelism " ^
-                         "turned on (use -p)"))
+  detect_deadlocks_g (build_pgraph node) skip_single node
+
+let detect_ldeadlocks_g graph node =
+  let deadlocks = Ldeadlock.deadlocks graph in
+  match deadlocks with
+  | [] -> print_string "No deadlocks detected\n"
+  | l ->
+    print_string ((string_of_int (List.length l)) ^
+                  " possible deadlocks detected, at the following states:\n");
+    List.iter (fun pstate ->
+        print_string (Pcesk_types.string_of_pstate "    " pstate);
+        print_newline ())
+      l
 
 let detect_ldeadlocks node =
-  if !Params.parallel then
-    let _, graph = peval node in
-    let deadlocks = Ldeadlock.deadlocks graph in
-    match deadlocks with
-    | [] -> print_string "No deadlocks detected\n"
-    | l ->
-      print_string ((string_of_int (List.length l)) ^
-                    " possible deadlocks detected, at the following states:\n");
-      List.iter (fun pstate ->
-          print_string (Pcesk_types.string_of_pstate "    " pstate);
-          print_newline ())
-        l
-  else
-    raise (BadArguments ("cannot do deadlock detection without parallelism " ^
-                         "turned on (use -p)"))
+  detect_ldeadlocks_g (build_pgraph node) node
+
+let detect_unretried_cas_g graph node =
+  let unretried = Unretried_cas.unretried_cas graph in
+  match unretried with
+  | [] -> print_string "No unretried cas detected\n"
+  | l ->
+    print_string ((string_of_int (List.length l)) ^
+                  " unretried cas found:\n");
+    List.iter (fun tag ->
+        match Ast.find_node tag node with
+        | Some exp ->
+          print_string (Ast.string_of_node ~tags:true exp);
+          print_newline ()
+        | None ->
+          print_string "Unknown node (should not happen)\n")
+      l
 
 let detect_unretried_cas node =
-  if !Params.parallel then
-    let _, graph = peval node in
-    let unretried = Unretried_cas.unretried_cas graph in
-    match unretried with
-    | [] -> print_string "No unretried cas detected\n"
-    | l ->
-      print_string ((string_of_int (List.length l)) ^
-                    " unretried cas found:\n");
-      List.iter (fun tag ->
-          match Ast.find_node tag node with
-          | Some exp ->
-            print_string (Ast.string_of_node ~tags:true exp);
-            print_newline ()
-          | None ->
-            print_string "Unknown node (should not happen)\n")
-        l
-  else
-    raise (BadArguments ("cannot do unretried cas analysis without " ^
-                         "parallelism turned on (use -p)"))
+  detect_unretried_cas_g (build_pgraph node) node
 
 let compare_states node = match !Params.tag1, !Params.tag2 with
   | Some t1, Some t2 ->
