@@ -1,0 +1,5 @@
+(letrec ((t1 (spawn 1))
+         (t2 (spawn 2)))
+  ; When thread t1 is joined on, t2 disappears (if it finished its execution)
+  (join t1)
+  (join t2))
