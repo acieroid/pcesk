@@ -13,4 +13,5 @@
          (t3 (spawn (dec))))
   (join t1)
   (join t2)
+  (join t3)
   counter)
