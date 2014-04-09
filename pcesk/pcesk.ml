@@ -22,18 +22,6 @@ let merge_threads context tcount tid x y = match x, y with
   | Some x, None | None, Some x -> Some x
   | None, None -> None
 
-let remove_thread context tid x y =
-  let simplify v =
-    if ContextSet.is_empty v then None else Some v in
-  match x, y with
-  | Some x, Some y ->
-    simplify (ContextSet.union
-                (ContextSet.remove context x)
-                (ContextSet.remove context y))
-  | Some x, None | None, Some x ->
-    simplify (ContextSet.remove context x)
-  | None, None -> None
-
 let merge_tids tid x y = match x, y with
   | Some x, Some y -> Some Infinity
   | Some x, None | None, Some x -> Some x
@@ -108,9 +96,9 @@ let step_halt pstate tid context value =
      pstore = store_extend1 pstate.pstore (TidAddr tid) value;
      threads =
        if !Params.remove_threads then
-         ThreadMap.merge (remove_thread context)
+         ThreadMap.add tid (ContextSet.remove context
+                              (ThreadMap.find tid pstate.threads))
            pstate.threads
-           ThreadMap.empty
        else
          pstate.threads;
      tcount =
