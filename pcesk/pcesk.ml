@@ -96,9 +96,12 @@ let step_halt pstate tid context value =
      pstore = store_extend1 pstate.pstore (TidAddr tid) value;
      threads =
        if !Params.remove_threads then
-         ThreadMap.add tid (ContextSet.remove context
-                              (ThreadMap.find tid pstate.threads))
-           pstate.threads
+         let contexts = (ContextSet.remove context
+                           (ThreadMap.find tid pstate.threads)) in
+         if ContextSet.is_empty contexts then
+           ThreadMap.remove tid pstate.threads
+         else
+           ThreadMap.add tid contexts pstate.threads
        else
          pstate.threads;
      tcount =
