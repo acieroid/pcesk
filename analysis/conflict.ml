@@ -140,20 +140,18 @@ let conflicts
          (function
            | [(t1, t2, _)] as l ->
              if t1 = t2 && is_cas node t1 then
-               (* Only a ww conflict between a cas and itself, that can be
-                * dropped *)
+               (* Only a ww conflict between two cas on the same address, that
+                  can be dropped *)
                []
              else
                l
            | [(t1, t2, _); (t1', t2', _)] as l ->
              let ncas = List.length (List.filter (is_cas node)
                                           [t1; t2; t1'; t2']) in
-             if ncas = 3 &&
-                ((t1 = t2 && t1 = t1' || t1 = t2') ||
-                 (t1' = t2' && t1' = t1 || t1' = t2')) then
+             if ncas = 3 then
                (* Got a rw & a ww, and they matches the pattern we want
-                * (two cas writes with the same tag on one side, a read and a
-                * cas write with the same tag as previously on the other side
+                * (two cas writes on the same address one side, a read and a
+                * cas write on the same address as previously on the other side,
                 * we ignore it *)
                []
              else
