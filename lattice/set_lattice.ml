@@ -80,18 +80,16 @@ module Set_lattice : functor (Size : SIZE) -> LATTICE =
       | Top -> "Top"
       | Bot -> "Bot"
 
-    let filter_option l =
-      BatList.filter_map (fun x -> x) l
-
     let op_bin f x y = match x, y with
       | Bot, _ | _, Bot -> Bot
       | Values vs1, Values vs2 ->
-        abst (filter_option (List.map (fun (x, y) -> f x y) (product vs1 vs2)))
+        abst (List.concat
+                (List.map (fun (x, y) -> f x y) (product vs1 vs2)))
       | _ -> Top
 
     let op_un f x = match x with
       | Bot -> Bot
-      | Values vs -> Values (filter_option (List.map f vs))
+      | Values vs -> Values (List.concat (List.map f vs))
       | _ -> Top
 
     let test ctx =
@@ -129,7 +127,8 @@ module Set_lattice : functor (Size : SIZE) -> LATTICE =
       test "meet(6,7)" Bot (meet abs_six abs_seven);
       test "meet(6, \"foo\")" Bot (meet abs_six (abst1 str));
       test "meet(#t, #f)" Bot (meet abs_true abs_false);
-      test "meet(Bool, #f)" (abst1 AbsBoolean) (meet (abst1 AbsBoolean) abs_false);
-      test "meet(#t, Bool)" Bot (meet abs_true (abst1 AbsBoolean));
+      test "meet({#t, #f}, #f)" (abst [AbsTrue; AbsFalse])
+        (meet (abst [AbsTrue; AbsFalse]) abs_false);
+      test "meet(#t, Bool)" Bot (meet abs_true (abst [AbsTrue; AbsFalse]));
 
   end

@@ -5,9 +5,9 @@ open Set_lattice
 
 (** Types and modules *)
 
-module Lattice = Set_lattice(struct let size = 10 end)
+module Lattice = Set_lattice(struct let size = 100 end)
 module Store = Store(Addr)(Lattice)
-module Aval = Aval.AbstractAval
+module Aval = Aval.AbstractAvalNoUnique
 module Time = Time.AbstractTime
 
 type exp =

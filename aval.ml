@@ -25,3 +25,14 @@ module AbstractAval = struct
     | Cons (car, cdr) -> abstract_cons car cdr !Params.list_length
     | v -> AbsUnique v
 end
+
+module AbstractAvalNoUnique = struct
+  let aval = function
+    | String _ -> AbsString
+    | Integer _ -> AbsInteger
+    | Symbol _ -> AbsSymbol
+    | Nil | Cons _ -> AbsList
+    | Boolean true -> AbsTrue
+    | Boolean false -> AbsFalse
+    | v -> AbsUnique v
+end

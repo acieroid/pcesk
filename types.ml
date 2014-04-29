@@ -21,7 +21,8 @@ and value =
   | AbsUnique of prim_value
   | AbsString
   | AbsInteger
-  | AbsBoolean
+  | AbsTrue
+  | AbsFalse
   | AbsSymbol
   | AbsList
 and kont =
@@ -34,7 +35,8 @@ and kont =
   | SetKont of int * string * env * addr
   | CallccKont of int * env * addr
   | HaltKont
-and prim = string * (value list -> value option)
+(* The return value of a primitive is the *set* of the possible return values *)
+and prim = string * (value list -> value list)
 and time =
   | IntTime of int
   | KCallSitesTime of Ast.node list
@@ -99,7 +101,8 @@ and string_of_value = function
   | AbsUnique v -> string_of_prim_value v
   | AbsString -> "Str"
   | AbsInteger -> "Int"
-  | AbsBoolean -> "Bool"
+  | AbsTrue -> "True"
+  | AbsFalse -> "False"
   | AbsSymbol -> "Sym"
   | AbsList -> "List"
 
@@ -144,56 +147,31 @@ let value_subsumes x y = match x, y with
   | AbsUnique a, AbsUnique b -> a = b
   | AbsString, AbsString
   | AbsInteger, AbsInteger
-  | AbsBoolean, AbsBoolean
+  | AbsTrue, AbsTrue
+  | AbsFalse, AbsFalse
   | AbsSymbol, AbsSymbol
   | AbsList, AbsList
   | AbsString, AbsUnique (String _)
   | AbsInteger, AbsUnique (Integer _)
-  | AbsBoolean, AbsUnique (Boolean _)
+  | AbsTrue, AbsUnique (Boolean true)
+  | AbsFalse, AbsUnique (Boolean false)
   | AbsSymbol, AbsUnique (Symbol _) -> true
   | _ -> false
 
 let merge x y = match x, y with
-  | AbsUnique (Primitive _), AbsUnique (Primitive _) -> None
-  | AbsUnique x, AbsUnique y when value_equals x y -> Some (AbsUnique x)
-  | AbsUnique (Integer _), AbsUnique (Integer _) -> Some AbsInteger
-  | AbsUnique (String _), AbsUnique (String _) -> Some AbsString
-  | AbsUnique (Symbol _), AbsUnique (Symbol _) -> Some AbsSymbol
-  | AbsUnique (Boolean _), AbsUnique (Boolean _) -> Some AbsBoolean
-  | AbsUnique (Cons _), AbsUnique (Cons _) -> Some AbsList
-  | AbsUnique Nil, AbsUnique Nil -> Some (AbsUnique Nil)
-  | AbsUnique (Cons (_, _)), AbsUnique Nil
-  | AbsUnique Nil, AbsUnique (Cons (_, _)) -> Some AbsList
-  | AbsString, AbsString
-  | AbsString, AbsUnique (String _)
-  | AbsUnique (String _), AbsString -> Some AbsString
-  | AbsInteger, AbsInteger
-  | AbsInteger, AbsUnique (Integer _)
-  | AbsUnique (Integer _), AbsInteger -> Some AbsInteger
-  | AbsBoolean, AbsBoolean
-  | AbsBoolean, AbsUnique (Boolean _)
-  | AbsUnique (Boolean _), AbsBoolean -> Some AbsBoolean
-  | AbsSymbol, AbsSymbol
-  | AbsSymbol, AbsUnique (Symbol _)
-  | AbsUnique (Symbol _), AbsSymbol -> Some AbsSymbol
-  | AbsList, AbsList
-  | AbsList, AbsUnique (Cons _)
-  | AbsList, AbsUnique Nil
-  | AbsUnique (Cons _), AbsList
-  | AbsUnique Nil, AbsList -> Some AbsList
   | _ -> None
 
 let value_op_int f x y = match x, y with
-  | AbsInteger, _ | _, AbsInteger -> Some AbsInteger
+  | AbsInteger, _ | _, AbsInteger -> [AbsInteger]
   | AbsUnique (Integer v1), AbsUnique (Integer v2) ->
-    Some (AbsUnique (Integer (f v1 v2)))
-  | _ -> None
+    [AbsUnique (Integer (f v1 v2))]
+  | _ -> []
 
 let value_comp_int f x y = match x, y with
-  | AbsInteger, _ | _, AbsInteger -> Some AbsBoolean
+  | AbsInteger, _ | _, AbsInteger -> [AbsTrue; AbsFalse]
   | AbsUnique (Integer v1), AbsUnique (Integer v2) ->
-    Some (AbsUnique (Boolean (f v1 v2)))
-  | _ -> None
+    [AbsUnique (Boolean (f v1 v2))]
+  | _ -> []
 
 let value_add = value_op_int (+)
 let value_sub = value_op_int (-)
@@ -202,9 +180,9 @@ let value_div = value_op_int (/)
 let value_mod = value_op_int (mod)
 
 let value_neg x = match x with
-  | AbsUnique (Integer a) -> Some (AbsUnique (Integer (-a)))
-  | AbsInteger -> Some AbsInteger
-  | _ -> None
+  | AbsUnique (Integer a) -> [AbsUnique (Integer (-a))]
+  | AbsInteger -> [AbsInteger]
+  | _ -> []
 
 let value_gt = value_comp_int (>)
 let value_gte = value_comp_int (>=)
@@ -214,6 +192,7 @@ let value_int_eq = value_comp_int (=)
 let value_int_neq = value_comp_int (<>)
 
 let value_not x = match x with
-  | AbsUnique (Boolean b) -> Some (AbsUnique (Boolean (not b)))
-  | AbsBoolean -> Some AbsBoolean
-  | _ -> None
+  | AbsUnique (Boolean b) -> [AbsUnique (Boolean (not b))]
+  | AbsTrue -> [AbsFalse]
+  | AbsFalse -> [AbsTrue]
+  | _ -> []

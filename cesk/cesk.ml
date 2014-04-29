@@ -186,14 +186,11 @@ let rec apply_function rator rands state = match rator with
           step_begin state tag body
       end
   | AbsUnique (Primitive prim) ->
-    begin match apply_primitive prim rands with
-      | Some v ->
-        [{ state with
-           exp = Value v;
-           change = Pop;
-           time = tick state}]
-      | None -> []
-    end
+    List.map (fun v -> { state with
+                         exp = Value v;
+                         change = Pop;
+                         time = tick state})
+      (apply_primitive prim rands)
   | AbsUnique (Kont k) ->
     begin match rands with
       | [rand] -> step_value state rand  k
