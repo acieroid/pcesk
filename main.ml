@@ -38,6 +38,10 @@ let print_ast node =
   print_string (Ast.string_of_node ~tags:true node);
   print_newline ()
 
+let ast_length node =
+  print_int (Ast.highest_tag node);
+  print_newline ()
+
 let build_pgraph node =
   if !Params.parallel then
     let _, graph = peval node in
@@ -195,6 +199,7 @@ let () =
     let action = match !Params.target with
       | Params.Run -> run
       | Params.PrintAST -> print_ast
+      | Params.ASTLength -> ast_length
       | Params.MHP -> mhp
       | Params.SetConflicts -> detect_conflicts false false
       | Params.AllConflicts -> detect_conflicts true false

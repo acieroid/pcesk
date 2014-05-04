@@ -157,3 +157,44 @@ let rec find_node tag node =
     find_node tag e
   | (Cas (_, e1, e2), _) ->
     find_node tag e1 ++ find_node tag e2
+
+(* Find the tag with the highest number in a node *)
+let rec highest_tag node =
+  let highest_var_tag vars =
+    List.fold_left max 0 (List.map snd vars)
+  and highest_binding_tag bindings =
+    List.fold_left max 0 (List.map (fun ((_, t), n) -> max t (highest_tag n))
+                            bindings)
+  and highest_tag' nodes =
+    List.fold_left max 0 (List.map highest_tag nodes) in
+  match node with
+  | (Identifier _, tag)
+  | (String _, tag)
+  | (Integer _, tag)
+  | (Boolean _, tag)
+  | (Nil, tag)
+  | (Locked, tag)
+  | (Unlocked, tag) ->
+    tag
+  | (Acquire (_, tag'), tag)
+  | (Release (_, tag'), tag) ->
+    max tag tag'
+  | (Funcall (f, args), tag) ->
+    max tag (max (highest_tag f) (highest_tag' args))
+  | (Lambda (args, body), tag) ->
+    max tag (max (highest_var_tag args) (highest_tag' body))
+  | (Begin body, tag) ->
+    max tag (highest_tag' body)
+  | (LetRec (bindings, body), tag) ->
+    max tag (max (highest_binding_tag bindings) (highest_tag' body))
+  | (If (cond, cons, alt), tag) ->
+    max tag (max (max (highest_tag cond) (highest_tag cons))
+               (highest_tag alt))
+  | (Set ((_, tag'), value), tag) ->
+    max tag (max tag' (highest_tag value))
+  | (Callcc n, tag)
+  | (Spawn n, tag)
+  | (Join n, tag) ->
+    max tag (highest_tag n)
+  | (Cas ((_, tag'), n1, n2), tag) ->
+    max tag (max tag' (max (highest_tag n1) (highest_tag n2)))
