@@ -2,7 +2,9 @@
 This is an implementation of an abstract CESK machine which supports concurrent
 constructs (spawn/join), based on Matthew Might's description of CESK machines
 (mainly from the papers [[http://matt.might.net/papers/vanhorn2010abstract.pdf][Abstracting Abstract Machines]] and [[http://matt.might.net/papers/might2011pceks.pdf][A Family of Abstract
-Interpretations for Static Analysis of Concurrent Higher-Order Programming]])
+Interpretations for Static Analysis of Concurrent Higher-Order Programming]]).
+
+This work is done in the context of my Master's Thesis, available [[http://awesom.eu/~acieroid/thesis.pdf][here]].
 ** Dependencies and compilation
 The following OCaml packages are required:
   - ocamlgraph
@@ -148,17 +150,6 @@ For example:
 
 #+BEGIN_SRC shell
 $ ./main.byte -i input/seq/mut-rec.scm
-Running with:
-        exploration = bfs
-        gc-before = off
-        gc = off
-        k = 0
-        parallelism = off
-        remove-threads = off
-        join-strong-updates = off
-        subsumption = off
-        store-strong-updates = on
-        threads-strong-updates = on
 #f
 #t
 #f
@@ -178,20 +169,10 @@ state space compared to just using a reduction by subsumption (=-s=).
 For example:
 
 #+BEGIN_SRC shell
-./main.byte -i input/pcounter.scm -p -j -s -r
-Running with:
-        exploration = bfs
-        gc-before = off
-        gc = off
-        k = 0
-        parallelism = on
-        remove-threads = on
-        join-strong-updates = on
-        subsumption = on
-        store-strong-updates = on
-        threads-strong-updates = on
+$ ./main.byte -i input/pcounter.scm -p -j -r -s
 Int
-981/2298/9.63
+Int
+2578/6333/431.817
 #+END_SRC
 **** MHP Analysis
 We can check whether two expressions may happen in parallel. First, the two
@@ -202,13 +183,10 @@ value for =t1= and =t2= and the target =mhp= is run.
 For example:
 
 #+BEGIN_SRC shell
-$ ./main.byte -i input/pcounter.scm -p -j -s -r -target ast -quiet
-(letrec ((counter@2 0@3) (f@4 (lambda () (letrec ((old@7 counter@8)
-(new@9 (+@11 old@12 1@13)@10)) (if (cas counter old@17 new@18)@15
-"done"@19 (f@21 )@20)@14)@6)@5) (t1@22 (spawn (f@25 )@24)@23) (t2@26
-(spawn (f@29 )@28)@27)) (join t1@31)@30 (join t2@33)@32 counter@34)@1
+$ ./main.byte -i input/pcounter.scm -p -j -r -target ast
+(letrec ((counter@2 0@3) (f@4 (lambda () (letrec ((old@7 counter@8) (new@9 (+@11 old@12 1@13)@10)) (if (cas counter old@17 new@18)@15 #t@19 (f@21 )@20)@14)@6)@5) (t1@22 (spawn (f@25 )@24)@23) (t2@26 (spawn (f@29 )@28)@27)) (join t1@31)@30 (join t2@33)@32 counter@34)@1
 
-$ ./main.byte -i input/pcounter.scm -p -j -s -r -target mhp -quiet -t1  15 -t2 15
+$ ./main.byte -i input/pcounter.scm -p -j -r -target mhp -quiet -t1  15 -t2 15
 The expressions (cas counter old@17 new@18)@15 and (cas counter old@17 new@18)@15 may happen in parallel
 #+END_SRC
 
@@ -228,24 +206,24 @@ The =race= target combines =conflicts= and =unretriedcas=.
 For example:
 
 #+BEGIN_SRC shell
-$ ./main.byte -p -r -j -i input/pcounter.scm -target setconflicts -quiet -gc -s
+$ ./main.byte -p -r -j -i input/pcounter.scm -target setconflicts
 No conflicts detected
 
-$ ./main.byte -p -r -j -i input/pcounter.scm -target unretriedcas -quiet -gc -s
+$ ./main.byte -p -r -j -i input/pcounter.scm -target unretriedcas
 No unretried cas detected
 
-$ ./main.byte -p -r -j -i input/pcounter-race.scm -target setconflicts -quiet -gc -s
+$ ./main.byte -p -r -j -i input/pcounter-race.scm -target setconflicts
 2 conflicts detected between the following pairs of expressions:
 (set! counter (+@9 counter@10 1@11)@8)@6, (set! counter (+@9 counter@10 1@11)@8)@6
 (set! counter (+@9 counter@10 1@11)@8)@6, counter@10
 
-$ ./main.byte -p -r -j -i input/pcounter-race.scm -target race -quiet -gc -s
+$ ./main.byte -p -r -j -i input/pcounter-race.scm -target race
 2 conflicts detected between the following pairs of expressions:
 (set! counter (+@9 counter@10 1@11)@8)@6, (set! counter (+@9 counter@10 1@11)@8)@6
 (set! counter (+@9 counter@10 1@11)@8)@6, counter@10
 No unretried cas detected
 #+END_SRC
-**** Detecting Deadlocks Involving cas
+**** Detecting Deadlocks Involving =cas=
 To detect deadlocks in a program where locks are implemented with =cas=, the
 target =deadlocks= looks for a cycle in the state graph starting at a state that
 evaluates a =cas= and that fails (resulting in =#f=). If such a cycle exists,
@@ -254,7 +232,7 @@ there is a possibility of staying blocked in this cycle infinitely.
 For example:
 
 #+BEGIN_SRC shell
-$ ./main.byte -p -r -j -i input/deadlock-simple.scm -target deadlocks -quiet -gc -s
+$ ./main.byte -p -r -j -i input/deadlock-simple.scm -target deadlocks -gc
 1 possible deadlocks detected, starting at the following expressions:
 (cas lock #f@9 #t@10)@7 [on tid 1]
 #+END_SRC
@@ -268,31 +246,7 @@ and takes less time than the deadlock analysis for deadlocks implemented with
 For example:
 
 #+BEGIN_SRC shell
-$ ./main.byte -p -r -j -i input/locks/deadlock.scm -target ldeadlocks -quiet -l
-nvolving cas
-To detect deadlocks in a program where locks are implemented with =cas=, the
-target =deadlocks= looks for a cycle in the state graph starting at a state that
-evaluates a =cas= and that fails (resulting in =#f=). If such a cycle exists,
-there is a possibility of staying blocked in this cycle infinitely.
-
-For example:
-
-#+BEGIN_SRC shell
-$ ./main.byte -p -r -j -i input/deadlock-simple.scm -target deadlocks -quiet -gc -s
-1 possible deadlocks detected, starting at the following expressions:
-(cas lock #f@9 #t@10)@7 [on tid 1]
-#+END_SRC
-
-**** Detecting Deadlocks Involving First-Class Locks
-When the =-l= flag is given, first-class locks can be used in the input
-programs. The deadlock analysis for those lock (=ldeadlocks=) is more precise
-and takes less time than the deadlock analysis for deadlocks implemented with
-=cas= (=deadlocks=).
-
-For example:
-
-#+BEGIN_SRC shell
-$ ./main.byte -p -r -j -i input/locks/deadlock.scm -target ldeadlocks -quiet -l
+$ ./main.byte -p -r -j -i input/locks/deadlock.scm -target ldeadlocks -l
 1 possible deadlocks detected, at the following states:
     {1: {(join t1)}
      2: {(acquire b)}
